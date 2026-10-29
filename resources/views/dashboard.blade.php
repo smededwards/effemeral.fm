@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Effemeral</title>
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    </head>
+    <body class="min-h-screen bg-zinc-950 text-zinc-100">
+        <main class="mx-auto max-w-5xl space-y-8 px-6 py-12">
+            <header>
+                <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
+                <h1 class="mt-3 text-4xl font-semibold">Listening history</h1>
+                <p class="mt-3 max-w-2xl text-zinc-400">Import Last.fm scrobbles manually while the matching and recommendation tools are built.</p>
+            </header>
+
+            @if (session('success'))
+                <div class="rounded-lg border border-emerald-800 bg-emerald-950/60 p-4 text-emerald-200">{{ session('success') }}</div>
+            @endif
+
+            @if (session('error'))
+                <div class="rounded-lg border border-red-800 bg-red-950/60 p-4 text-red-200">{{ session('error') }}</div>
+            @endif
+
+            @if ($errors->any())
+                <div class="rounded-lg border border-red-800 bg-red-950/60 p-4 text-red-200">
+                    <ul class="list-disc space-y-1 pl-5">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <section class="grid gap-6 md:grid-cols-2">
+                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                    <h2 class="text-xl font-medium">Import Last.fm</h2>
+                    <p class="mt-2 text-sm text-zinc-400">The first prototype defaults to the most recent 90 days and 100 scrobbles.</p>
+
+                    <form class="mt-6 space-y-4" method="POST" action="{{ route('imports.lastfm') }}">
+                        @csrf
+                        <label class="block text-sm text-zinc-300">
+                            From
+                            <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="date" name="from" value="{{ old('from', $defaultFrom) }}" required>
+                        </label>
+                        <label class="block text-sm text-zinc-300">
+                            To
+                            <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="date" name="to" value="{{ old('to', $defaultTo) }}" required>
+                        </label>
+                        <label class="block text-sm text-zinc-300">
+                            Maximum scrobbles
+                            <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="limit" min="1" max="1000" value="{{ old('limit', 100) }}" required>
+                        </label>
+                        <button class="rounded-md bg-emerald-500 px-4 py-2 font-medium text-zinc-950 hover:bg-emerald-400" type="submit">Queue import</button>
+                    </form>
+                </div>
+
+                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                    <h2 class="text-xl font-medium">Import status</h2>
+                    <dl class="mt-6 space-y-4 text-sm">
+                        <div class="flex justify-between gap-4 border-b border-zinc-800 pb-3"><dt class="text-zinc-400">Stored scrobbles</dt><dd>{{ number_format($scrobbleCount) }}</dd></div>
+                        @if ($latestImport)
+                            <div class="flex justify-between gap-4 border-b border-zinc-800 pb-3"><dt class="text-zinc-400">Latest status</dt><dd class="capitalize">{{ $latestImport->status }}</dd></div>
+                            <div class="flex justify-between gap-4 border-b border-zinc-800 pb-3"><dt class="text-zinc-400">Fetched</dt><dd>{{ number_format($latestImport->fetched_count) }}</dd></div>
+                            <div class="flex justify-between gap-4 border-b border-zinc-800 pb-3"><dt class="text-zinc-400">Imported</dt><dd>{{ number_format($latestImport->imported_count) }}</dd></div>
+                            <div class="flex justify-between gap-4"><dt class="text-zinc-400">Skipped duplicates</dt><dd>{{ number_format($latestImport->skipped_count) }}</dd></div>
+                            @if ($latestImport->error)
+                                <p class="rounded-md bg-red-950/60 p-3 text-red-200">{{ $latestImport->error }}</p>
+                            @endif
+                        @else
+                            <p class="text-zinc-400">No imports have been run yet.</p>
+                        @endif
+                    </dl>
+                </div>
+            </section>
+        </main>
+    </body>
+</html>
