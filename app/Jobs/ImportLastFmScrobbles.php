@@ -25,7 +25,7 @@ class ImportLastFmScrobbles implements ShouldQueue
             $tracks = $client->recentTracks(
                 CarbonImmutable::parse((string) $run->getRawOriginal('from_at')),
                 CarbonImmutable::parse((string) $run->getRawOriginal('to_at')),
-                (int) ($run->requested_limit ?? 100),
+                $run->requested_limit === null ? null : (int) $run->requested_limit,
             );
             $imported = 0;
             $skipped = 0;

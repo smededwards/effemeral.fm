@@ -78,4 +78,44 @@ class LastFmImportTest extends TestCase
         ]);
         $this->assertSame('The Album', Scrobble::query()->firstOrFail()->album_name);
     }
+
+    public function test_a_full_import_can_be_queued_without_an_item_limit(): void
+    {
+        Queue::fake();
+
+        $response = $this->post(route('imports.lastfm.full'));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success', 'Full Last.fm import queued.');
+        $this->assertDatabaseHas('last_fm_import_runs', [
+            'status' => 'queued',
+            'requested_limit' => null,
+        ]);
+        Queue::assertPushed(ImportLastFmScrobbles::class);
+    }
+
+    public function test_a_failed_import_can_be_retried_as_a_new_run(): void
+    {
+        Queue::fake();
+
+        $failedRun = LastFmImportRun::query()->create([
+            'source' => 'lastfm',
+            'status' => 'failed',
+            'from_at' => '2026-01-01 00:00:00',
+            'to_at' => '2026-03-31 23:59:59',
+            'requested_limit' => 100,
+            'error' => 'Temporary API failure',
+        ]);
+
+        $response = $this->post(route('imports.lastfm.retry', $failedRun));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success', 'Last.fm import retry queued.');
+        $this->assertDatabaseHas('last_fm_import_runs', [
+            'retry_of_id' => $failedRun->id,
+            'status' => 'queued',
+            'requested_limit' => 100,
+        ]);
+        Queue::assertPushed(ImportLastFmScrobbles::class);
+    }
 }

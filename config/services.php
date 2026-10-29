@@ -38,6 +38,7 @@ return [
     'lastfm' => [
         'api_key' => env('LASTFM_API_KEY'),
         'username' => env('LASTFM_USERNAME'),
+        'import_start' => env('LASTFM_IMPORT_START', '2024-01-01'),
         'endpoint' => env('LASTFM_API_ENDPOINT', 'https://ws.audioscrobbler.com/2.0/'),
         'user_agent' => env('LASTFM_USER_AGENT', 'Effemeral/0.1 (+https://github.com/smededwards/effemeral.fm)'),
     ],

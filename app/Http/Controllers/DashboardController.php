@@ -16,6 +16,7 @@ class DashboardController extends Controller
     {
         return view('dashboard', [
             'latestImport' => LastFmImportRun::query()->latest()->first(),
+            'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),
             'defaultTo' => now()->toDateString(),
@@ -24,6 +25,46 @@ class DashboardController extends Controller
 
     public function import(StartLastFmImportRequest $request): RedirectResponse
     {
+        return $this->queueImport(
+            CarbonImmutable::parse($request->date('from'))->startOfDay(),
+            CarbonImmutable::parse($request->date('to'))->endOfDay(),
+            $request->integer('limit'),
+            'Last.fm import queued.',
+        );
+    }
+
+    public function fullImport(): RedirectResponse
+    {
+        return $this->queueImport(
+            CarbonImmutable::parse(config('services.lastfm.import_start'))->startOfDay(),
+            CarbonImmutable::now()->endOfDay(),
+            null,
+            'Full Last.fm import queued.',
+        );
+    }
+
+    public function retry(LastFmImportRun $importRun): RedirectResponse
+    {
+        if ($importRun->status !== 'failed') {
+            return back()->with('error', 'Only failed imports can be retried.');
+        }
+
+        return $this->queueImport(
+            CarbonImmutable::parse((string) $importRun->getRawOriginal('from_at')),
+            CarbonImmutable::parse((string) $importRun->getRawOriginal('to_at')),
+            $importRun->requested_limit === null ? null : (int) $importRun->requested_limit,
+            'Last.fm import retry queued.',
+            $importRun->id,
+        );
+    }
+
+    private function queueImport(
+        CarbonImmutable $from,
+        CarbonImmutable $to,
+        ?int $limit,
+        string $successMessage,
+        ?int $retryOfId = null,
+    ): RedirectResponse {
         $activeImport = LastFmImportRun::query()
             ->whereIn('status', ['queued', 'running'])
             ->exists();
@@ -35,13 +76,14 @@ class DashboardController extends Controller
         $run = LastFmImportRun::query()->create([
             'source' => 'lastfm',
             'status' => 'queued',
-            'from_at' => CarbonImmutable::parse($request->date('from'))->startOfDay(),
-            'to_at' => CarbonImmutable::parse($request->date('to'))->endOfDay(),
-            'requested_limit' => $request->integer('limit'),
+            'from_at' => $from,
+            'to_at' => $to,
+            'requested_limit' => $limit,
+            'retry_of_id' => $retryOfId,
         ]);
 
         ImportLastFmScrobbles::dispatch($run->id);
 
-        return back()->with('success', 'Last.fm import queued.');
+        return back()->with('success', $successMessage);
     }
 }
