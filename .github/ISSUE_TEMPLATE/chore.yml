@@ -1,0 +1,23 @@
+name: Chore
+description: Track technical maintenance or infrastructure work.
+title: "chore: "
+labels: [chore]
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: testing
+    attributes:
+      label: Test plan
+    validations:
+      required: true

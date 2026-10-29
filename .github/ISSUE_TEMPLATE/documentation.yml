@@ -1,0 +1,23 @@
+name: Documentation
+description: Improve public or technical documentation.
+title: "docs: "
+labels: [docs]
+body:
+  - type: textarea
+    id: scope
+    attributes:
+      label: Documentation scope
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: testing
+    attributes:
+      label: Verification plan
+    validations:
+      required: true
