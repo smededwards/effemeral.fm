@@ -7,4 +7,5 @@ maintenance.php
 routes.php
 routes.scanned.php
 schedule-*
+phpstan/
 services.json
