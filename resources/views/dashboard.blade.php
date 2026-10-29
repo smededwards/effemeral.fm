@@ -51,7 +51,11 @@
                             Maximum scrobbles
                             <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="limit" min="1" max="1000" value="{{ old('limit', 100) }}" required>
                         </label>
-                        <button class="rounded-md bg-emerald-500 px-4 py-2 font-medium text-zinc-950 hover:bg-emerald-400" type="submit">Queue import</button>
+                        <div class="flex flex-wrap gap-3">
+                            <button class="rounded-md bg-emerald-500 px-4 py-2 font-medium text-zinc-950 hover:bg-emerald-400" type="submit">Queue import</button>
+                            <button class="rounded-md border border-zinc-700 px-4 py-2 font-medium text-zinc-200 hover:border-zinc-500" type="submit" formaction="{{ route('imports.lastfm.full') }}">Queue full import</button>
+                        </div>
+                        <p class="text-xs text-zinc-500">Full import starts at {{ config('services.lastfm.import_start') }} and continues through today. It may take much longer.</p>
                     </form>
                 </div>
 
@@ -71,6 +75,50 @@
                             <p class="text-zinc-400">No imports have been run yet.</p>
                         @endif
                     </dl>
+                </div>
+            </section>
+
+            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-medium">Recent imports</h2>
+                        <p class="mt-1 text-sm text-zinc-400">Every run is retained so retries remain visible and auditable.</p>
+                    </div>
+                </div>
+                <div class="mt-6 overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="border-b border-zinc-800 text-zinc-400">
+                            <tr>
+                                <th class="px-3 py-3 font-normal">Started</th>
+                                <th class="px-3 py-3 font-normal">Range</th>
+                                <th class="px-3 py-3 font-normal">Mode</th>
+                                <th class="px-3 py-3 font-normal">Status</th>
+                                <th class="px-3 py-3 font-normal">Results</th>
+                                <th class="px-3 py-3 font-normal"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($recentImports as $import)
+                                <tr class="border-b border-zinc-800/70">
+                                    <td class="px-3 py-3 text-zinc-300">{{ $import->created_at?->format('Y-m-d H:i') }}</td>
+                                    <td class="px-3 py-3 text-zinc-400">{{ $import->from_at->toDateString() }} – {{ $import->to_at->toDateString() }}</td>
+                                    <td class="px-3 py-3 text-zinc-400">{{ $import->requested_limit ? 'Bounded' : 'Full' }}</td>
+                                    <td class="px-3 py-3 capitalize">{{ $import->status }}</td>
+                                    <td class="px-3 py-3 text-zinc-400">{{ number_format($import->imported_count) }} imported / {{ number_format($import->skipped_count) }} skipped</td>
+                                    <td class="px-3 py-3 text-right">
+                                        @if ($import->status === 'failed')
+                                            <form method="POST" action="{{ route('imports.lastfm.retry', $import) }}">
+                                                @csrf
+                                                <button class="text-emerald-400 hover:text-emerald-300" type="submit">Retry</button>
+                                            </form>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td class="px-3 py-6 text-zinc-500" colspan="6">No import history yet.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </section>
         </main>

@@ -12,7 +12,7 @@ class LastFmClient
     /**
      * @return list<array<string, mixed>>
      */
-    public function recentTracks(CarbonImmutable $from, CarbonImmutable $to, int $limit): array
+    public function recentTracks(CarbonImmutable $from, CarbonImmutable $to, ?int $limit = null): array
     {
         $tracks = [];
         $page = 1;
@@ -26,7 +26,7 @@ class LastFmClient
                     'user' => config('services.lastfm.username'),
                     'api_key' => config('services.lastfm.api_key'),
                     'format' => 'json',
-                    'limit' => min(200, $limit - count($tracks)),
+                    'limit' => $limit === null ? 200 : min(200, $limit - count($tracks)),
                     'page' => $page,
                     'from' => $from->timestamp,
                     'to' => $to->timestamp,
@@ -56,7 +56,7 @@ class LastFmClient
             $totalPages = (int) data_get($payload, 'recenttracks.@attr.totalPages', $page);
 
             $page++;
-        } while (count($tracks) < $limit && $page <= $totalPages && $pageTracks !== []);
+        } while (($limit === null || count($tracks) < $limit) && $page <= $totalPages && $pageTracks !== []);
 
         return array_slice($tracks, 0, $limit);
     }
