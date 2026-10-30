@@ -7,3 +7,4 @@ Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 Route::post('/imports/lastfm', [DashboardController::class, 'import'])->name('imports.lastfm');
 Route::post('/imports/lastfm/full', [DashboardController::class, 'fullImport'])->name('imports.lastfm.full');
 Route::post('/imports/lastfm/{importRun}/retry', [DashboardController::class, 'retry'])->name('imports.lastfm.retry');
+Route::post('/imports/spotify/albums', [DashboardController::class, 'spotifyAlbumsImport'])->name('imports.spotify.albums');

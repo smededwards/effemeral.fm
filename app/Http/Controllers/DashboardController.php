@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StartLastFmImportRequest;
 use App\Jobs\ImportLastFmScrobbles;
+use App\Jobs\ImportSpotifySavedAlbums;
 use App\Models\LastFmImportRun;
 use App\Models\Scrobble;
+use App\Models\SpotifyAlbumImportRun;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -17,6 +19,7 @@ class DashboardController extends Controller
         return view('dashboard', [
             'latestImport' => LastFmImportRun::query()->latest()->first(),
             'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
+            'latestSpotifyImport' => SpotifyAlbumImportRun::query()->latest()->first(),
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),
             'defaultTo' => now()->toDateString(),
@@ -56,6 +59,27 @@ class DashboardController extends Controller
             'Last.fm import retry queued.',
             $importRun->id,
         );
+    }
+
+    public function spotifyAlbumsImport(): RedirectResponse
+    {
+        $activeImport = SpotifyAlbumImportRun::query()
+            ->whereIn('status', ['queued', 'running'])
+            ->exists();
+
+        if ($activeImport) {
+            return back()->with('error', 'A Spotify album import is already in progress.');
+        }
+
+        $run = SpotifyAlbumImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'queued',
+            'requested_limit' => 100,
+        ]);
+
+        ImportSpotifySavedAlbums::dispatch($run->id);
+
+        return back()->with('success', 'Spotify saved albums import queued.');
     }
 
     private function queueImport(

@@ -79,6 +79,32 @@
             </section>
 
             <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-medium">Spotify saved albums</h2>
+                        <p class="mt-1 text-sm text-zinc-400">Import the 100 most recently saved albums as supporting library data.</p>
+                    </div>
+                    <form method="POST" action="{{ route('imports.spotify.albums') }}">
+                        @csrf
+                        <button class="rounded-md bg-[#BF3989] px-4 py-2 font-medium text-white hover:bg-[#a93278]" type="submit">Queue Spotify import</button>
+                    </form>
+                </div>
+                @if ($latestSpotifyImport)
+                    <dl class="mt-6 grid gap-4 text-sm sm:grid-cols-4">
+                        <div><dt class="text-zinc-400">Status</dt><dd class="mt-1 capitalize">{{ $latestSpotifyImport->status }}</dd></div>
+                        <div><dt class="text-zinc-400">Fetched</dt><dd class="mt-1">{{ number_format($latestSpotifyImport->fetched_count) }}</dd></div>
+                        <div><dt class="text-zinc-400">Imported</dt><dd class="mt-1">{{ number_format($latestSpotifyImport->imported_count) }}</dd></div>
+                        <div><dt class="text-zinc-400">Updated</dt><dd class="mt-1">{{ number_format($latestSpotifyImport->updated_count) }}</dd></div>
+                    </dl>
+                    @if ($latestSpotifyImport->error)
+                        <p class="mt-4 rounded-md bg-red-950/60 p-3 text-red-200">{{ $latestSpotifyImport->error }}</p>
+                    @endif
+                @else
+                    <p class="mt-5 text-sm text-zinc-500">No Spotify album imports have been run yet.</p>
+                @endif
+            </section>
+
+            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-xl font-medium">Recent imports</h2>
