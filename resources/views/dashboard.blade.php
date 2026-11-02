@@ -119,6 +119,40 @@
             </section>
 
             <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-medium">Imported Spotify albums</h2>
+                        <p class="mt-1 text-sm text-zinc-400">Saved albums are shown newest first for review.</p>
+                    </div>
+                    <span class="text-sm text-zinc-500">{{ number_format($spotifySavedAlbums->count()) }} albums</span>
+                </div>
+
+                @if ($spotifySavedAlbums->isNotEmpty())
+                    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        @foreach ($spotifySavedAlbums as $album)
+                            <article class="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+                                @if ($album->cover_image_url)
+                                    <img class="aspect-square w-full object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->name }}">
+                                @else
+                                    <div class="flex aspect-square items-center justify-center bg-zinc-900 text-sm text-zinc-600">No artwork</div>
+                                @endif
+                                <div class="space-y-2 p-4">
+                                    <h3 class="font-medium">{{ $album->name }}</h3>
+                                    <p class="text-sm text-zinc-400">{{ $album->primary_artist_name ?? 'Unknown artist' }}</p>
+                                    <p class="text-xs text-zinc-500">{{ $album->release_date ?: 'Release date unknown' }}</p>
+                                    @if ($album->spotify_url)
+                                        <a class="inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $album->spotify_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
+                                    @endif
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="mt-6 text-sm text-zinc-500">No saved Spotify albums have been imported yet.</p>
+                @endif
+            </section>
+
+            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-xl font-medium">Recent imports</h2>
