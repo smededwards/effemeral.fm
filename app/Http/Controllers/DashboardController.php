@@ -13,6 +13,7 @@ use App\Models\SpotifySavedAlbum;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use stdClass;
 
 class DashboardController extends Controller
 {
@@ -61,6 +62,38 @@ class DashboardController extends Controller
             ->sortBy('percentage')
             ->take(10)
             ->values();
+        $artists = Scrobble::query()
+            ->select('artist_name')
+            ->selectRaw('COUNT(*) as scrobble_count')
+            ->selectRaw('MAX(listened_at) as latest_listened_at')
+            ->groupBy('artist_name')
+            ->orderByDesc('scrobble_count')
+            ->limit(10)
+            ->toBase()
+            ->get()
+            ->map(fn (stdClass $artist): array => [
+                'name' => (string) $artist->artist_name,
+                'scrobbles' => (int) $artist->scrobble_count,
+                'last_listened_at' => CarbonImmutable::parse((string) $artist->latest_listened_at)->toDateString(),
+            ]);
+
+        $albums = Scrobble::query()
+            ->select('artist_name', 'album_name')
+            ->selectRaw('COUNT(*) as scrobble_count')
+            ->selectRaw('MAX(listened_at) as latest_listened_at')
+            ->whereNotNull('album_name')
+            ->where('album_name', '<>', '')
+            ->groupBy('artist_name', 'album_name')
+            ->orderByDesc('scrobble_count')
+            ->limit(10)
+            ->toBase()
+            ->get()
+            ->map(fn (stdClass $album): array => [
+                'artist' => (string) $album->artist_name,
+                'name' => (string) $album->album_name,
+                'scrobbles' => (int) $album->scrobble_count,
+                'last_listened_at' => CarbonImmutable::parse((string) $album->latest_listened_at)->toDateString(),
+            ]);
 
         return view('dashboard', [
             'latestImport' => LastFmImportRun::query()->latest()->first(),
@@ -69,6 +102,8 @@ class DashboardController extends Controller
             'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
             'spotifySavedAlbums' => SpotifySavedAlbum::query()->latest('saved_at')->get(),
             'incompleteAlbums' => $incompleteAlbums,
+            'topArtists' => $artists,
+            'topAlbums' => $albums,
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),
             'defaultTo' => now()->toDateString(),
