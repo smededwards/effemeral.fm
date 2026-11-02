@@ -2,6 +2,8 @@
 
 namespace App\Services\Spotify;
 
+use App\Models\SpotifyConnection;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -13,10 +15,6 @@ class SpotifyClient
      */
     public function savedAlbums(?int $limit = null): array
     {
-        if (! config('services.spotify.access_token')) {
-            throw new RuntimeException('Spotify access token is not configured.');
-        }
-
         $albums = [];
         $offset = 0;
 
@@ -44,9 +42,47 @@ class SpotifyClient
     private function request(): PendingRequest
     {
         return Http::baseUrl(config('services.spotify.api_endpoint'))
-            ->withToken(config('services.spotify.access_token'))
+            ->withToken($this->accessToken())
             ->acceptJson()
             ->timeout(15)
             ->retry(3, 1000, throw: false);
+    }
+
+    private function accessToken(): string
+    {
+        $connection = SpotifyConnection::query()->latest()->first();
+
+        if ($connection === null) {
+            $token = config('services.spotify.access_token');
+
+            if (! is_string($token) || $token === '') {
+                throw new RuntimeException('Spotify account is not connected.');
+            }
+
+            return $token;
+        }
+
+        if ($connection->expires_at === null || CarbonImmutable::parse((string) $connection->expires_at)->isFuture()) {
+            return $connection->access_token;
+        }
+
+        $response = Http::asForm()->acceptJson()->post(config('services.spotify.token_endpoint'), [
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $connection->refresh_token,
+            'client_id' => config('services.spotify.client_id'),
+            'client_secret' => config('services.spotify.client_secret'),
+        ]);
+
+        if ($response->failed() || ! is_string($response->json('access_token'))) {
+            throw new RuntimeException('Spotify token refresh failed.');
+        }
+
+        $connection->update([
+            'access_token' => $response->json('access_token'),
+            'expires_at' => now()->addSeconds((int) $response->json('expires_in', 3600)),
+            'refresh_token' => $response->json('refresh_token', $connection->refresh_token),
+        ]);
+
+        return $connection->access_token;
     }
 }

@@ -8,6 +8,7 @@ use App\Jobs\ImportSpotifySavedAlbums;
 use App\Models\LastFmImportRun;
 use App\Models\Scrobble;
 use App\Models\SpotifyAlbumImportRun;
+use App\Models\SpotifyConnection;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -20,6 +21,7 @@ class DashboardController extends Controller
             'latestImport' => LastFmImportRun::query()->latest()->first(),
             'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
             'latestSpotifyImport' => SpotifyAlbumImportRun::query()->latest()->first(),
+            'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),
             'defaultTo' => now()->toDateString(),

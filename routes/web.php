@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SpotifyAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -8,3 +9,6 @@ Route::post('/imports/lastfm', [DashboardController::class, 'import'])->name('im
 Route::post('/imports/lastfm/full', [DashboardController::class, 'fullImport'])->name('imports.lastfm.full');
 Route::post('/imports/lastfm/{importRun}/retry', [DashboardController::class, 'retry'])->name('imports.lastfm.retry');
 Route::post('/imports/spotify/albums', [DashboardController::class, 'spotifyAlbumsImport'])->name('imports.spotify.albums');
+Route::get('/auth/spotify', [SpotifyAuthController::class, 'redirect'])->name('auth.spotify');
+Route::get('/auth/spotify/callback', [SpotifyAuthController::class, 'callback'])->name('auth.spotify.callback');
+Route::post('/auth/spotify/disconnect', [SpotifyAuthController::class, 'disconnect'])->name('auth.spotify.disconnect');
