@@ -76,6 +76,20 @@
                         @endif
                     </dl>
                 </div>
+
+                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                    <h2 class="text-xl font-medium">Spotify account</h2>
+                    @if ($spotifyConnection)
+                        <p class="mt-2 text-sm text-zinc-400">Connected{{ $spotifyConnection->display_name ? ' as '.$spotifyConnection->display_name : '' }}.</p>
+                        <form class="mt-6" method="POST" action="{{ route('auth.spotify.disconnect') }}">
+                            @csrf
+                            <button class="rounded-md border border-zinc-700 px-4 py-2 font-medium text-zinc-200 hover:border-zinc-500" type="submit">Disconnect Spotify</button>
+                        </form>
+                    @else
+                        <p class="mt-2 text-sm text-zinc-400">Connect Spotify to import your saved albums.</p>
+                        <a class="mt-6 inline-block rounded-md bg-[#BF3989] px-4 py-2 font-medium text-white hover:bg-[#a93278]" href="{{ route('auth.spotify') }}">Connect Spotify</a>
+                    @endif
+                </div>
             </section>
 
             <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
