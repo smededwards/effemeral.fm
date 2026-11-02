@@ -90,4 +90,29 @@ class DashboardTest extends TestCase
         $response->assertSee('2 plays');
         $response->assertSee('Last heard 2026-01-02');
     }
+
+    public function test_album_completion_can_be_overridden_and_cleared(): void
+    {
+        $album = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'override-album-id',
+            'spotify_uri' => 'spotify:album:override-album-id',
+            'name' => 'Override Album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+            'primary_artist_name' => 'An Artist',
+            'tracks' => ['items' => [['name' => 'Only Track']]],
+        ]);
+
+        $this->post(route('albums.completion.complete', $album))
+            ->assertSessionHas('success', 'Album marked as heard.');
+        $this->assertTrue($album->fresh()->completion_override);
+
+        $this->post(route('albums.completion.incomplete', $album))
+            ->assertSessionHas('success', 'Album marked as incomplete.');
+        $this->assertFalse($album->fresh()->completion_override);
+
+        $this->post(route('albums.completion.clear', $album))
+            ->assertSessionHas('success', 'Album completion override cleared.');
+        $this->assertNull($album->fresh()->completion_override);
+    }
 }

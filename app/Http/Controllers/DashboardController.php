@@ -35,7 +35,7 @@ class DashboardController extends Controller
                     ->values();
 
                 // Albums with partial tracklists are deferred until Spotify track pagination exists.
-                if ($tracks->isEmpty() || $tracks->count() !== $album->total_tracks) {
+                if ($album->completion_override === true || $tracks->isEmpty() || $tracks->count() !== $album->total_tracks) {
                     return null;
                 }
 
@@ -44,7 +44,7 @@ class DashboardController extends Controller
                     ->filter(fn (array $track): bool => isset($heardTracks[$albumKey][$this->normalise($track['name'])]))
                     ->count();
 
-                if ($heard === $tracks->count()) {
+                if ($album->completion_override !== false && $heard === $tracks->count()) {
                     return null;
                 }
 
@@ -56,6 +56,7 @@ class DashboardController extends Controller
                     'percentage' => (int) floor(($heard / $tracks->count()) * 100),
                     'spotify_url' => $album->spotify_url,
                     'cover_image_url' => $album->cover_image_url,
+                    'manual_override' => $album->completion_override !== null,
                 ];
             })
             ->filter()
@@ -113,6 +114,27 @@ class DashboardController extends Controller
     private function normalise(string $value): string
     {
         return preg_replace('/\s+/', ' ', mb_strtolower(trim($value))) ?? '';
+    }
+
+    public function markAlbumComplete(SpotifySavedAlbum $album): RedirectResponse
+    {
+        $album->update(['completion_override' => true]);
+
+        return back()->with('success', 'Album marked as heard.');
+    }
+
+    public function markAlbumIncomplete(SpotifySavedAlbum $album): RedirectResponse
+    {
+        $album->update(['completion_override' => false]);
+
+        return back()->with('success', 'Album marked as incomplete.');
+    }
+
+    public function clearAlbumCompletionOverride(SpotifySavedAlbum $album): RedirectResponse
+    {
+        $album->update(['completion_override' => null]);
+
+        return back()->with('success', 'Album completion override cleared.');
     }
 
     public function import(StartLastFmImportRequest $request): RedirectResponse
