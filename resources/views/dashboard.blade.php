@@ -118,6 +118,49 @@
                 @endif
             </section>
 
+            <section class="grid gap-6 md:grid-cols-2">
+                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                    <h2 class="text-xl font-medium">Top artists</h2>
+                    <p class="mt-1 text-sm text-zinc-400">Based on imported Last.fm scrobbles.</p>
+                    @if ($topArtists->isNotEmpty())
+                        <div class="mt-6 space-y-4">
+                            @foreach ($topArtists as $artist)
+                                <div class="flex items-start justify-between gap-4 border-b border-zinc-800 pb-3 last:border-0 last:pb-0">
+                                    <div>
+                                        <h3 class="font-medium">{{ $artist['name'] }}</h3>
+                                        <p class="mt-1 text-xs text-zinc-500">Last heard {{ $artist['last_listened_at'] }}</p>
+                                    </div>
+                                    <span class="whitespace-nowrap text-sm text-zinc-400">{{ number_format($artist['scrobbles']) }} plays</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="mt-6 text-sm text-zinc-500">No Last.fm scrobbles have been imported yet.</p>
+                    @endif
+                </div>
+
+                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                    <h2 class="text-xl font-medium">Top albums</h2>
+                    <p class="mt-1 text-sm text-zinc-400">Based on imported Last.fm scrobbles with album data.</p>
+                    @if ($topAlbums->isNotEmpty())
+                        <div class="mt-6 space-y-4">
+                            @foreach ($topAlbums as $album)
+                                <div class="flex items-start justify-between gap-4 border-b border-zinc-800 pb-3 last:border-0 last:pb-0">
+                                    <div>
+                                        <h3 class="font-medium">{{ $album['name'] }}</h3>
+                                        <p class="mt-1 text-sm text-zinc-400">{{ $album['artist'] }}</p>
+                                        <p class="mt-1 text-xs text-zinc-500">Last heard {{ $album['last_listened_at'] }}</p>
+                                    </div>
+                                    <span class="whitespace-nowrap text-sm text-zinc-400">{{ number_format($album['scrobbles']) }} plays</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="mt-6 text-sm text-zinc-500">No albums are available from the imported scrobbles yet.</p>
+                    @endif
+                </div>
+            </section>
+
             <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
