@@ -19,6 +19,49 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
+        $heardTracks = [];
+
+        foreach (Scrobble::query()->whereNotNull('album_name')->get(['artist_name', 'album_name', 'track_name']) as $scrobble) {
+            $albumKey = $this->normalise($scrobble->artist_name).'|'.$this->normalise((string) $scrobble->album_name);
+            $heardTracks[$albumKey][$this->normalise($scrobble->track_name)] = true;
+        }
+
+        $incompleteAlbums = SpotifySavedAlbum::query()
+            ->latest('saved_at')
+            ->get()
+            ->map(function (SpotifySavedAlbum $album) use ($heardTracks): ?array {
+                $tracks = collect(data_get($album->tracks, 'items', []))
+                    ->filter(fn (mixed $track): bool => is_array($track) && is_string($track['name'] ?? null))
+                    ->values();
+
+                // Albums with partial tracklists are deferred until Spotify track pagination exists.
+                if ($tracks->isEmpty() || $tracks->count() !== $album->total_tracks) {
+                    return null;
+                }
+
+                $albumKey = $this->normalise((string) $album->primary_artist_name).'|'.$this->normalise($album->name);
+                $heard = $tracks
+                    ->filter(fn (array $track): bool => isset($heardTracks[$albumKey][$this->normalise($track['name'])]))
+                    ->count();
+
+                if ($heard === $tracks->count()) {
+                    return null;
+                }
+
+                return [
+                    'artist' => $album->primary_artist_name ?? 'Unknown artist',
+                    'name' => $album->name,
+                    'heard' => $heard,
+                    'total' => $tracks->count(),
+                    'percentage' => (int) floor(($heard / $tracks->count()) * 100),
+                    'spotify_url' => $album->spotify_url,
+                    'cover_image_url' => $album->cover_image_url,
+                ];
+            })
+            ->filter()
+            ->sortBy('percentage')
+            ->take(10)
+            ->values();
         $artists = Scrobble::query()
             ->select('artist_name')
             ->selectRaw('COUNT(*) as scrobble_count')
@@ -58,12 +101,18 @@ class DashboardController extends Controller
             'latestSpotifyImport' => SpotifyAlbumImportRun::query()->latest()->first(),
             'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
             'spotifySavedAlbums' => SpotifySavedAlbum::query()->latest('saved_at')->get(),
+            'incompleteAlbums' => $incompleteAlbums,
             'topArtists' => $artists,
             'topAlbums' => $albums,
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),
             'defaultTo' => now()->toDateString(),
         ]);
+    }
+
+    private function normalise(string $value): string
+    {
+        return preg_replace('/\s+/', ' ', mb_strtolower(trim($value))) ?? '';
     }
 
     public function import(StartLastFmImportRequest $request): RedirectResponse
