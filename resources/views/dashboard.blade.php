@@ -121,6 +121,43 @@
             <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
+                        <h2 class="text-xl font-medium">Albums to complete</h2>
+                        <p class="mt-1 text-sm text-zinc-400">Saved Spotify albums with tracks not yet heard in Last.fm.</p>
+                    </div>
+                    <span class="text-sm text-zinc-500">{{ number_format($incompleteAlbums->count()) }} shown</span>
+                </div>
+
+                @if ($incompleteAlbums->isNotEmpty())
+                    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                        @foreach ($incompleteAlbums as $album)
+                            <article class="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+                                @if ($album['cover_image_url'])
+                                    <img class="aspect-square w-full object-cover" src="{{ $album['cover_image_url'] }}" alt="Cover art for {{ $album['name'] }}">
+                                @else
+                                    <div class="flex aspect-square items-center justify-center bg-zinc-900 text-sm text-zinc-600">No artwork</div>
+                                @endif
+                                <div class="space-y-2 p-4">
+                                    <h3 class="font-medium">{{ $album['name'] }}</h3>
+                                    <p class="text-sm text-zinc-400">{{ $album['artist'] }}</p>
+                                    <p class="text-sm text-zinc-300">{{ $album['heard'] }} / {{ $album['total'] }} tracks heard</p>
+                                    <div class="h-1.5 overflow-hidden rounded-full bg-zinc-800" role="progressbar" aria-label="{{ $album['name'] }} completion" aria-valuenow="{{ $album['percentage'] }}" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="h-full rounded-full bg-amber-400" style="width: {{ $album['percentage'] }}%"></div>
+                                    </div>
+                                    @if ($album['spotify_url'])
+                                        <a class="inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $album['spotify_url'] }}" target="_blank" rel="noreferrer">Open in Spotify</a>
+                                    @endif
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="mt-6 text-sm text-zinc-500">No incomplete albums are available yet.</p>
+                @endif
+            </section>
+
+            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
                         <h2 class="text-xl font-medium">Imported Spotify albums</h2>
                         <p class="mt-1 text-sm text-zinc-400">Saved albums are shown newest first for review.</p>
                     </div>
