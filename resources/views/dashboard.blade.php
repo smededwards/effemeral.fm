@@ -223,6 +223,24 @@
                                     @if ($album->spotify_url)
                                         <a class="inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $album->spotify_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
                                     @endif
+                                    @if ($album->completion_override === null)
+                                        <div class="flex flex-wrap gap-2 pt-2">
+                                            <form method="POST" action="{{ route('albums.completion.complete', $album) }}">
+                                                @csrf
+                                                <button class="text-xs text-emerald-400 hover:text-emerald-300" type="submit">Mark heard</button>
+                                            </form>
+                                            <form method="POST" action="{{ route('albums.completion.incomplete', $album) }}">
+                                                @csrf
+                                                <button class="text-xs text-amber-400 hover:text-amber-300" type="submit">Mark incomplete</button>
+                                            </form>
+                                        </div>
+                                    @else
+                                        <p class="pt-2 text-xs text-zinc-500">Manual: {{ $album->completion_override ? 'heard' : 'incomplete' }}</p>
+                                        <form method="POST" action="{{ route('albums.completion.clear', $album) }}">
+                                            @csrf
+                                            <button class="text-xs text-zinc-400 hover:text-zinc-200" type="submit">Clear override</button>
+                                        </form>
+                                    @endif
                                 </div>
                             </article>
                         @endforeach
