@@ -19,8 +19,8 @@ return new class extends Migration
             $table->unsignedInteger('heard_tracks');
             $table->unsignedInteger('total_tracks');
             $table->unsignedTinyInteger('completion_percentage');
-            $table->unique(['recommendation_run_id', 'spotify_saved_album_id']);
-            $table->unique(['recommendation_run_id', 'position']);
+            $table->unique(['recommendation_run_id', 'spotify_saved_album_id'], 'album_recommendations_run_album_unique');
+            $table->unique(['recommendation_run_id', 'position'], 'album_recommendations_run_position_unique');
             $table->timestamps();
         });
     }
