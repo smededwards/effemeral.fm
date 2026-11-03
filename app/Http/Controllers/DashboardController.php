@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StartLastFmImportRequest;
 use App\Jobs\ImportLastFmScrobbles;
 use App\Jobs\ImportSpotifySavedAlbums;
+use App\Models\AlbumRecommendation;
 use App\Models\LastFmImportRun;
+use App\Models\RecommendationRun;
 use App\Models\Scrobble;
 use App\Models\SpotifyAlbumImportRun;
 use App\Models\SpotifyConnection;
 use App\Models\SpotifySavedAlbum;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use stdClass;
 
@@ -19,50 +22,7 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
-        $heardTracks = [];
-
-        foreach (Scrobble::query()->whereNotNull('album_name')->get(['artist_name', 'album_name', 'track_name']) as $scrobble) {
-            $albumKey = $this->normalise($scrobble->artist_name).'|'.$this->normalise((string) $scrobble->album_name);
-            $heardTracks[$albumKey][$this->normalise($scrobble->track_name)] = true;
-        }
-
-        $incompleteAlbums = SpotifySavedAlbum::query()
-            ->latest('saved_at')
-            ->get()
-            ->map(function (SpotifySavedAlbum $album) use ($heardTracks): ?array {
-                $tracks = collect(data_get($album->tracks, 'items', []))
-                    ->filter(fn (mixed $track): bool => is_array($track) && is_string($track['name'] ?? null))
-                    ->values();
-
-                // Albums with partial tracklists are deferred until Spotify track pagination exists.
-                if ($album->completion_override === true || $tracks->isEmpty() || $tracks->count() !== $album->total_tracks) {
-                    return null;
-                }
-
-                $albumKey = $this->normalise((string) $album->primary_artist_name).'|'.$this->normalise($album->name);
-                $heard = $tracks
-                    ->filter(fn (array $track): bool => isset($heardTracks[$albumKey][$this->normalise($track['name'])]))
-                    ->count();
-
-                if ($album->completion_override !== false && $heard === $tracks->count()) {
-                    return null;
-                }
-
-                return [
-                    'artist' => $album->primary_artist_name ?? 'Unknown artist',
-                    'name' => $album->name,
-                    'heard' => $heard,
-                    'total' => $tracks->count(),
-                    'percentage' => (int) floor(($heard / $tracks->count()) * 100),
-                    'spotify_url' => $album->spotify_url,
-                    'cover_image_url' => $album->cover_image_url,
-                    'manual_override' => $album->completion_override !== null,
-                ];
-            })
-            ->filter()
-            ->sortBy('percentage')
-            ->take(10)
-            ->values();
+        $incompleteAlbums = $this->incompleteAlbums();
         $artists = Scrobble::query()
             ->select('artist_name')
             ->selectRaw('COUNT(*) as scrobble_count')
@@ -105,6 +65,10 @@ class DashboardController extends Controller
             'incompleteAlbums' => $incompleteAlbums,
             'topArtists' => $artists,
             'topAlbums' => $albums,
+            'latestRecommendation' => RecommendationRun::query()
+                ->with('albumRecommendations.spotifySavedAlbum')
+                ->latest()
+                ->first(),
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),
             'defaultTo' => now()->toDateString(),
@@ -114,6 +78,86 @@ class DashboardController extends Controller
     private function normalise(string $value): string
     {
         return preg_replace('/\s+/', ' ', mb_strtolower(trim($value))) ?? '';
+    }
+
+    /**
+     * @return Collection<int, array{id: int, artist: string, name: string, heard: int, total: int, percentage: int, spotify_url: string|null, cover_image_url: string|null, manual_override: bool}>
+     */
+    private function incompleteAlbums(): Collection
+    {
+        $heardTracks = [];
+
+        foreach (Scrobble::query()->whereNotNull('album_name')->get(['artist_name', 'album_name', 'track_name']) as $scrobble) {
+            $albumKey = $this->normalise($scrobble->artist_name).'|'.$this->normalise((string) $scrobble->album_name);
+            $heardTracks[$albumKey][$this->normalise($scrobble->track_name)] = true;
+        }
+
+        return SpotifySavedAlbum::query()
+            ->latest('saved_at')
+            ->get()
+            ->map(function (SpotifySavedAlbum $album) use ($heardTracks): ?array {
+                $tracks = collect(data_get($album->tracks, 'items', []))
+                    ->filter(fn (mixed $track): bool => is_array($track) && is_string($track['name'] ?? null))
+                    ->values();
+
+                // Albums with partial tracklists are deferred until Spotify track pagination exists.
+                if ($album->completion_override === true || $tracks->isEmpty() || $tracks->count() !== $album->total_tracks) {
+                    return null;
+                }
+
+                $albumKey = $this->normalise((string) $album->primary_artist_name).'|'.$this->normalise($album->name);
+                $heard = $tracks
+                    ->filter(fn (array $track): bool => isset($heardTracks[$albumKey][$this->normalise($track['name'])]))
+                    ->count();
+
+                if ($album->completion_override !== false && $heard === $tracks->count()) {
+                    return null;
+                }
+
+                return [
+                    'id' => $album->id,
+                    'artist' => $album->primary_artist_name ?? 'Unknown artist',
+                    'name' => $album->name,
+                    'heard' => $heard,
+                    'total' => $tracks->count(),
+                    'percentage' => (int) floor(($heard / $tracks->count()) * 100),
+                    'spotify_url' => $album->spotify_url,
+                    'cover_image_url' => $album->cover_image_url,
+                    'manual_override' => $album->completion_override !== null,
+                ];
+            })
+            ->filter()
+            ->sortBy('percentage')
+            ->take(10)
+            ->values();
+    }
+
+    public function generateRecommendations(): RedirectResponse
+    {
+        $albums = $this->incompleteAlbums();
+
+        if ($albums->isEmpty()) {
+            return back()->with('error', 'No incomplete albums are available for recommendation.');
+        }
+
+        $run = RecommendationRun::query()->create([
+            'source' => 'lastfm_spotify',
+            'status' => 'draft',
+            'generated_at' => now(),
+        ]);
+
+        foreach ($albums as $position => $album) {
+            AlbumRecommendation::query()->create([
+                'recommendation_run_id' => $run->id,
+                'spotify_saved_album_id' => $album['id'],
+                'position' => $position + 1,
+                'heard_tracks' => $album['heard'],
+                'total_tracks' => $album['total'],
+                'completion_percentage' => $album['percentage'],
+            ]);
+        }
+
+        return back()->with('success', 'Draft album recommendations generated.');
     }
 
     public function markAlbumComplete(SpotifySavedAlbum $album): RedirectResponse

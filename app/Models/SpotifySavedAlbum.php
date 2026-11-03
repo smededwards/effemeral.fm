@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SpotifySavedAlbum extends Model
 {
@@ -22,5 +23,10 @@ class SpotifySavedAlbum extends Model
             'last_synced_at' => 'immutable_datetime',
             'completion_override' => 'boolean',
         ];
+    }
+
+    public function recommendations(): HasMany
+    {
+        return $this->hasMany(AlbumRecommendation::class);
     }
 }
