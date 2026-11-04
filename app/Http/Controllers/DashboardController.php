@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StartLastFmImportRequest;
 use App\Jobs\ImportLastFmScrobbles;
+use App\Jobs\ImportSpotifyPlaylists;
 use App\Jobs\ImportSpotifySavedAlbums;
 use App\Models\AlbumRecommendation;
 use App\Models\LastFmImportRun;
@@ -11,6 +12,8 @@ use App\Models\RecommendationRun;
 use App\Models\Scrobble;
 use App\Models\SpotifyAlbumImportRun;
 use App\Models\SpotifyConnection;
+use App\Models\SpotifyPlaylist;
+use App\Models\SpotifyPlaylistImportRun;
 use App\Models\SpotifySavedAlbum;
 use App\Services\Spotify\SpotifyClient;
 use Carbon\CarbonImmutable;
@@ -64,6 +67,8 @@ class DashboardController extends Controller
             'latestImport' => LastFmImportRun::query()->latest()->first(),
             'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
             'latestSpotifyImport' => SpotifyAlbumImportRun::query()->latest()->first(),
+            'latestSpotifyPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
+            'spotifyPlaylists' => SpotifyPlaylist::query()->with('items.album')->latest('last_synced_at')->get(),
             'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
             'spotifySavedAlbums' => SpotifySavedAlbum::query()->latest('saved_at')->get(),
             'incompleteAlbums' => $incompleteAlbums,
@@ -340,6 +345,27 @@ class DashboardController extends Controller
         ImportSpotifySavedAlbums::dispatch($run->id);
 
         return back()->with('success', 'Spotify saved albums import queued.');
+    }
+
+    public function spotifyPlaylistsImport(): RedirectResponse
+    {
+        $activeImport = SpotifyPlaylistImportRun::query()
+            ->whereIn('status', ['queued', 'running'])
+            ->exists();
+
+        if ($activeImport) {
+            return back()->with('error', 'A Spotify playlist import is already in progress.');
+        }
+
+        $run = SpotifyPlaylistImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'queued',
+            'requested_limit' => 10,
+        ]);
+
+        ImportSpotifyPlaylists::dispatch($run->id);
+
+        return back()->with('success', 'Spotify playlists import queued.');
     }
 
     private function queueImport(

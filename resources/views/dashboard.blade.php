@@ -95,6 +95,49 @@
             <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
+                        <h2 class="text-xl font-medium">Spotify playlists</h2>
+                        <p class="mt-1 text-sm text-zinc-400">Audit your ten most recent playlists by album and track membership.</p>
+                    </div>
+                    <form method="POST" action="{{ route('imports.spotify.playlists') }}">
+                        @csrf
+                        <button class="rounded-md bg-[#BF3989] px-4 py-2 text-sm font-medium text-white hover:bg-[#a93278]" type="submit">Import playlists</button>
+                    </form>
+                </div>
+
+                @if ($latestSpotifyPlaylistImport)
+                    <dl class="mt-6 grid gap-4 text-sm sm:grid-cols-4">
+                        <div><dt class="text-zinc-500">Status</dt><dd class="mt-1 capitalize">{{ $latestSpotifyPlaylistImport->status }}</dd></div>
+                        <div><dt class="text-zinc-500">Playlist rows</dt><dd class="mt-1">{{ number_format($latestSpotifyPlaylistImport->imported_count + $latestSpotifyPlaylistImport->updated_count) }}</dd></div>
+                        <div><dt class="text-zinc-500">Track items</dt><dd class="mt-1">{{ number_format($latestSpotifyPlaylistImport->fetched_count) }}</dd></div>
+                        <div><dt class="text-zinc-500">Skipped</dt><dd class="mt-1">{{ number_format($latestSpotifyPlaylistImport->skipped_count) }}</dd></div>
+                    </dl>
+                @endif
+
+                @if ($spotifyPlaylists->isNotEmpty())
+                    <div class="mt-6 space-y-3">
+                        @foreach ($spotifyPlaylists as $playlist)
+                            <article class="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <h3 class="font-medium">{{ $playlist->name }}</h3>
+                                        <p class="mt-1 text-sm text-zinc-400">{{ $playlist->items->count() }} imported tracks · {{ $playlist->items->pluck('album_id')->filter()->unique()->count() }} albums</p>
+                                    </div>
+                                    @if ($playlist->spotify_url)
+                                        <a class="text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $playlist->spotify_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
+                                    @endif
+                                </div>
+                                <p class="mt-3 text-xs text-zinc-500">{{ $playlist->description ?: 'No description' }}</p>
+                            </article>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="mt-6 text-sm text-zinc-500">No Spotify playlists have been imported yet.</p>
+                @endif
+            </section>
+
+            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
                         <h2 class="text-xl font-medium">Spotify saved albums</h2>
                         <p class="mt-1 text-sm text-zinc-400">Import the 100 most recently saved albums as supporting library data.</p>
                     </div>
