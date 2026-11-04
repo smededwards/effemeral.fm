@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AlbumRecommendation extends Model
 {
     protected $fillable = [
-        'recommendation_run_id', 'spotify_saved_album_id', 'position', 'heard_tracks',
+        'recommendation_run_id', 'album_id', 'spotify_saved_album_id', 'position', 'heard_tracks',
         'total_tracks', 'completion_percentage', 'included',
     ];
 
@@ -36,5 +36,10 @@ class AlbumRecommendation extends Model
     public function spotifySavedAlbum(): BelongsTo
     {
         return $this->belongsTo(SpotifySavedAlbum::class);
+    }
+
+    public function album(): BelongsTo
+    {
+        return $this->belongsTo(Album::class);
     }
 }

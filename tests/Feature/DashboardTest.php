@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Album;
 use App\Models\AlbumRecommendation;
+use App\Models\Artist;
 use App\Models\RecommendationRun;
 use App\Models\Scrobble;
+use App\Models\SpotifyAlbumCollection;
 use App\Models\SpotifySavedAlbum;
+use App\Models\Track;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -75,6 +79,71 @@ class DashboardTest extends TestCase
         $response->assertSee('Albums to complete');
         $response->assertSee('1 / 3 tracks heard');
         $response->assertSee('An Album');
+    }
+
+    public function test_canonical_saved_albums_use_linked_scrobbles_for_completion_and_recommendations(): void
+    {
+        $artist = Artist::query()->create([
+            'name' => 'Canonical Artist',
+            'normalised_name' => 'canonical artist',
+        ]);
+        $album = Album::query()->create([
+            'title' => 'Canonical Album',
+            'normalised_title' => 'canonical album',
+            'spotify_id' => 'canonical-album-id',
+            'spotify_url' => 'https://open.spotify.com/album/canonical-album-id',
+            'total_tracks' => 2,
+        ]);
+        $album->artists()->attach($artist->id, ['artist_position' => 0]);
+        $heardTrack = Track::query()->create([
+            'album_id' => $album->id,
+            'title' => 'Heard Track',
+            'normalised_title' => 'heard track',
+            'spotify_id' => 'heard-track-id',
+            'spotify_uri' => 'spotify:track:heard-track-id',
+            'track_number' => 1,
+        ]);
+        Track::query()->create([
+            'album_id' => $album->id,
+            'title' => 'Unheard Track',
+            'normalised_title' => 'unheard track',
+            'spotify_id' => 'unheard-track-id',
+            'spotify_uri' => 'spotify:track:unheard-track-id',
+            'track_number' => 2,
+        ]);
+        SpotifyAlbumCollection::query()->create([
+            'album_id' => $album->id,
+            'collection_type' => 'saved',
+            'saved_at' => now(),
+        ]);
+        $legacyAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'canonical-album-id',
+            'spotify_uri' => 'spotify:album:canonical-album-id',
+            'name' => 'Canonical Album',
+            'album_type' => 'album',
+            'total_tracks' => 2,
+            'primary_artist_name' => 'Canonical Artist',
+        ]);
+        Scrobble::query()->create([
+            'source_key' => 'canonical-heard-track',
+            'artist_name' => 'Canonical Artist',
+            'track_name' => 'Heard Track',
+            'album_name' => 'Canonical Album',
+            'track_id' => $heardTrack->id,
+            'listened_at' => '2026-01-02 12:00:00',
+        ]);
+
+        $this->get(route('dashboard'))
+            ->assertSee('1 / 2 tracks heard')
+            ->assertSee('Canonical Album');
+
+        $this->post(route('recommendations.generate'))
+            ->assertSessionHas('success', 'Draft album recommendations generated.');
+
+        $this->assertDatabaseHas('album_recommendations', [
+            'album_id' => $album->id,
+            'spotify_saved_album_id' => $legacyAlbum->id,
+        ]);
     }
 
     public function test_lastfm_scrobbles_are_summarised_by_artist_and_album(): void
