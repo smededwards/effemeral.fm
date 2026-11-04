@@ -336,6 +336,17 @@
                 </div>
 
                 @if ($spotifySavedAlbums->isNotEmpty())
+                    <form class="mt-6 rounded-lg border border-zinc-800 bg-zinc-950 p-4" method="POST" action="{{ route('recommendations.create') }}">
+                        @csrf
+                        <label class="block text-sm text-zinc-300" for="manual_album_ids">Create a playlist draft from saved albums</label>
+                        <p class="mt-1 text-xs text-zinc-500">Select albums in the order you want them reviewed.</p>
+                        <select class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" id="manual_album_ids" name="album_ids[]" multiple size="6" required>
+                            @foreach ($spotifySavedAlbums as $album)
+                                <option value="{{ $album->id }}">{{ $album->primary_artist_name ?? 'Unknown artist' }} — {{ $album->name }}</option>
+                            @endforeach
+                        </select>
+                        <button class="mt-4 rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Create playlist draft</button>
+                    </form>
                     <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         @foreach ($spotifySavedAlbums as $album)
                             <article class="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">

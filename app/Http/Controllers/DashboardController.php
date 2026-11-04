@@ -273,6 +273,37 @@ class DashboardController extends Controller
         return back()->with('success', 'Draft album recommendations generated.');
     }
 
+    public function createManualRecommendations(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'album_ids' => ['required', 'array', 'min:1'],
+            'album_ids.*' => ['integer', 'distinct', 'exists:spotify_saved_albums,id'],
+        ]);
+        $albums = SpotifySavedAlbum::query()->whereIn('id', $validated['album_ids'])->get()->keyBy('id');
+        $run = RecommendationRun::query()->create([
+            'source' => 'spotify_saved_albums',
+            'status' => 'draft',
+            'generated_at' => now(),
+        ]);
+
+        foreach ($validated['album_ids'] as $position => $albumId) {
+            $album = $albums->get($albumId);
+            $progress = $this->recommendationProgress($album);
+
+            AlbumRecommendation::query()->create([
+                'recommendation_run_id' => $run->id,
+                'album_id' => $progress['canonical_id'],
+                'spotify_saved_album_id' => $album->id,
+                'position' => $position + 1,
+                'heard_tracks' => $progress['heard'],
+                'total_tracks' => $progress['total'],
+                'completion_percentage' => $progress['percentage'],
+            ]);
+        }
+
+        return back()->with('success', 'Manual album playlist draft created.');
+    }
+
     public function syncRecommendations(RecommendationRun $recommendationRun, SpotifyClient $client): RedirectResponse
     {
         if ($recommendationRun->spotify_playlist_id !== null || $recommendationRun->status === 'synced') {
