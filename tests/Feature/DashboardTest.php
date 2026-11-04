@@ -237,6 +237,43 @@ class DashboardTest extends TestCase
             ->assertSee('Recommendation Album');
     }
 
+    public function test_a_manual_draft_can_be_created_from_selected_saved_albums_in_order(): void
+    {
+        $firstAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'manual-first-album-id',
+            'spotify_uri' => 'spotify:album:manual-first-album-id',
+            'name' => 'First Manual Album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+            'tracks' => ['items' => [['name' => 'First Track']]],
+        ]);
+        $secondAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'manual-second-album-id',
+            'spotify_uri' => 'spotify:album:manual-second-album-id',
+            'name' => 'Second Manual Album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+            'tracks' => ['items' => [['name' => 'Second Track']]],
+        ]);
+
+        $this->post(route('recommendations.create'), [
+            'album_ids' => [$secondAlbum->id, $firstAlbum->id],
+        ])->assertSessionHas('success', 'Manual album playlist draft created.');
+
+        $run = RecommendationRun::query()->latest('id')->firstOrFail();
+        $this->assertSame('spotify_saved_albums', $run->source);
+        $this->assertDatabaseHas('album_recommendations', [
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $secondAlbum->id,
+            'position' => 1,
+        ]);
+        $this->assertDatabaseHas('album_recommendations', [
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $firstAlbum->id,
+            'position' => 2,
+        ]);
+    }
+
     public function test_a_recommendation_draft_can_be_reordered_and_reviewed(): void
     {
         $run = RecommendationRun::factory()->create();
