@@ -265,11 +265,20 @@
                         <form class="mt-6 rounded-lg border border-zinc-800 bg-zinc-950 p-4" method="POST" action="{{ route('recommendations.albums.add', $latestRecommendation) }}">
                             @csrf
                             <label class="block text-sm text-zinc-300" for="album_ids">Add saved Spotify albums</label>
-                            <select class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" id="album_ids" name="album_ids[]" multiple size="6" required>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                 @foreach ($availableSavedAlbums as $album)
-                                    <option value="{{ $album->id }}">{{ $album->primary_artist_name ?? 'Unknown artist' }} — {{ $album->name }}</option>
+                                    <label class="relative rounded-lg border border-zinc-800 bg-zinc-900 p-3 has-[:checked]:border-[#BF3989]">
+                                        <input class="absolute right-3 top-3" type="checkbox" name="album_ids[]" value="{{ $album->id }}">
+                                        @if ($album->cover_image_url)
+                                            <img class="aspect-square w-full rounded object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->name }}">
+                                        @else
+                                            <div class="flex aspect-square items-center justify-center rounded bg-zinc-950 text-xs text-zinc-600">No artwork</div>
+                                        @endif
+                                        <span class="mt-2 block text-sm font-medium">{{ $album->name }}</span>
+                                        <span class="mt-1 block text-xs text-zinc-400">{{ $album->primary_artist_name ?? 'Unknown artist' }} · {{ $album->total_tracks ?? 0 }} tracks</span>
+                                    </label>
                                 @endforeach
-                            </select>
+                            </div>
                             <button class="mt-4 rounded-md border border-[#BF3989] px-4 py-2 text-sm font-medium text-[#f08cc4] hover:bg-[#BF3989] hover:text-white" type="submit">Add to draft</button>
                         </form>
                     @endif
@@ -332,19 +341,51 @@
                         <h2 class="text-xl font-medium">Imported Spotify albums</h2>
                         <p class="mt-1 text-sm text-zinc-400">Saved albums are shown newest first for review.</p>
                     </div>
-                    <span class="text-sm text-zinc-500">{{ number_format($spotifySavedAlbums->count()) }} albums</span>
+                    <span class="text-sm text-zinc-500">{{ number_format($spotifySavedAlbums->count()) }} of {{ number_format($spotifySavedAlbumCount) }} albums</span>
                 </div>
 
+                @if ($spotifySavedAlbumCount > 0)
+                    <form class="mt-6 grid gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-[1fr_16rem_auto] md:items-end" method="GET" action="{{ route('dashboard') }}">
+                        <label class="block text-sm text-zinc-300">
+                            Search albums or artists
+                            <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" type="search" name="album_search" value="{{ $albumSearch }}" placeholder="Album or artist">
+                        </label>
+                        <label class="block text-sm text-zinc-300">
+                            Artist
+                            <select class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" name="album_artist">
+                                <option value="">All artists</option>
+                                @foreach ($spotifyAlbumArtists as $artist)
+                                    <option value="{{ $artist }}" @selected($albumArtist === $artist)>{{ $artist }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <button class="rounded-md border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-500" type="submit">Filter</button>
+                    </form>
+                @endif
+
                 @if ($spotifySavedAlbums->isNotEmpty())
+                    @php($draftAlbumIds = $latestRecommendation?->albumRecommendations->pluck('spotify_saved_album_id')->all() ?? [])
                     <form class="mt-6 rounded-lg border border-zinc-800 bg-zinc-950 p-4" method="POST" action="{{ route('recommendations.create') }}">
                         @csrf
                         <label class="block text-sm text-zinc-300" for="manual_album_ids">Create a playlist draft from saved albums</label>
-                        <p class="mt-1 text-xs text-zinc-500">Select albums in the order you want them reviewed.</p>
-                        <select class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" id="manual_album_ids" name="album_ids[]" multiple size="6" required>
+                        <p class="mt-1 text-xs text-zinc-500">Select albums in the order you want them reviewed. Albums already in the latest draft are marked.</p>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             @foreach ($spotifySavedAlbums as $album)
-                                <option value="{{ $album->id }}">{{ $album->primary_artist_name ?? 'Unknown artist' }} — {{ $album->name }}</option>
+                                <label class="relative rounded-lg border border-zinc-800 bg-zinc-900 p-3 has-[:checked]:border-amber-400">
+                                    <input class="absolute right-3 top-3" type="checkbox" name="album_ids[]" value="{{ $album->id }}" @disabled(in_array($album->id, $draftAlbumIds, true))>
+                                    @if ($album->cover_image_url)
+                                        <img class="aspect-square w-full rounded object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->name }}">
+                                    @else
+                                        <div class="flex aspect-square items-center justify-center rounded bg-zinc-950 text-xs text-zinc-600">No artwork</div>
+                                    @endif
+                                    <span class="mt-2 block text-sm font-medium">{{ $album->name }}</span>
+                                    <span class="mt-1 block text-xs text-zinc-400">{{ $album->primary_artist_name ?? 'Unknown artist' }} · {{ $album->total_tracks ?? 0 }} tracks</span>
+                                    @if (in_array($album->id, $draftAlbumIds, true))
+                                        <span class="mt-2 block text-xs text-amber-300">Already in latest draft</span>
+                                    @endif
+                                </label>
                             @endforeach
-                        </select>
+                        </div>
                         <button class="mt-4 rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Create playlist draft</button>
                     </form>
                     <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -358,7 +399,7 @@
                                 <div class="space-y-2 p-4">
                                     <h3 class="font-medium">{{ $album->name }}</h3>
                                     <p class="text-sm text-zinc-400">{{ $album->primary_artist_name ?? 'Unknown artist' }}</p>
-                                    <p class="text-xs text-zinc-500">{{ $album->release_date ?: 'Release date unknown' }}</p>
+                                    <p class="text-xs text-zinc-500">{{ $album->total_tracks ?? 0 }} tracks · {{ $album->release_date ?: 'Release date unknown' }}</p>
                                     @if ($album->spotify_url)
                                         <a class="inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $album->spotify_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
                                     @endif
