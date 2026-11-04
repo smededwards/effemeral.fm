@@ -259,6 +259,20 @@
                 </div>
 
                 @if ($latestRecommendation?->albumRecommendations->isNotEmpty())
+                    @php($draftAlbumIds = $latestRecommendation->albumRecommendations->pluck('spotify_saved_album_id')->all())
+                    @php($availableSavedAlbums = $spotifySavedAlbums->whereNotIn('id', $draftAlbumIds))
+                    @if ($availableSavedAlbums->isNotEmpty())
+                        <form class="mt-6 rounded-lg border border-zinc-800 bg-zinc-950 p-4" method="POST" action="{{ route('recommendations.albums.add', $latestRecommendation) }}">
+                            @csrf
+                            <label class="block text-sm text-zinc-300" for="album_ids">Add saved Spotify albums</label>
+                            <select class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" id="album_ids" name="album_ids[]" multiple size="6" required>
+                                @foreach ($availableSavedAlbums as $album)
+                                    <option value="{{ $album->id }}">{{ $album->primary_artist_name ?? 'Unknown artist' }} — {{ $album->name }}</option>
+                                @endforeach
+                            </select>
+                            <button class="mt-4 rounded-md border border-[#BF3989] px-4 py-2 text-sm font-medium text-[#f08cc4] hover:bg-[#BF3989] hover:text-white" type="submit">Add to draft</button>
+                        </form>
+                    @endif
                     <form class="mt-6" method="POST" action="{{ route('recommendations.review', $latestRecommendation) }}">
                         @csrf
                         <ol class="space-y-3">

@@ -291,6 +291,45 @@ class DashboardTest extends TestCase
         ]);
     }
 
+    public function test_saved_albums_can_be_added_to_an_existing_recommendation_draft(): void
+    {
+        $run = RecommendationRun::factory()->create();
+        $existingAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'existing-draft-album-id',
+            'spotify_uri' => 'spotify:album:existing-draft-album-id',
+            'name' => 'Existing Album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+        ]);
+        $newAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'new-draft-album-id',
+            'spotify_uri' => 'spotify:album:new-draft-album-id',
+            'name' => 'New Album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+            'tracks' => ['items' => [['name' => 'New Track']]],
+        ]);
+        AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $existingAlbum->id,
+            'position' => 1,
+            'heard_tracks' => 0,
+            'total_tracks' => 1,
+            'completion_percentage' => 0,
+        ]);
+
+        $this->post(route('recommendations.albums.add', $run), [
+            'album_ids' => [$newAlbum->id],
+        ])->assertSessionHas('success', 'Albums added to the recommendation draft.');
+
+        $this->assertDatabaseHas('album_recommendations', [
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $newAlbum->id,
+            'position' => 2,
+            'total_tracks' => 1,
+        ]);
+    }
+
     public function test_included_recommendations_are_synced_to_a_private_spotify_playlist_in_reviewed_order(): void
     {
         config()->set('services.spotify.access_token', 'test-token');
