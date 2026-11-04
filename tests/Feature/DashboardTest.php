@@ -156,4 +156,58 @@ class DashboardTest extends TestCase
             ->assertSee('Latest recommendation draft')
             ->assertSee('Recommendation Album');
     }
+
+    public function test_a_recommendation_draft_can_be_reordered_and_reviewed(): void
+    {
+        $run = RecommendationRun::factory()->create();
+        $firstAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'first-review-album-id',
+            'spotify_uri' => 'spotify:album:first-review-album-id',
+            'name' => 'First Review Album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+        ]);
+        $secondAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'second-review-album-id',
+            'spotify_uri' => 'spotify:album:second-review-album-id',
+            'name' => 'Second Review Album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+        ]);
+        $first = AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $firstAlbum->id,
+            'position' => 1,
+            'heard_tracks' => 0,
+            'total_tracks' => 1,
+            'completion_percentage' => 0,
+            'included' => true,
+        ]);
+        $second = AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $secondAlbum->id,
+            'position' => 2,
+            'heard_tracks' => 0,
+            'total_tracks' => 1,
+            'completion_percentage' => 0,
+            'included' => true,
+        ]);
+
+        $this->post(route('recommendations.review', $run), [
+            'positions' => [$first->id => 2, $second->id => 1],
+            'included' => [$second->id],
+        ])
+            ->assertSessionHas('success', 'Recommendation draft review saved.');
+
+        $this->assertDatabaseHas('album_recommendations', [
+            'id' => $first->id,
+            'position' => 2,
+            'included' => false,
+        ]);
+        $this->assertDatabaseHas('album_recommendations', [
+            'id' => $second->id,
+            'position' => 1,
+            'included' => true,
+        ]);
+    }
 }

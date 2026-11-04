@@ -13,6 +13,7 @@ Route::post('/albums/{album}/completion/complete', [DashboardController::class, 
 Route::post('/albums/{album}/completion/incomplete', [DashboardController::class, 'markAlbumIncomplete'])->name('albums.completion.incomplete');
 Route::post('/albums/{album}/completion/clear', [DashboardController::class, 'clearAlbumCompletionOverride'])->name('albums.completion.clear');
 Route::post('/recommendations/generate', [DashboardController::class, 'generateRecommendations'])->name('recommendations.generate');
+Route::post('/recommendations/{recommendationRun}/review', [DashboardController::class, 'reviewRecommendations'])->name('recommendations.review');
 Route::get('/auth/spotify', [SpotifyAuthController::class, 'redirect'])->name('auth.spotify');
 Route::get('/auth/spotify/callback', [SpotifyAuthController::class, 'callback'])->name('auth.spotify.callback');
 Route::post('/auth/spotify/disconnect', [SpotifyAuthController::class, 'disconnect'])->name('auth.spotify.disconnect');
