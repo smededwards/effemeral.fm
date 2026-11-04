@@ -327,6 +327,7 @@
                     @else
                         <form class="mt-4" method="POST" action="{{ route('recommendations.sync', $latestRecommendation) }}">
                             @csrf
+                            <input type="hidden" name="confirmed" value="1">
                             <button class="rounded-md bg-[#BF3989] px-4 py-2 text-sm font-medium text-white hover:bg-[#a93278]" type="submit">Sync included albums to Spotify</button>
                         </form>
                     @endif

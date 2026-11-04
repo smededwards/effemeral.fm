@@ -77,6 +77,10 @@
                 @else
                     <form method="POST" action="{{ route('recommendations.sync', $recommendationRun) }}">
                         @csrf
+                        <label class="mb-3 flex items-start gap-2 text-sm text-amber-100">
+                            <input class="mt-1" type="checkbox" name="confirmed" value="1" required>
+                            <span>I have reviewed the included albums and confirm this private Spotify playlist should be created.</span>
+                        </label>
                         <button class="rounded-md bg-[#BF3989] px-4 py-2 text-sm font-medium text-white hover:bg-[#a93278]" type="submit">Sync included albums</button>
                     </form>
                 @endif
