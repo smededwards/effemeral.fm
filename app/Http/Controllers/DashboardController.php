@@ -378,6 +378,32 @@ class DashboardController extends Controller
         return back()->with('success', 'Albums added to the recommendation draft.');
     }
 
+    public function removeAlbumFromRecommendations(RecommendationRun $recommendationRun, AlbumRecommendation $albumRecommendation): RedirectResponse
+    {
+        if ($recommendationRun->spotify_playlist_id !== null || $recommendationRun->status === 'synced') {
+            return back()->with('error', 'This recommendation draft has already been synced to Spotify.');
+        }
+
+        abort_unless($albumRecommendation->recommendation_run_id === $recommendationRun->id, 404);
+
+        DB::transaction(function () use ($albumRecommendation, $recommendationRun): void {
+            $albumRecommendation->delete();
+            /** @var \Illuminate\Database\Eloquent\Collection<int, AlbumRecommendation> $remaining */
+            $remaining = $recommendationRun->albumRecommendations()->get();
+            $offset = $remaining->count();
+
+            foreach ($remaining as $recommendation) {
+                $recommendation->update(['position' => $recommendation->position + $offset]);
+            }
+
+            foreach ($remaining->values() as $position => $recommendation) {
+                $recommendation->update(['position' => $position + 1]);
+            }
+        });
+
+        return back()->with('success', 'Album removed from the recommendation draft.');
+    }
+
     public function reviewRecommendations(Request $request, RecommendationRun $recommendationRun): RedirectResponse
     {
         $validated = $request->validate([

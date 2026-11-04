@@ -330,6 +330,51 @@ class DashboardTest extends TestCase
         ]);
     }
 
+    public function test_an_album_can_be_removed_from_an_unsynced_recommendation_draft(): void
+    {
+        $run = RecommendationRun::factory()->create();
+        $firstAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'first-removal-album-id',
+            'spotify_uri' => 'spotify:album:first-removal-album-id',
+            'name' => 'First Album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+        ]);
+        $secondAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'second-removal-album-id',
+            'spotify_uri' => 'spotify:album:second-removal-album-id',
+            'name' => 'Second Album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+        ]);
+        AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $firstAlbum->id,
+            'position' => 1,
+            'heard_tracks' => 0,
+            'total_tracks' => 1,
+            'completion_percentage' => 0,
+        ]);
+        $second = AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $secondAlbum->id,
+            'position' => 2,
+            'heard_tracks' => 0,
+            'total_tracks' => 1,
+            'completion_percentage' => 0,
+        ]);
+
+        $this->post(route('recommendations.albums.remove', [$run, $second]))
+            ->assertSessionHas('success', 'Album removed from the recommendation draft.');
+
+        $this->assertDatabaseMissing('album_recommendations', ['id' => $second->id]);
+        $this->assertDatabaseHas('album_recommendations', [
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $firstAlbum->id,
+            'position' => 1,
+        ]);
+    }
+
     public function test_included_recommendations_are_synced_to_a_private_spotify_playlist_in_reviewed_order(): void
     {
         config()->set('services.spotify.access_token', 'test-token');

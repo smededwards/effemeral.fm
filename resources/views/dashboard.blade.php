@@ -296,6 +296,7 @@
                                         <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum->name }}</h3>
                                         <p class="mt-1 text-sm text-zinc-400">{{ $recommendation->spotifySavedAlbum->primary_artist_name }} · {{ $recommendation->heard_tracks }} / {{ $recommendation->total_tracks }} tracks heard</p>
                                     </div>
+                                    <button class="text-sm text-red-400 hover:text-red-300" type="submit" form="remove-recommendation-{{ $recommendation->id }}">Remove</button>
                                 </div>
                                 @if ($recommendation->spotifySavedAlbum->spotify_url)
                                     <a class="text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $recommendation->spotifySavedAlbum->spotify_url }}" target="_blank" rel="noreferrer">Spotify</a>
@@ -305,6 +306,11 @@
                         </ol>
                         <button class="mt-6 rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Save review</button>
                     </form>
+                    @foreach ($latestRecommendation->albumRecommendations as $recommendation)
+                        <form id="remove-recommendation-{{ $recommendation->id }}" method="POST" action="{{ route('recommendations.albums.remove', [$latestRecommendation, $recommendation]) }}">
+                            @csrf
+                        </form>
+                    @endforeach
                     @if ($latestRecommendation->spotify_playlist_url)
                         <p class="mt-4 text-sm text-emerald-400">Synced {{ $latestRecommendation->synced_at?->format('Y-m-d H:i') }} · <a class="underline" href="{{ $latestRecommendation->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify playlist</a></p>
                     @elseif ($latestRecommendation->status === 'sync_failed')
