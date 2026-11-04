@@ -77,6 +77,7 @@ class LastFmImportTest extends TestCase
             'skipped_count' => 1,
         ]);
         $this->assertSame('The Album', Scrobble::query()->firstOrFail()->album_name);
+        Http::assertSent(fn ($request): bool => str_starts_with($request->url(), config('services.lastfm.endpoint')));
     }
 
     public function test_a_full_import_can_be_queued_without_an_item_limit(): void
