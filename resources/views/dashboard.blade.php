@@ -167,7 +167,13 @@
                         <h2 class="text-xl font-medium">Albums to complete</h2>
                         <p class="mt-1 text-sm text-zinc-400">Saved Spotify albums with tracks not yet heard in Last.fm.</p>
                     </div>
-                    <span class="text-sm text-zinc-500">{{ number_format($incompleteAlbums->count()) }} shown</span>
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm text-zinc-500">{{ number_format($incompleteAlbums->count()) }} shown</span>
+                        <form method="POST" action="{{ route('recommendations.generate') }}">
+                            @csrf
+                            <button class="rounded-md bg-amber-400 px-3 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Generate draft</button>
+                        </form>
+                    </div>
                 </div>
 
                 @if ($incompleteAlbums->isNotEmpty())
@@ -195,6 +201,39 @@
                     </div>
                 @else
                     <p class="mt-6 text-sm text-zinc-500">No incomplete albums are available yet.</p>
+                @endif
+            </section>
+
+            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-medium">Latest recommendation draft</h2>
+                        <p class="mt-1 text-sm text-zinc-400">Generated from incomplete albums for your review.</p>
+                    </div>
+                    @if ($latestRecommendation)
+                        <span class="text-sm text-zinc-500">{{ $latestRecommendation->generated_at?->format('Y-m-d H:i') }}</span>
+                    @endif
+                </div>
+
+                @if ($latestRecommendation?->albumRecommendations->isNotEmpty())
+                    <ol class="mt-6 space-y-3">
+                        @foreach ($latestRecommendation->albumRecommendations as $recommendation)
+                            <li class="flex items-center justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+                                <div class="flex items-center gap-4">
+                                    <span class="text-sm text-zinc-500">{{ $recommendation->position }}</span>
+                                    <div>
+                                        <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum->name }}</h3>
+                                        <p class="mt-1 text-sm text-zinc-400">{{ $recommendation->spotifySavedAlbum->primary_artist_name }} · {{ $recommendation->heard_tracks }} / {{ $recommendation->total_tracks }} tracks heard</p>
+                                    </div>
+                                </div>
+                                @if ($recommendation->spotifySavedAlbum->spotify_url)
+                                    <a class="text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $recommendation->spotifySavedAlbum->spotify_url }}" target="_blank" rel="noreferrer">Spotify</a>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ol>
+                @else
+                    <p class="mt-6 text-sm text-zinc-500">No recommendation draft has been generated yet.</p>
                 @endif
             </section>
 

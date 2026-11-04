@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\AlbumRecommendation;
+use App\Models\RecommendationRun;
 use App\Models\Scrobble;
 use App\Models\SpotifySavedAlbum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -114,5 +116,44 @@ class DashboardTest extends TestCase
         $this->post(route('albums.completion.clear', $album))
             ->assertSessionHas('success', 'Album completion override cleared.');
         $this->assertNull($album->fresh()->completion_override);
+    }
+
+    public function test_a_draft_recommendation_run_is_generated_from_incomplete_albums(): void
+    {
+        $album = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'recommendation-album-id',
+            'spotify_uri' => 'spotify:album:recommendation-album-id',
+            'spotify_url' => 'https://open.spotify.com/album/recommendation-album-id',
+            'name' => 'Recommendation Album',
+            'album_type' => 'album',
+            'total_tracks' => 2,
+            'primary_artist_name' => 'An Artist',
+            'tracks' => ['items' => [['name' => 'Heard Track'], ['name' => 'Unheard Track']]],
+        ]);
+        Scrobble::query()->create([
+            'source_key' => 'recommendation-heard-track',
+            'artist_name' => 'An Artist',
+            'track_name' => 'Heard Track',
+            'album_name' => 'Recommendation Album',
+            'listened_at' => '2026-01-02 12:00:00',
+        ]);
+
+        $this->post(route('recommendations.generate'))
+            ->assertSessionHas('success', 'Draft album recommendations generated.');
+
+        $run = RecommendationRun::query()->firstOrFail();
+        $this->assertDatabaseHas('album_recommendations', [
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $album->id,
+            'position' => 1,
+            'heard_tracks' => 1,
+            'total_tracks' => 2,
+            'completion_percentage' => 50,
+        ]);
+        $this->assertSame(1, AlbumRecommendation::query()->count());
+
+        $this->get(route('dashboard'))
+            ->assertSee('Latest recommendation draft')
+            ->assertSee('Recommendation Album');
     }
 }
