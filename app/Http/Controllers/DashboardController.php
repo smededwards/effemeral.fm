@@ -6,7 +6,9 @@ use App\Http\Requests\StartLastFmImportRequest;
 use App\Jobs\ImportLastFmScrobbles;
 use App\Jobs\ImportSpotifyPlaylists;
 use App\Jobs\ImportSpotifySavedAlbums;
+use App\Models\Album;
 use App\Models\AlbumRecommendation;
+use App\Models\Artist;
 use App\Models\LastFmImportRun;
 use App\Models\RecommendationRun;
 use App\Models\Scrobble;
@@ -15,6 +17,7 @@ use App\Models\SpotifyConnection;
 use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
 use App\Models\SpotifySavedAlbum;
+use App\Models\Track;
 use App\Services\Spotify\SpotifyClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -75,7 +78,7 @@ class DashboardController extends Controller
             'topArtists' => $artists,
             'topAlbums' => $albums,
             'latestRecommendation' => RecommendationRun::query()
-                ->with('albumRecommendations.spotifySavedAlbum')
+                ->with('albumRecommendations.album', 'albumRecommendations.spotifySavedAlbum')
                 ->latest()
                 ->first(),
             'scrobbleCount' => Scrobble::query()->count(),
@@ -90,10 +93,61 @@ class DashboardController extends Controller
     }
 
     /**
-     * @return Collection<int, array{id: int, artist: string, name: string, heard: int, total: int, percentage: int, spotify_url: string|null, cover_image_url: string|null, manual_override: bool}>
+     * @return Collection<int, array<string, mixed>>
      */
     private function incompleteAlbums(): Collection
     {
+        $legacyAlbums = SpotifySavedAlbum::query()->get()->keyBy('spotify_album_id');
+        $heardTrackIds = Scrobble::query()
+            ->whereNotNull('track_id')
+            ->pluck('track_id')
+            ->flip();
+        $canonicalAlbums = Album::query()
+            ->with(['artists', 'tracks', 'spotifyCollections'])
+            ->whereHas('spotifyCollections', fn ($query) => $query->where('collection_type', 'saved'))
+            ->get();
+
+        if ($canonicalAlbums->isNotEmpty()) {
+            /** @var Collection<int, array<string, mixed>> $incompleteAlbums */
+            $incompleteAlbums = $canonicalAlbums
+                ->map(function (Album $album) use ($heardTrackIds, $legacyAlbums): ?array {
+                    /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+                    $tracks = $album->getRelation('tracks');
+                    /** @var \Illuminate\Database\Eloquent\Collection<int, Artist> $artists */
+                    $artists = $album->getRelation('artists');
+                    $legacyAlbum = $legacyAlbums->get($album->spotify_id);
+                    $manualOverride = $legacyAlbum?->completion_override;
+
+                    if ($manualOverride === true || $tracks->isEmpty() || ($album->total_tracks !== null && $tracks->count() !== $album->total_tracks)) {
+                        return null;
+                    }
+
+                    $heard = $tracks->filter(fn ($track): bool => $heardTrackIds->has($track->id))->count();
+                    if ($manualOverride !== false && $heard === $tracks->count()) {
+                        return null;
+                    }
+
+                    return [
+                        'id' => $legacyAlbum?->id,
+                        'canonical_id' => $album->id,
+                        'artist' => $artists->sortBy('pivot.artist_position')->first()->name ?? 'Unknown artist',
+                        'name' => $album->title,
+                        'heard' => $heard,
+                        'total' => $tracks->count(),
+                        'percentage' => (int) floor(($heard / $tracks->count()) * 100),
+                        'spotify_url' => $album->spotify_url,
+                        'cover_image_url' => $album->cover_image_url,
+                        'manual_override' => $manualOverride !== null,
+                    ];
+                })
+                ->filter(fn (?array $album): bool => $album !== null && $album['id'] !== null)
+                ->sortBy('percentage')
+                ->take(10)
+                ->values();
+
+            return $incompleteAlbums;
+        }
+
         $heardTracks = [];
 
         foreach (Scrobble::query()->whereNotNull('album_name')->get(['artist_name', 'album_name', 'track_name']) as $scrobble) {
@@ -101,7 +155,8 @@ class DashboardController extends Controller
             $heardTracks[$albumKey][$this->normalise($scrobble->track_name)] = true;
         }
 
-        return SpotifySavedAlbum::query()
+        /** @var Collection<int, array<string, mixed>> $incompleteAlbums */
+        $incompleteAlbums = SpotifySavedAlbum::query()
             ->latest('saved_at')
             ->get()
             ->map(function (SpotifySavedAlbum $album) use ($heardTracks): ?array {
@@ -125,6 +180,7 @@ class DashboardController extends Controller
 
                 return [
                     'id' => $album->id,
+                    'canonical_id' => null,
                     'artist' => $album->primary_artist_name ?? 'Unknown artist',
                     'name' => $album->name,
                     'heard' => $heard,
@@ -139,6 +195,8 @@ class DashboardController extends Controller
             ->sortBy('percentage')
             ->take(10)
             ->values();
+
+        return $incompleteAlbums;
     }
 
     public function generateRecommendations(): RedirectResponse
@@ -158,6 +216,7 @@ class DashboardController extends Controller
         foreach ($albums as $position => $album) {
             AlbumRecommendation::query()->create([
                 'recommendation_run_id' => $run->id,
+                'album_id' => $album['canonical_id'] ?? null,
                 'spotify_saved_album_id' => $album['id'],
                 'position' => $position + 1,
                 'heard_tracks' => $album['heard'],
@@ -177,24 +236,32 @@ class DashboardController extends Controller
 
         /** @var Collection<int, AlbumRecommendation> $recommendations */
         $recommendations = $recommendationRun->albumRecommendations()
-            ->with('spotifySavedAlbum')
+            ->with('album.tracks', 'spotifySavedAlbum')
             ->where('included', true)
             ->get();
         $trackUris = [];
 
         foreach ($recommendations as $recommendation) {
-            /** @var SpotifySavedAlbum|null $album */
-            $album = $recommendation->spotifySavedAlbum()->first();
+            /** @var Album|null $album */
+            $album = $recommendation->getRelation('album');
+            /** @var SpotifySavedAlbum|null $legacyAlbum */
+            $legacyAlbum = $recommendation->getRelation('spotifySavedAlbum');
 
-            if ($album === null) {
-                continue;
-            }
+            if ($album !== null && $album->getRelation('tracks')->isNotEmpty()) {
+                /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+                $tracks = $album->getRelation('tracks');
+                foreach ($tracks as $track) {
+                    if (is_string($track->spotify_uri) && str_starts_with($track->spotify_uri, 'spotify:track:')) {
+                        $trackUris[] = $track->spotify_uri;
+                    }
+                }
+            } elseif ($legacyAlbum !== null) {
+                foreach (data_get($legacyAlbum->tracks, 'items', []) as $track) {
+                    $uri = is_array($track) ? ($track['uri'] ?? null) : null;
 
-            foreach (data_get($album->tracks, 'items', []) as $track) {
-                $uri = is_array($track) ? ($track['uri'] ?? null) : null;
-
-                if (is_string($uri) && str_starts_with($uri, 'spotify:track:')) {
-                    $trackUris[] = $uri;
+                    if (is_string($uri) && str_starts_with($uri, 'spotify:track:')) {
+                        $trackUris[] = $uri;
+                    }
                 }
             }
         }

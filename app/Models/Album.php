@@ -23,4 +23,9 @@ class Album extends Model
     {
         return $this->hasMany(Track::class);
     }
+
+    public function spotifyCollections(): HasMany
+    {
+        return $this->hasMany(SpotifyAlbumCollection::class);
+    }
 }
