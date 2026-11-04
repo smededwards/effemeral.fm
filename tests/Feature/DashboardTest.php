@@ -11,6 +11,7 @@ use App\Models\SpotifyAlbumCollection;
 use App\Models\SpotifySavedAlbum;
 use App\Models\Track;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -482,15 +483,20 @@ class DashboardTest extends TestCase
     public function test_included_recommendations_are_synced_to_a_private_spotify_playlist_in_reviewed_order(): void
     {
         config()->set('services.spotify.access_token', 'test-token');
-        Http::fake([
-            config('services.spotify.api_endpoint').'/me/playlists' => Http::response([
-                'id' => 'playlist-id',
-                'external_urls' => ['spotify' => 'https://open.spotify.com/playlist/playlist-id'],
-            ], 201),
-            config('services.spotify.api_endpoint').'/playlists/playlist-id/items' => Http::response([
-                'snapshot_id' => 'snapshot-id',
-            ], 201),
-        ]);
+        Http::fake(function (HttpRequest $request) {
+            if ($request->method() === 'GET') {
+                return Http::response(['items' => [], 'next' => null]);
+            }
+
+            if (str_ends_with($request->url(), '/me/playlists')) {
+                return Http::response([
+                    'id' => 'playlist-id',
+                    'external_urls' => ['spotify' => 'https://open.spotify.com/playlist/playlist-id'],
+                ], 201);
+            }
+
+            return Http::response(['snapshot_id' => 'snapshot-id'], 201);
+        });
         $run = RecommendationRun::factory()->create();
         $includedAlbum = SpotifySavedAlbum::query()->create([
             'spotify_album_id' => 'included-album-id',
@@ -525,7 +531,7 @@ class DashboardTest extends TestCase
             'included' => false,
         ]);
 
-        $this->post(route('recommendations.sync', $run))
+        $this->post(route('recommendations.sync', $run), ['confirmed' => true])
             ->assertSessionHas('success', 'Recommendation draft synced to Spotify.');
 
         $run->refresh();
@@ -540,5 +546,68 @@ class DashboardTest extends TestCase
             return $request->url() === config('services.spotify.api_endpoint').'/playlists/playlist-id/items'
                 && $request['uris'] === ['spotify:track:first', 'spotify:track:second'];
         });
+    }
+
+    public function test_sync_requires_confirmation(): void
+    {
+        $run = RecommendationRun::factory()->create();
+
+        $this->post(route('recommendations.sync', $run))
+            ->assertSessionHas('error', 'Confirm the reviewed albums before syncing to Spotify.');
+
+        $this->assertSame('draft', $run->fresh()->status);
+    }
+
+    public function test_failed_sync_reuses_the_created_playlist_on_retry(): void
+    {
+        config()->set('services.spotify.access_token', 'test-token');
+        $createCalls = 0;
+        $addCalls = 0;
+        Http::fake(function (HttpRequest $request) use (&$createCalls, &$addCalls) {
+            if ($request->method() === 'GET') {
+                return Http::response(['items' => [], 'next' => null]);
+            }
+
+            if (str_ends_with($request->url(), '/me/playlists')) {
+                $createCalls++;
+
+                return Http::response([
+                    'id' => 'retry-playlist-id',
+                    'external_urls' => ['spotify' => 'https://open.spotify.com/playlist/retry-playlist-id'],
+                ], 201);
+            }
+
+            $addCalls++;
+
+            return $addCalls <= 4
+                ? Http::response([], 500)
+                : Http::response(['snapshot_id' => 'snapshot-id'], 201);
+        });
+        $run = RecommendationRun::factory()->create();
+        $album = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'retry-album-id',
+            'spotify_uri' => 'spotify:album:retry-album-id',
+            'name' => 'Retry Album',
+            'album_type' => 'album',
+            'tracks' => ['items' => [['uri' => 'spotify:track:retry']]],
+        ]);
+        AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $album->id,
+            'position' => 1,
+            'heard_tracks' => 0,
+            'total_tracks' => 1,
+            'completion_percentage' => 0,
+        ]);
+
+        $this->post(route('recommendations.sync', $run), ['confirmed' => true])
+            ->assertSessionHas('error', 'Spotify playlist sync failed. Check the recommendation status.');
+        $this->assertSame('retry-playlist-id', $run->fresh()->spotify_playlist_id);
+
+        $this->post(route('recommendations.sync', $run), ['confirmed' => true])
+            ->assertSessionHas('success', 'Recommendation draft synced to Spotify.');
+
+        $this->assertSame(1, $createCalls);
+        $this->assertSame('synced', $run->fresh()->status);
     }
 }
