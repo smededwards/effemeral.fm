@@ -216,11 +216,25 @@
                 </div>
 
                 @if ($latestRecommendation?->albumRecommendations->isNotEmpty())
-                    <ol class="mt-6 space-y-3">
+                    <form class="mt-6" method="POST" action="{{ route('recommendations.review', $latestRecommendation) }}">
+                        @csrf
+                        <ol class="space-y-3">
                         @foreach ($latestRecommendation->albumRecommendations as $recommendation)
                             <li class="flex items-center justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
                                 <div class="flex items-center gap-4">
-                                    <span class="text-sm text-zinc-500">{{ $recommendation->position }}</span>
+                                    <label class="flex items-center gap-2 text-sm text-zinc-400">
+                                        <span class="sr-only">Include {{ $recommendation->spotifySavedAlbum->name }}</span>
+                                        <input type="checkbox" name="included[]" value="{{ $recommendation->id }}" @checked($recommendation->included)>
+                                        Include
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm text-zinc-400">
+                                        <span class="sr-only">Position for {{ $recommendation->spotifySavedAlbum->name }}</span>
+                                        <select class="rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" name="positions[{{ $recommendation->id }}]">
+                                            @foreach ($latestRecommendation->albumRecommendations as $positionOption)
+                                                <option value="{{ $positionOption->position }}" @selected($recommendation->position === $positionOption->position)>{{ $positionOption->position }}</option>
+                                            @endforeach
+                                        </select>
+                                    </label>
                                     <div>
                                         <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum->name }}</h3>
                                         <p class="mt-1 text-sm text-zinc-400">{{ $recommendation->spotifySavedAlbum->primary_artist_name }} · {{ $recommendation->heard_tracks }} / {{ $recommendation->total_tracks }} tracks heard</p>
@@ -231,7 +245,9 @@
                                 @endif
                             </li>
                         @endforeach
-                    </ol>
+                        </ol>
+                        <button class="mt-6 rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Save review</button>
+                    </form>
                 @else
                     <p class="mt-6 text-sm text-zinc-500">No recommendation draft has been generated yet.</p>
                 @endif

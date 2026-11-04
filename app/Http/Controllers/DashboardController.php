@@ -14,7 +14,9 @@ use App\Models\SpotifyConnection;
 use App\Models\SpotifySavedAlbum;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use stdClass;
 
@@ -158,6 +160,51 @@ class DashboardController extends Controller
         }
 
         return back()->with('success', 'Draft album recommendations generated.');
+    }
+
+    public function reviewRecommendations(Request $request, RecommendationRun $recommendationRun): RedirectResponse
+    {
+        $validated = $request->validate([
+            'positions' => ['required', 'array'],
+            'positions.*' => ['required', 'integer', 'min:1'],
+            'included' => ['array'],
+            'included.*' => ['integer'],
+        ]);
+        /** @var Collection<int, AlbumRecommendation> $recommendations */
+        $recommendations = $recommendationRun->albumRecommendations()->get();
+        $positions = collect($validated['positions'])->mapWithKeys(fn (mixed $position, string $id): array => [(int) $id => (int) $position]);
+        $recommendationIds = $recommendations->pluck('id')->map(fn (int|string $id): int => (int) $id)->all();
+
+        if ($positions->keys()->sort()->values()->all() !== collect($recommendationIds)->sort()->values()->all()) {
+            return back()->withErrors(['positions' => 'The recommendation list has changed. Reload the page and try again.']);
+        }
+
+        $positionValues = $positions->values();
+        if ($positionValues->unique()->count() !== $recommendations->count() || $positionValues->min() !== 1 || $positionValues->max() !== $recommendations->count()) {
+            return back()->withErrors(['positions' => 'Each album must have a unique position.']);
+        }
+
+        $includedIds = collect($validated['included'] ?? [])->map(fn (int $id): int => $id);
+        if ($includedIds->diff($recommendationIds)->isNotEmpty()) {
+            return back()->withErrors(['included' => 'The recommendation list has changed. Reload the page and try again.']);
+        }
+
+        DB::transaction(function () use ($includedIds, $positions, $recommendations): void {
+            $offset = $recommendations->count();
+
+            foreach ($recommendations as $recommendation) {
+                $recommendation->update(['position' => $recommendation->position + $offset]);
+            }
+
+            foreach ($recommendations as $recommendation) {
+                $recommendation->update([
+                    'position' => $positions->get($recommendation->id),
+                    'included' => $includedIds->contains($recommendation->id),
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Recommendation draft review saved.');
     }
 
     public function markAlbumComplete(SpotifySavedAlbum $album): RedirectResponse
