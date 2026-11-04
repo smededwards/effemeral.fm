@@ -7,6 +7,7 @@ use App\Models\RecommendationRun;
 use App\Models\Scrobble;
 use App\Models\SpotifySavedAlbum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -209,5 +210,68 @@ class DashboardTest extends TestCase
             'position' => 1,
             'included' => true,
         ]);
+    }
+
+    public function test_included_recommendations_are_synced_to_a_private_spotify_playlist_in_reviewed_order(): void
+    {
+        config()->set('services.spotify.access_token', 'test-token');
+        Http::fake([
+            config('services.spotify.api_endpoint').'/me/playlists' => Http::response([
+                'id' => 'playlist-id',
+                'external_urls' => ['spotify' => 'https://open.spotify.com/playlist/playlist-id'],
+            ], 201),
+            config('services.spotify.api_endpoint').'/playlists/playlist-id/items' => Http::response([
+                'snapshot_id' => 'snapshot-id',
+            ], 201),
+        ]);
+        $run = RecommendationRun::factory()->create();
+        $includedAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'included-album-id',
+            'spotify_uri' => 'spotify:album:included-album-id',
+            'name' => 'Included Album',
+            'album_type' => 'album',
+            'tracks' => ['items' => [['uri' => 'spotify:track:first'], ['uri' => 'spotify:track:second']]],
+        ]);
+        $excludedAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'excluded-album-id',
+            'spotify_uri' => 'spotify:album:excluded-album-id',
+            'name' => 'Excluded Album',
+            'album_type' => 'album',
+            'tracks' => ['items' => [['uri' => 'spotify:track:excluded']]],
+        ]);
+        AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $includedAlbum->id,
+            'position' => 1,
+            'heard_tracks' => 0,
+            'total_tracks' => 2,
+            'completion_percentage' => 0,
+            'included' => true,
+        ]);
+        AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $excludedAlbum->id,
+            'position' => 2,
+            'heard_tracks' => 0,
+            'total_tracks' => 1,
+            'completion_percentage' => 0,
+            'included' => false,
+        ]);
+
+        $this->post(route('recommendations.sync', $run))
+            ->assertSessionHas('success', 'Recommendation draft synced to Spotify.');
+
+        $run->refresh();
+        $this->assertSame('synced', $run->status);
+        $this->assertSame('playlist-id', $run->spotify_playlist_id);
+        $this->assertSame('https://open.spotify.com/playlist/playlist-id', $run->spotify_playlist_url);
+        Http::assertSent(function ($request): bool {
+            return $request->url() === config('services.spotify.api_endpoint').'/me/playlists'
+                && $request['public'] === false;
+        });
+        Http::assertSent(function ($request): bool {
+            return $request->url() === config('services.spotify.api_endpoint').'/playlists/playlist-id/items'
+                && $request['uris'] === ['spotify:track:first', 'spotify:track:second'];
+        });
     }
 }

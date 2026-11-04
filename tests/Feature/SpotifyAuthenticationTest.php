@@ -19,6 +19,7 @@ class SpotifyAuthenticationTest extends TestCase
         $response = $this->get(route('auth.spotify'));
 
         $response->assertRedirectContains('https://accounts.spotify.com/authorize');
+        $response->assertRedirectContains('playlist-modify-private');
         $this->assertNotEmpty(session('spotify_oauth_state'));
     }
 
