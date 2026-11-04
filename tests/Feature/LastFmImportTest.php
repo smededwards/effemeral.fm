@@ -77,6 +77,10 @@ class LastFmImportTest extends TestCase
             'skipped_count' => 1,
         ]);
         $this->assertSame('The Album', Scrobble::query()->firstOrFail()->album_name);
+        $this->assertNotNull(Scrobble::query()->firstOrFail()->track_id);
+        $this->assertDatabaseHas('artists', ['lastfm_mbid' => 'artist-mbid']);
+        $this->assertDatabaseHas('albums', ['lastfm_mbid' => 'album-mbid']);
+        $this->assertDatabaseHas('tracks', ['lastfm_mbid' => 'track-mbid']);
         Http::assertSent(fn ($request): bool => str_starts_with($request->url(), config('services.lastfm.endpoint')));
     }
 

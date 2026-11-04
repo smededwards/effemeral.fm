@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Jobs\ImportSpotifySavedAlbums;
+use App\Models\Album;
+use App\Models\Artist;
 use App\Models\SpotifyAlbumImportRun;
 use App\Models\SpotifySavedAlbum;
+use App\Models\Track;
 use App\Services\Spotify\SpotifyClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -74,6 +77,13 @@ class SpotifySavedAlbumsImportTest extends TestCase
             'name' => 'A Saved Album',
         ]);
         $this->assertSame('A Saved Album', SpotifySavedAlbum::query()->firstOrFail()->name);
+        $this->assertDatabaseHas('artists', ['spotify_id' => 'artist-id', 'name' => 'An Artist']);
+        $this->assertDatabaseHas('albums', ['spotify_id' => 'album-id', 'title' => 'A Saved Album']);
+        $this->assertDatabaseHas('tracks', ['spotify_id' => 'track-id', 'title' => 'A Track']);
+        $this->assertDatabaseHas('spotify_album_collections', ['collection_type' => 'saved']);
+        $this->assertCount(1, Album::query()->firstOrFail()->artists);
+        $this->assertSame('A Track', Track::query()->firstOrFail()->title);
+        $this->assertSame('An Artist', Artist::query()->firstOrFail()->name);
         $this->assertDatabaseHas('spotify_album_import_runs', [
             'id' => $run->id,
             'status' => 'completed',

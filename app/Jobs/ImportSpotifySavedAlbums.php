@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\SpotifyAlbumImportRun;
 use App\Models\SpotifySavedAlbum;
+use App\Services\Catalog\CatalogWriter;
 use App\Services\Spotify\SpotifyClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -15,8 +16,9 @@ class ImportSpotifySavedAlbums implements ShouldQueue
 
     public function __construct(public int $importRunId) {}
 
-    public function handle(SpotifyClient $client): void
+    public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null): void
     {
+        $catalog ??= app(CatalogWriter::class);
         $run = SpotifyAlbumImportRun::query()->findOrFail($this->importRunId);
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
@@ -36,6 +38,8 @@ class ImportSpotifySavedAlbums implements ShouldQueue
                     continue;
                 }
 
+                $catalog->spotifyAlbum($album, $item['added_at'] ?? null);
+
                 $savedAlbum = SpotifySavedAlbum::query()->firstOrNew(['spotify_album_id' => $albumId]);
                 $wasExisting = $savedAlbum->exists;
                 $savedAlbum->fill([
@@ -52,10 +56,10 @@ class ImportSpotifySavedAlbums implements ShouldQueue
                     'tracks' => data_get($album, 'tracks.items', []),
                     'cover_image_url' => data_get($album, 'images.0.url'),
                     'saved_at' => $item['added_at'] ?? null,
-                    'last_synced_at' => now(),
                 ]);
 
                 if ($savedAlbum->isDirty() || ! $wasExisting) {
+                    $savedAlbum->last_synced_at = now();
                     $savedAlbum->save();
                     $wasExisting ? $updated++ : $imported++;
                 } else {
