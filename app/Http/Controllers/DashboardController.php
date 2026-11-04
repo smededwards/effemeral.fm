@@ -33,6 +33,26 @@ class DashboardController extends Controller
     public function index(): View
     {
         $incompleteAlbums = $this->incompleteAlbums();
+        $latestRecommendation = RecommendationRun::query()
+            ->with('albumRecommendations.album', 'albumRecommendations.spotifySavedAlbum')
+            ->latest()
+            ->first();
+        $albumSearch = trim((string) request('album_search'));
+        $albumArtist = trim((string) request('album_artist'));
+        $spotifySavedAlbumQuery = SpotifySavedAlbum::query()->latest('saved_at');
+
+        if ($albumSearch !== '') {
+            $spotifySavedAlbumQuery->where(function ($query) use ($albumSearch): void {
+                $query->where('name', 'like', '%'.$albumSearch.'%')
+                    ->orWhere('primary_artist_name', 'like', '%'.$albumSearch.'%');
+            });
+        }
+
+        if ($albumArtist !== '') {
+            $spotifySavedAlbumQuery->where('primary_artist_name', $albumArtist);
+        }
+
+        $spotifySavedAlbums = $spotifySavedAlbumQuery->get();
         $artists = Scrobble::query()
             ->select('artist_name')
             ->selectRaw('COUNT(*) as scrobble_count')
@@ -73,14 +93,20 @@ class DashboardController extends Controller
             'latestSpotifyPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
             'spotifyPlaylists' => SpotifyPlaylist::query()->with('items.album')->latest('last_synced_at')->get(),
             'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
-            'spotifySavedAlbums' => SpotifySavedAlbum::query()->latest('saved_at')->get(),
+            'spotifySavedAlbums' => $spotifySavedAlbums,
+            'spotifySavedAlbumCount' => SpotifySavedAlbum::query()->count(),
+            'spotifyAlbumArtists' => SpotifySavedAlbum::query()
+                ->whereNotNull('primary_artist_name')
+                ->where('primary_artist_name', '<>', '')
+                ->distinct()
+                ->orderBy('primary_artist_name')
+                ->pluck('primary_artist_name'),
+            'albumSearch' => $albumSearch,
+            'albumArtist' => $albumArtist,
             'incompleteAlbums' => $incompleteAlbums,
             'topArtists' => $artists,
             'topAlbums' => $albums,
-            'latestRecommendation' => RecommendationRun::query()
-                ->with('albumRecommendations.album', 'albumRecommendations.spotifySavedAlbum')
-                ->latest()
-                ->first(),
+            'latestRecommendation' => $latestRecommendation,
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),
             'defaultTo' => now()->toDateString(),

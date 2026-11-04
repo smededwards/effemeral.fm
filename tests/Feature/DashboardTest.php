@@ -274,6 +274,28 @@ class DashboardTest extends TestCase
         ]);
     }
 
+    public function test_saved_album_search_filters_the_selection_list(): void
+    {
+        SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'search-match-album-id',
+            'spotify_uri' => 'spotify:album:search-match-album-id',
+            'name' => 'Matching Album',
+            'album_type' => 'album',
+            'primary_artist_name' => 'Matching Artist',
+        ]);
+        SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'search-other-album-id',
+            'spotify_uri' => 'spotify:album:search-other-album-id',
+            'name' => 'Other Album',
+            'album_type' => 'album',
+            'primary_artist_name' => 'Other Artist',
+        ]);
+
+        $this->get(route('dashboard', ['album_search' => 'Matching']))
+            ->assertSee('Matching Album')
+            ->assertDontSee('Other Album');
+    }
+
     public function test_a_recommendation_draft_can_be_reordered_and_reviewed(): void
     {
         $run = RecommendationRun::factory()->create();
