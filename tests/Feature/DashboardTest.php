@@ -36,6 +36,16 @@ class DashboardTest extends TestCase
         $response->assertSee('https://open.spotify.com/album/album-id');
     }
 
+    public function test_dashboard_forms_use_the_forwarded_https_scheme(): void
+    {
+        $response = $this->withServerVariables([
+            'HTTP_X_FORWARDED_PROTO' => 'https',
+            'HTTP_X_FORWARDED_HOST' => 'app.effemeral.local',
+        ])->get(route('dashboard'));
+
+        $response->assertSee('action="https://app.effemeral.local/imports/lastfm"', false);
+    }
+
     public function test_incomplete_saved_albums_show_lastfm_completion_progress(): void
     {
         SpotifySavedAlbum::query()->create([
