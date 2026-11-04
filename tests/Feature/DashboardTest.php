@@ -296,6 +296,51 @@ class DashboardTest extends TestCase
             ->assertDontSee('Other Album');
     }
 
+    public function test_recommendation_review_page_summarises_included_tracks_and_albums(): void
+    {
+        $run = RecommendationRun::factory()->create();
+        $includedAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'review-included-album-id',
+            'spotify_uri' => 'spotify:album:review-included-album-id',
+            'name' => 'Included Review Album',
+            'album_type' => 'album',
+            'tracks' => ['items' => [['uri' => 'spotify:track:one'], ['uri' => 'spotify:track:two']]],
+        ]);
+        $excludedAlbum = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'review-excluded-album-id',
+            'spotify_uri' => 'spotify:album:review-excluded-album-id',
+            'name' => 'Excluded Review Album',
+            'album_type' => 'album',
+            'tracks' => ['items' => [['uri' => 'spotify:track:three']]],
+        ]);
+        AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $includedAlbum->id,
+            'position' => 1,
+            'heard_tracks' => 0,
+            'total_tracks' => 2,
+            'completion_percentage' => 0,
+            'included' => true,
+        ]);
+        AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $excludedAlbum->id,
+            'position' => 2,
+            'heard_tracks' => 0,
+            'total_tracks' => 1,
+            'completion_percentage' => 0,
+            'included' => false,
+        ]);
+
+        $this->get(route('recommendations.review.page', $run))
+            ->assertOk()
+            ->assertSee('1', false)
+            ->assertSee('2 Spotify tracks available')
+            ->assertSee('Included Review Album')
+            ->assertSee('Excluded Review Album')
+            ->assertSee('Syncing will create a private Spotify playlist containing 2 tracks.');
+    }
+
     public function test_a_recommendation_draft_can_be_reordered_and_reviewed(): void
     {
         $run = RecommendationRun::factory()->create();

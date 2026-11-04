@@ -330,6 +330,7 @@
                             <button class="rounded-md bg-[#BF3989] px-4 py-2 text-sm font-medium text-white hover:bg-[#a93278]" type="submit">Sync included albums to Spotify</button>
                         </form>
                     @endif
+                    <a class="mt-4 inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ route('recommendations.review.page', $latestRecommendation) }}">Open full review page</a>
                 @else
                     <p class="mt-6 text-sm text-zinc-500">No recommendation draft has been generated yet.</p>
                 @endif
