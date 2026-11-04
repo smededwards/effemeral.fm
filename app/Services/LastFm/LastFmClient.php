@@ -63,9 +63,10 @@ class LastFmClient
 
     private function request(): PendingRequest
     {
-        return Http::withHeaders([
-            'User-Agent' => config('services.lastfm.user_agent'),
-            'Accept' => 'application/json',
-        ])->timeout(15)->retry(3, 1000, throw: false);
+        return Http::baseUrl((string) config('services.lastfm.endpoint'))
+            ->withHeaders([
+                'User-Agent' => config('services.lastfm.user_agent'),
+                'Accept' => 'application/json',
+            ])->timeout(15)->retry(3, 1000, throw: false);
     }
 }
