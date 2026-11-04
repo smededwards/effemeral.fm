@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Scrobble extends Model
 {
     protected $fillable = [
-        'source', 'source_key', 'artist_name', 'artist_mbid', 'track_name',
+        'source', 'source_key', 'artist_id', 'album_id', 'track_id', 'artist_name', 'artist_mbid', 'track_name',
         'track_mbid', 'album_name', 'album_mbid', 'source_url', 'listened_at',
         'now_playing',
     ];

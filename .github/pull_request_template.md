@@ -1,6 +1,10 @@
 ## Summary
 
-<!-- Keep this concise. Link the related issue below. -->
+<!-- Every PR must include a meaningful description of the purpose and user-facing result. -->
+
+## User-facing changes
+
+<!-- Describe what can be observed or used after this change. -->
 
 ## Related issue
 
@@ -15,4 +19,4 @@ Closes #
 
 ## Review notes
 
-<!-- Mention risks, migrations, or follow-up work. -->
+<!-- Mention risks, migrations, setup or credential changes, compatibility concerns, and follow-up work. -->

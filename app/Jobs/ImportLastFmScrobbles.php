@@ -2,8 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Models\Album;
 use App\Models\LastFmImportRun;
 use App\Models\Scrobble;
+use App\Services\Catalog\CatalogWriter;
 use App\Services\LastFm\LastFmClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -16,8 +18,9 @@ class ImportLastFmScrobbles implements ShouldQueue
 
     public function __construct(public int $importRunId) {}
 
-    public function handle(LastFmClient $client): void
+    public function handle(LastFmClient $client, ?CatalogWriter $catalog = null): void
     {
+        $catalog ??= app(CatalogWriter::class);
         $run = LastFmImportRun::query()->findOrFail($this->importRunId);
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
@@ -58,6 +61,22 @@ class ImportLastFmScrobbles implements ShouldQueue
                         'listened_at' => CarbonImmutable::createFromTimestampUTC((int) data_get($track, 'date.uts')),
                     ],
                 );
+
+                $track = $catalog->lastFmScrobble([
+                    'artist_name' => $scrobble->artist_name,
+                    'artist_mbid' => $scrobble->artist_mbid,
+                    'album_name' => $scrobble->album_name,
+                    'album_mbid' => $scrobble->album_mbid,
+                    'track_name' => $scrobble->track_name,
+                    'track_mbid' => $scrobble->track_mbid,
+                ]);
+                $album = $track === null ? null : Album::query()->with('artists')->find($track->album_id);
+                $artistId = $album?->artists()->value('artists.id');
+                $scrobble->update([
+                    'artist_id' => $artistId === null ? null : (int) $artistId,
+                    'album_id' => $track?->album_id,
+                    'track_id' => $track?->id,
+                ]);
 
                 $scrobble->wasRecentlyCreated ? $imported++ : $skipped++;
             }

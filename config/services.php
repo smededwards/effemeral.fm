@@ -51,7 +51,7 @@ return [
         'refresh_token' => env('SPOTIFY_REFRESH_TOKEN'),
         'api_endpoint' => env('SPOTIFY_API_ENDPOINT', 'https://api.spotify.com/v1'),
         'token_endpoint' => env('SPOTIFY_TOKEN_ENDPOINT', 'https://accounts.spotify.com/api/token'),
-        'scopes' => env('SPOTIFY_SCOPES', 'user-library-read playlist-modify-private'),
+        'scopes' => env('SPOTIFY_SCOPES', 'user-library-read playlist-read-private playlist-read-collaborative playlist-modify-private'),
     ],
 
 ];

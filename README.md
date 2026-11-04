@@ -1,58 +1,65 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Effemeral
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Effemeral is a private, single-user Laravel application for turning listening history into album-level discovery and playlist drafts.
 
-## About Laravel
+The prototype is intentionally album-first and manual-first:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Last.fm is the authoritative source for listening history and completion evidence.
+- Spotify provides saved albums, liked songs, playlists, catalogue metadata, and the eventual playlist export.
+- Effemeral stores a canonical catalogue of artists, albums, and tracks, with source identifiers and Spotify collection membership.
+- Recommendations remain drafts until they are reviewed, reordered, and explicitly synced.
+- Discogs, genre enrichment, full-history import, liked-song import, and playlist-content import are follow-up slices.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Current import foundation
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+The current import layer supports:
 
-## Learning Laravel
+- Last.fm scrobbles linked to canonical artists, albums, and tracks.
+- Spotify saved albums linked to canonical artists, albums, tracks, and saved-collection membership.
+- Idempotent retries and cross-source matching using provider IDs first, then normalized identity.
+- Existing compatibility storage for the current dashboard while the canonical model becomes the source for future features.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+The model is deliberately additive. Existing imported data is not removed by the catalogue migrations.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Local development
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+The application runs in Docker with MySQL, Redis, a queue worker, and the shared Traefik proxy used by the other local projects.
 
-## Agentic Development
+The local URL is https://app.effemeral.local.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Start the shared proxy once:
 
-```bash
-composer require laravel/boost --dev
+    docker compose -f /Users/smededwards/Developer/effemeral/.docker/traefik/compose.yaml up -d
 
-php artisan boost:install
-```
+Then start Effemeral:
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+    cd /Users/smededwards/Developer/effemeral/effemeral.fm
+    docker compose up -d
 
-## Contributing
+Do not commit .env or provider credentials. Copy .env.example to .env and configure the Last.fm and Spotify credentials locally.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Verification
 
-## Code of Conduct
+Run the standard checks from the application container:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+    docker compose exec laravel.test composer test
+    docker compose exec laravel.test composer lint
+    docker compose exec laravel.test composer analyse
 
-## Security Vulnerabilities
+## Development workflow
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- Work from the latest dev branch using a feature branch.
+- Open pull requests into dev and review them before merging.
+- Use Conventional Commits.
+- Every pull request needs a description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
+- Keep manual review and override paths for recommendations and completion decisions.
 
-## License
+## Roadmap direction
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+1. Complete the canonical import foundation.
+2. Import Spotify liked songs and playlist contents into the canonical model.
+3. Rebuild completion and recommendation queries on canonical records.
+4. Add album-level Effemeral playlist editing and Spotify export.
+5. Add normalized genre enrichment and manual genre corrections.
+6. Add Discogs metadata and full discography support.
+7. Expand from the prototype's limited imports to the complete Last.fm and Spotify datasets.
