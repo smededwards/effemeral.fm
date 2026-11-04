@@ -5,7 +5,7 @@
 
 ## Foundational Context
 
-This application is a Laravel application running on PHP 8.4. Always use the APIs that match the installed major version of each package — do not assume a version.
+This application is a Laravel application running on PHP 8.3. Always use the APIs that match the installed major version of each package — do not assume a version.
 
 Before relying on a package's API, confirm its installed version:
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
@@ -146,3 +146,21 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Run `vendor/bin/phpunit` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
 
 </laravel-boost-guidelines>
+
+## Effemeral product focus
+
+- Effemeral is a private, single-user Laravel prototype for album-first listening intelligence.
+- Last.fm is the canonical source for listening history and completion evidence.
+- Spotify is a supporting library and export source: saved albums, liked songs, and playlists enrich the catalogue but do not prove that an album was heard.
+- The canonical catalogue is the artists, albums, and tracks tables, with source identifiers and collection membership. Do not add new features that depend only on embedded provider JSON when the canonical model can be used.
+- Importers must be idempotent, preserve source provenance, tolerate retries, and avoid creating cross-source duplicates. Existing compatibility tables should not be removed without a migration plan.
+- Discogs metadata, genre enrichment, liked-song import, playlist-content import, and full-history import are later slices. Do not imply they are implemented when they are only represented in the model or roadmap.
+- Album-level workflows come before individual-track playlist workflows. Keep manual review, ordering, inclusion, and completion overrides available for consequential automation.
+
+## Effemeral delivery workflow
+
+- Work from the latest dev branch using a feature branch without codex in its name.
+- Open pull requests into dev; do not merge them without the user's review.
+- Every pull request must include a non-empty description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
+- Use Conventional Commits and labels limited to Conventional Commit types.
+- Before handoff, run the narrowest relevant tests plus Pint and PHPStan. Report any skipped verification and remaining risks.
