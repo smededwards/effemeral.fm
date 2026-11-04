@@ -199,6 +199,51 @@ class DashboardController extends Controller
         return $incompleteAlbums;
     }
 
+    /**
+     * @return array{canonical_id: int|null, heard: int, total: int, percentage: int}
+     */
+    private function recommendationProgress(SpotifySavedAlbum $savedAlbum): array
+    {
+        $canonicalAlbum = Album::query()->with('tracks')->where('spotify_id', $savedAlbum->spotify_album_id)->first();
+
+        if ($canonicalAlbum !== null && $canonicalAlbum->tracks->isNotEmpty()) {
+            $heardTrackIds = Scrobble::query()
+                ->whereNotNull('track_id')
+                ->pluck('track_id')
+                ->flip();
+            /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+            $tracks = $canonicalAlbum->getRelation('tracks');
+            $total = $tracks->count();
+            $heard = $tracks->filter(fn (Track $track): bool => $heardTrackIds->has($track->id))->count();
+
+            return [
+                'canonical_id' => $canonicalAlbum->id,
+                'heard' => $heard,
+                'total' => $total,
+                'percentage' => (int) floor(($heard / $total) * 100),
+            ];
+        }
+
+        $tracks = collect(data_get($savedAlbum->tracks, 'items', []))
+            ->filter(fn (mixed $track): bool => is_array($track) && is_string($track['name'] ?? null))
+            ->values();
+        $heardTracks = Scrobble::query()
+            ->where('artist_name', $savedAlbum->primary_artist_name)
+            ->where('album_name', $savedAlbum->name)
+            ->pluck('track_name')
+            ->map(fn (string $track): string => $this->normalise($track))
+            ->flip();
+        $total = $tracks->count();
+        $heard = $tracks->filter(fn (array $track): bool => $heardTracks->has($this->normalise($track['name'])))->count();
+
+        return [
+            'canonical_id' => null,
+            'heard' => $heard,
+            'total' => $total,
+            'percentage' => $total > 0 ? (int) floor(($heard / $total) * 100) : 0,
+        ];
+    }
+
     public function generateRecommendations(): RedirectResponse
     {
         $albums = $this->incompleteAlbums();
@@ -290,6 +335,47 @@ class DashboardController extends Controller
         }
 
         return back()->with('success', 'Recommendation draft synced to Spotify.');
+    }
+
+    public function addAlbumsToRecommendations(Request $request, RecommendationRun $recommendationRun): RedirectResponse
+    {
+        if ($recommendationRun->spotify_playlist_id !== null || $recommendationRun->status === 'synced') {
+            return back()->with('error', 'This recommendation draft has already been synced to Spotify.');
+        }
+
+        $validated = $request->validate([
+            'album_ids' => ['required', 'array', 'min:1'],
+            'album_ids.*' => ['integer', 'distinct', 'exists:spotify_saved_albums,id'],
+        ]);
+        $existingAlbumIds = $recommendationRun->albumRecommendations()->pluck('spotify_saved_album_id');
+        $albums = SpotifySavedAlbum::query()
+            ->whereIn('id', $validated['album_ids'])
+            ->whereNotIn('id', $existingAlbumIds)
+            ->get();
+
+        if ($albums->count() !== count($validated['album_ids'])) {
+            return back()->withErrors(['album_ids' => 'One or more selected albums are already in this draft.']);
+        }
+
+        $position = (int) ($recommendationRun->albumRecommendations()->max('position') ?? 0);
+
+        DB::transaction(function () use ($albums, $position, $recommendationRun): void {
+            foreach ($albums as $offset => $album) {
+                $progress = $this->recommendationProgress($album);
+
+                AlbumRecommendation::query()->create([
+                    'recommendation_run_id' => $recommendationRun->id,
+                    'album_id' => $progress['canonical_id'],
+                    'spotify_saved_album_id' => $album->id,
+                    'position' => $position + $offset + 1,
+                    'heard_tracks' => $progress['heard'],
+                    'total_tracks' => $progress['total'],
+                    'completion_percentage' => $progress['percentage'],
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Albums added to the recommendation draft.');
     }
 
     public function reviewRecommendations(Request $request, RecommendationRun $recommendationRun): RedirectResponse

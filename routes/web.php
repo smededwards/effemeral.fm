@@ -14,6 +14,7 @@ Route::post('/albums/{album}/completion/complete', [DashboardController::class, 
 Route::post('/albums/{album}/completion/incomplete', [DashboardController::class, 'markAlbumIncomplete'])->name('albums.completion.incomplete');
 Route::post('/albums/{album}/completion/clear', [DashboardController::class, 'clearAlbumCompletionOverride'])->name('albums.completion.clear');
 Route::post('/recommendations/generate', [DashboardController::class, 'generateRecommendations'])->name('recommendations.generate');
+Route::post('/recommendations/{recommendationRun}/albums', [DashboardController::class, 'addAlbumsToRecommendations'])->name('recommendations.albums.add');
 Route::post('/recommendations/{recommendationRun}/sync', [DashboardController::class, 'syncRecommendations'])->name('recommendations.sync');
 Route::post('/recommendations/{recommendationRun}/review', [DashboardController::class, 'reviewRecommendations'])->name('recommendations.review');
 Route::get('/auth/spotify', [SpotifyAuthController::class, 'redirect'])->name('auth.spotify');
