@@ -39,6 +39,22 @@ class SpotifyClient
         return $limit === null ? $albums : array_slice($albums, 0, $limit);
     }
 
+    /** @return list<array<string, mixed>> */
+    public function playlists(?int $limit = null): array
+    {
+        return $this->paginate('/me/playlists', $limit, fn (array $item): bool => isset($item['id']));
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function playlistItems(string $playlistId): array
+    {
+        return $this->paginate(
+            '/playlists/'.$playlistId.'/items',
+            null,
+            fn (array $item): bool => is_array($item['track'] ?? null),
+        );
+    }
+
     /**
      * @return array{id: string, external_urls: array<string, string>}
      */
@@ -75,6 +91,42 @@ class SpotifyClient
                 throw new RuntimeException('Spotify playlist items could not be added.');
             }
         }
+    }
+
+    /**
+     * @param  callable(array<string, mixed>): bool  $filter
+     * @return list<array<string, mixed>>
+     */
+    private function paginate(string $path, ?int $limit, callable $filter): array
+    {
+        $items = [];
+        $offset = 0;
+
+        do {
+            $pageLimit = $limit === null ? 50 : min(50, $limit - count($items));
+            if ($pageLimit < 1) {
+                break;
+            }
+
+            $response = $this->request()->get($path, [
+                'limit' => $pageLimit,
+                'offset' => $offset,
+            ]);
+
+            if ($response->failed()) {
+                throw new RuntimeException('Spotify returned HTTP '.$response->status().'.');
+            }
+
+            $payload = $response->json();
+            $pageItems = array_values(array_filter(
+                data_get($payload, 'items', []),
+                fn (mixed $item): bool => is_array($item) && $filter($item),
+            ));
+            $items = array_merge($items, $pageItems);
+            $offset += count($pageItems);
+        } while (($limit === null || count($items) < $limit) && data_get($payload, 'next') !== null && $pageItems !== []);
+
+        return $limit === null ? $items : array_slice($items, 0, $limit);
     }
 
     private function request(): PendingRequest

@@ -11,8 +11,12 @@ use Illuminate\Support\Arr;
 class CatalogWriter
 {
     /** @param array<string, mixed> $albumData */
-    public function spotifyAlbum(array $albumData, mixed $savedAt = null): Album
-    {
+    public function spotifyAlbum(
+        array $albumData,
+        mixed $savedAt = null,
+        string $collectionType = 'saved',
+        ?string $playlistId = null,
+    ): Album {
         $title = (string) ($albumData['name'] ?? 'Unknown album');
         $normalisedTitle = $this->normalise($title);
         $primaryArtist = $this->normalise((string) data_get($albumData, 'artists.0.name', ''));
@@ -82,7 +86,7 @@ class CatalogWriter
         }
 
         SpotifyAlbumCollection::query()->updateOrCreate(
-            ['album_id' => $album->id, 'collection_type' => 'saved', 'spotify_playlist_id' => null],
+            ['album_id' => $album->id, 'collection_type' => $collectionType, 'spotify_playlist_id' => $playlistId],
             ['saved_at' => $savedAt],
         );
 

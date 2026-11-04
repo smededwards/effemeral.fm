@@ -9,6 +9,7 @@ Route::post('/imports/lastfm', [DashboardController::class, 'import'])->name('im
 Route::post('/imports/lastfm/full', [DashboardController::class, 'fullImport'])->name('imports.lastfm.full');
 Route::post('/imports/lastfm/{importRun}/retry', [DashboardController::class, 'retry'])->name('imports.lastfm.retry');
 Route::post('/imports/spotify/albums', [DashboardController::class, 'spotifyAlbumsImport'])->name('imports.spotify.albums');
+Route::post('/imports/spotify/playlists', [DashboardController::class, 'spotifyPlaylistsImport'])->name('imports.spotify.playlists');
 Route::post('/albums/{album}/completion/complete', [DashboardController::class, 'markAlbumComplete'])->name('albums.completion.complete');
 Route::post('/albums/{album}/completion/incomplete', [DashboardController::class, 'markAlbumIncomplete'])->name('albums.completion.incomplete');
 Route::post('/albums/{album}/completion/clear', [DashboardController::class, 'clearAlbumCompletionOverride'])->name('albums.completion.clear');
