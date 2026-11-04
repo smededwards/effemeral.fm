@@ -248,6 +248,16 @@
                         </ol>
                         <button class="mt-6 rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Save review</button>
                     </form>
+                    @if ($latestRecommendation->spotify_playlist_url)
+                        <p class="mt-4 text-sm text-emerald-400">Synced {{ $latestRecommendation->synced_at?->format('Y-m-d H:i') }} · <a class="underline" href="{{ $latestRecommendation->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify playlist</a></p>
+                    @elseif ($latestRecommendation->status === 'sync_failed')
+                        <p class="mt-4 rounded-md bg-red-950/60 p-3 text-sm text-red-200">Spotify sync failed: {{ $latestRecommendation->sync_error }}</p>
+                    @else
+                        <form class="mt-4" method="POST" action="{{ route('recommendations.sync', $latestRecommendation) }}">
+                            @csrf
+                            <button class="rounded-md bg-[#BF3989] px-4 py-2 text-sm font-medium text-white hover:bg-[#a93278]" type="submit">Sync included albums to Spotify</button>
+                        </form>
+                    @endif
                 @else
                     <p class="mt-6 text-sm text-zinc-500">No recommendation draft has been generated yet.</p>
                 @endif

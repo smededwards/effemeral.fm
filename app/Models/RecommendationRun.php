@@ -9,11 +9,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RecommendationRun extends Model
 {
-    protected $fillable = ['source', 'status', 'generated_at'];
+    protected $fillable = [
+        'source', 'status', 'generated_at', 'spotify_playlist_id', 'spotify_playlist_url',
+        'synced_at', 'sync_error',
+    ];
 
     protected function casts(): array
     {
-        return ['generated_at' => 'immutable_datetime'];
+        return [
+            'generated_at' => 'immutable_datetime',
+            'synced_at' => 'immutable_datetime',
+        ];
     }
 
     /** @use HasFactory<RecommendationRunFactory> */

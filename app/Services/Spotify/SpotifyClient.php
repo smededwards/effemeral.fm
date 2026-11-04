@@ -39,6 +39,44 @@ class SpotifyClient
         return $limit === null ? $albums : array_slice($albums, 0, $limit);
     }
 
+    /**
+     * @return array{id: string, external_urls: array<string, string>}
+     */
+    public function createPrivatePlaylist(string $name, string $description): array
+    {
+        $response = $this->request()->post('/me/playlists', [
+            'name' => $name,
+            'description' => $description,
+            'public' => false,
+            'collaborative' => false,
+        ]);
+
+        $playlistId = $response->json('id');
+
+        if ($response->failed() || ! is_string($playlistId) || $playlistId === '') {
+            throw new RuntimeException('Spotify playlist creation failed.');
+        }
+
+        $externalUrls = $response->json('external_urls');
+
+        return [
+            'id' => $playlistId,
+            'external_urls' => is_array($externalUrls) ? $externalUrls : [],
+        ];
+    }
+
+    /** @param list<string> $uris */
+    public function addPlaylistItems(string $playlistId, array $uris): void
+    {
+        foreach (array_chunk($uris, 100) as $chunk) {
+            $response = $this->request()->post('/playlists/'.$playlistId.'/items', ['uris' => $chunk]);
+
+            if ($response->failed()) {
+                throw new RuntimeException('Spotify playlist items could not be added.');
+            }
+        }
+    }
+
     private function request(): PendingRequest
     {
         return Http::baseUrl(config('services.spotify.api_endpoint'))
