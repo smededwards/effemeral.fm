@@ -330,6 +330,30 @@ class DashboardController extends Controller
         return back()->with('success', 'Manual album playlist draft created.');
     }
 
+    public function recommendationReview(RecommendationRun $recommendationRun): View
+    {
+        /** @var Collection<int, AlbumRecommendation> $recommendations */
+        $recommendations = $recommendationRun->albumRecommendations()
+            ->with('album.tracks', 'spotifySavedAlbum')
+            ->get();
+        $reviewAlbums = $recommendations->map(function (AlbumRecommendation $recommendation): array {
+            return [
+                'recommendation' => $recommendation,
+                'track_count' => count($this->recommendationTrackUris($recommendation)),
+            ];
+        });
+
+        return view('recommendations.review', [
+            'recommendationRun' => $recommendationRun,
+            'reviewAlbums' => $reviewAlbums,
+            'includedAlbums' => $reviewAlbums->where('recommendation.included', true)->count(),
+            'excludedAlbums' => $reviewAlbums->where('recommendation.included', false)->count(),
+            'includedTracks' => $reviewAlbums
+                ->where('recommendation.included', true)
+                ->sum('track_count'),
+        ]);
+    }
+
     public function syncRecommendations(RecommendationRun $recommendationRun, SpotifyClient $client): RedirectResponse
     {
         if ($recommendationRun->spotify_playlist_id !== null || $recommendationRun->status === 'synced') {
@@ -344,28 +368,7 @@ class DashboardController extends Controller
         $trackUris = [];
 
         foreach ($recommendations as $recommendation) {
-            /** @var Album|null $album */
-            $album = $recommendation->getRelation('album');
-            /** @var SpotifySavedAlbum|null $legacyAlbum */
-            $legacyAlbum = $recommendation->getRelation('spotifySavedAlbum');
-
-            if ($album !== null && $album->getRelation('tracks')->isNotEmpty()) {
-                /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
-                $tracks = $album->getRelation('tracks');
-                foreach ($tracks as $track) {
-                    if (is_string($track->spotify_uri) && str_starts_with($track->spotify_uri, 'spotify:track:')) {
-                        $trackUris[] = $track->spotify_uri;
-                    }
-                }
-            } elseif ($legacyAlbum !== null) {
-                foreach (data_get($legacyAlbum->tracks, 'items', []) as $track) {
-                    $uri = is_array($track) ? ($track['uri'] ?? null) : null;
-
-                    if (is_string($uri) && str_starts_with($uri, 'spotify:track:')) {
-                        $trackUris[] = $uri;
-                    }
-                }
-            }
+            $trackUris = [...$trackUris, ...$this->recommendationTrackUris($recommendation)];
         }
 
         if ($trackUris === []) {
@@ -392,6 +395,36 @@ class DashboardController extends Controller
         }
 
         return back()->with('success', 'Recommendation draft synced to Spotify.');
+    }
+
+    /** @return list<string> */
+    private function recommendationTrackUris(AlbumRecommendation $recommendation): array
+    {
+        /** @var Album|null $album */
+        $album = $recommendation->getRelation('album');
+        /** @var SpotifySavedAlbum|null $legacyAlbum */
+        $legacyAlbum = $recommendation->getRelation('spotifySavedAlbum');
+
+        if ($album !== null && $album->getRelation('tracks')->isNotEmpty()) {
+            /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+            $tracks = $album->getRelation('tracks');
+
+            return $tracks
+                ->pluck('spotify_uri')
+                ->filter(fn (mixed $uri): bool => is_string($uri) && str_starts_with($uri, 'spotify:track:'))
+                ->values()
+                ->all();
+        }
+
+        if ($legacyAlbum === null) {
+            return [];
+        }
+
+        return collect(data_get($legacyAlbum->tracks, 'items', []))
+            ->map(fn (mixed $track): mixed => is_array($track) ? ($track['uri'] ?? null) : null)
+            ->filter(fn (mixed $uri): bool => is_string($uri) && str_starts_with($uri, 'spotify:track:'))
+            ->values()
+            ->all();
     }
 
     public function addAlbumsToRecommendations(Request $request, RecommendationRun $recommendationRun): RedirectResponse
