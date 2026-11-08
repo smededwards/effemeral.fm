@@ -45,6 +45,27 @@ class SpotifyClient
         return $this->paginate('/me/playlists', $limit, fn (array $item): bool => isset($item['id']));
     }
 
+    /** @param list<string> $ids */
+    public function artists(array $ids): array
+    {
+        $artists = [];
+
+        foreach (array_chunk(array_values(array_unique($ids)), 50) as $chunk) {
+            $response = $this->request()->get('/artists', ['ids' => implode(',', $chunk)]);
+
+            if ($response->failed()) {
+                throw new RuntimeException('Spotify returned HTTP '.$response->status().'.');
+            }
+
+            $artists = array_merge($artists, array_values(array_filter(
+                data_get($response->json(), 'artists', []),
+                fn (mixed $artist): bool => is_array($artist) && isset($artist['id']),
+            )));
+        }
+
+        return $artists;
+    }
+
     /** @return list<array<string, mixed>> */
     public function playlistItems(string $playlistId): array
     {

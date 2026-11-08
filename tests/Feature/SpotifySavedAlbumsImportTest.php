@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\ImportSpotifySavedAlbums;
 use App\Models\Album;
 use App\Models\Artist;
+use App\Models\Genre;
 use App\Models\SpotifyAlbumImportRun;
 use App\Models\SpotifySavedAlbum;
 use App\Models\Track;
@@ -36,8 +37,14 @@ class SpotifySavedAlbumsImportTest extends TestCase
     public function test_saved_albums_are_imported_and_existing_albums_are_updated(): void
     {
         config()->set('services.spotify.access_token', 'test-token');
-        Http::fake([
-            '*' => Http::response([
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/artists?ids=artist-id')) {
+                return Http::response([
+                    'artists' => [['id' => 'artist-id', 'genres' => ['post-metal', 'post metal']]],
+                ]);
+            }
+
+            return Http::response([
                 'next' => null,
                 'items' => [
                     [
@@ -57,8 +64,8 @@ class SpotifySavedAlbumsImportTest extends TestCase
                         ],
                     ],
                 ],
-            ]),
-        ]);
+            ]);
+        });
 
         $run = SpotifyAlbumImportRun::query()->create([
             'source' => 'spotify',
@@ -84,6 +91,8 @@ class SpotifySavedAlbumsImportTest extends TestCase
         $this->assertCount(1, Album::query()->firstOrFail()->artists);
         $this->assertSame('A Track', Track::query()->firstOrFail()->title);
         $this->assertSame('An Artist', Artist::query()->firstOrFail()->name);
+        $this->assertSame(1, Genre::query()->count());
+        $this->assertSame(['post-metal'], Artist::query()->firstOrFail()->genres->unique('normalised_name')->pluck('name')->all());
         $this->assertDatabaseHas('spotify_album_import_runs', [
             'id' => $run->id,
             'status' => 'completed',
