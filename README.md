@@ -8,7 +8,8 @@ The prototype is intentionally album-first and manual-first:
 - Spotify provides saved albums, liked songs, playlists, catalogue metadata, and the eventual playlist export.
 - Effemeral stores a canonical catalogue of artists, albums, and tracks, with source identifiers and Spotify collection membership.
 - Recommendations remain drafts until they are reviewed, reordered, and explicitly synced.
-- Discogs, genre enrichment, full-history import, liked-song import, and playlist-content import are follow-up slices.
+- The next discovery workflows are selected-album similarity and artist discography playlist drafts.
+- Discogs metadata, full-history import, liked-song import, and richer playlist-content analysis remain follow-up slices.
 
 ## Current import foundation
 
@@ -56,10 +57,23 @@ Run the standard checks from the application container:
 
 ## Roadmap direction
 
-1. Complete the canonical import foundation.
-2. Import Spotify liked songs and playlist contents into the canonical model.
-3. Rebuild completion and recommendation queries on canonical records.
-4. Add album-level Effemeral playlist editing and Spotify export.
-5. Add normalized genre enrichment and manual genre corrections.
-6. Add Discogs metadata and full discography support.
-7. Expand from the prototype's limited imports to the complete Last.fm and Spotify datasets.
+The target prototype supports two related album-first workflows:
+
+1. Select an album or artist from the canonical catalogue.
+2. Suggest similar albums using normalized genre, artist relationships, release year, and Last.fm completion evidence.
+3. Generate an album-level discography draft for a selected artist.
+4. Review, reorder, include, exclude, and manually override the draft.
+5. Sync the approved draft to a private Spotify playlist.
+
+The implementation order is:
+
+1. Complete the canonical catalogue and import foundation.
+2. Import and normalize Spotify artist genres and Last.fm tags, with manual corrections.
+3. Add catalogue search and selected album/artist context.
+4. Add same-genre, same-year album suggestions that exclude completed albums by default.
+5. Add artist discography discovery and album-level playlist drafts.
+6. Keep the existing review, audit, and Spotify sync flow as the shared delivery path.
+7. Add Discogs as the preferred metadata and genre authority when ready.
+8. Expand to the complete Last.fm history, Spotify liked songs, and deeper playlist-content analysis.
+
+The current prototype has steps 1 and 6 in place for saved-album recommendations. It does not yet provide steps 2–5 for arbitrary catalogue selections.

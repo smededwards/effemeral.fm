@@ -156,6 +156,9 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Importers must be idempotent, preserve source provenance, tolerate retries, and avoid creating cross-source duplicates. Existing compatibility tables should not be removed without a migration plan.
 - Discogs metadata, genre enrichment, liked-song import, playlist-content import, and full-history import are later slices. Do not imply they are implemented when they are only represented in the model or roadmap.
 - Album-level workflows come before individual-track playlist workflows. Keep manual review, ordering, inclusion, and completion overrides available for consequential automation.
+- The next product target is selected-album discovery: choose an album or artist, find similar incomplete albums from a requested genre and year, or generate an album-level artist discography draft.
+- Similarity recommendations require normalized genre data, release-year filtering, canonical catalogue records, and Last.fm completion evidence; do not make Spotify playlist membership the recommendation authority.
+- Artist discography drafts should reuse the existing recommendation review, ordering, exclusion, audit, and Spotify sync flow rather than creating a second playlist workflow.
 
 ## Effemeral delivery workflow
 
