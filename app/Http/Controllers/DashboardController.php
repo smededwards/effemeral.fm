@@ -180,6 +180,70 @@ class DashboardController extends Controller
         return redirect()->route('recommendations.review.page', $recommendationRun);
     }
 
+    public function discographyRecommendations(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'artist_id' => ['required', 'integer', 'exists:artists,id'],
+        ]);
+        $artist = Artist::query()->findOrFail($validated['artist_id']);
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums */
+        $albums = $artist->albums()
+            ->with('tracks')
+            ->where('album_type', 'album')
+            ->whereHas('spotifyCollections', fn ($query) => $query->where('collection_type', 'saved'))
+            ->orderBy('release_date')
+            ->orderBy('title')
+            ->get();
+        $savedAlbums = SpotifySavedAlbum::query()
+            ->whereIn('spotify_album_id', $albums->pluck('spotify_id')->filter())
+            ->get()
+            ->keyBy('spotify_album_id');
+        $albums = $albums->filter(function (Album $album) use ($savedAlbums): bool {
+            $savedAlbum = $savedAlbums->get($album->spotify_id);
+
+            return $savedAlbum !== null
+                && $album->tracks->isNotEmpty()
+                && ($album->total_tracks === null || $album->tracks->count() === $album->total_tracks);
+        })->values();
+
+        if ($albums->isEmpty()) {
+            return back()->with('error', 'No complete saved albums are available for this artist.');
+        }
+
+        $recommendationRun = DB::transaction(function () use ($albums, $savedAlbums): RecommendationRun {
+            $heardTrackIds = Scrobble::query()
+                ->whereNotNull('track_id')
+                ->pluck('track_id')
+                ->flip();
+            $run = RecommendationRun::query()->create([
+                'source' => 'artist_discography',
+                'status' => 'draft',
+                'generated_at' => now(),
+            ]);
+
+            foreach ($albums as $position => $album) {
+                $savedAlbum = $savedAlbums->get($album->spotify_id);
+                /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+                $tracks = $album->tracks;
+                $heard = $tracks->filter(fn (Track $track): bool => $heardTrackIds->has($track->id))->count();
+
+                AlbumRecommendation::query()->create([
+                    'recommendation_run_id' => $run->id,
+                    'album_id' => $album->id,
+                    'spotify_saved_album_id' => $savedAlbum->id,
+                    'position' => $position + 1,
+                    'heard_tracks' => $heard,
+                    'total_tracks' => $tracks->count(),
+                    'completion_percentage' => (int) floor(($heard / $tracks->count()) * 100),
+                ]);
+            }
+
+            return $run;
+        });
+
+        return redirect()->route('recommendations.review.page', $recommendationRun);
+    }
+
     public function index(): View
     {
         $incompleteAlbums = $this->incompleteAlbums();
