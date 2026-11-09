@@ -154,11 +154,15 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Spotify is a supporting library and export source: saved albums, liked songs, and playlists enrich the catalogue but do not prove that an album was heard.
 - The canonical catalogue is the artists, albums, and tracks tables, with source identifiers and collection membership. Do not add new features that depend only on embedded provider JSON when the canonical model can be used.
 - Importers must be idempotent, preserve source provenance, tolerate retries, and avoid creating cross-source duplicates. Existing compatibility tables should not be removed without a migration plan.
-- Discogs metadata, genre enrichment, liked-song import, playlist-content import, and full-history import are later slices. Do not imply they are implemented when they are only represented in the model or roadmap.
+- Discogs metadata, liked-song import, deeper playlist-content analysis, and full-history import remain later slices. Do not imply they are implemented when they are only represented in the model or roadmap.
 - Album-level workflows come before individual-track playlist workflows. Keep manual review, ordering, inclusion, and completion overrides available for consequential automation.
 - The next product target is selected-album discovery: choose an album or artist, find similar incomplete albums from a requested genre and year, or generate an album-level artist discography draft.
 - Similarity recommendations require normalized genre data, release-year filtering, canonical catalogue records, and Last.fm completion evidence; do not make Spotify playlist membership the recommendation authority.
 - Artist discography drafts should reuse the existing recommendation review, ordering, exclusion, audit, and Spotify sync flow rather than creating a second playlist workflow.
+- The agreed milestone sequence is `Agalloch`, `Baroness`, `Cathedral`, `Darkthrone`, `Earth`, `Funeral`, `Gallows`, `Hawkwind`, `Interpol`, `Jinjer`, `Kyuss`, `Lucifer`, `Mastodon`, `Neurosis`, `Opeth`, `Pallbearer`, `Quicksand`, `Rammstein`, `Slayer`, `Tombs`, `Ulver`, `Venom`, `Windhand`, `Xasthur`, `Yob`, and `Zao`; then cycle back to `A`.
+- The sequence starts with `Agalloch` as the closed `v0.1.0` prototype baseline and `Baroness` as the next `v0.2.0` milestone. Do not pre-create future milestones; create each one as its release work begins.
+- A milestone is complete only after its issues are merged into `dev`, CI/Pint/PHPStan/PHPUnit pass, the user reviews the working prototype, and `dev` is merged into `main`.
+- Milestone completion creates the matching semantic-version tag, GitHub release, and Conventional Commit changelog summary. Patch releases are reserved for fixes; new feature milestones increment the minor version while the project remains below `v1.0.0`.
 
 ## Effemeral delivery workflow
 
