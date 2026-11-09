@@ -10,6 +10,7 @@ use App\Services\Catalog\GenreWriter;
 use App\Services\Spotify\SpotifyClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class ImportSpotifyPlaylists implements ShouldQueue
@@ -59,43 +60,45 @@ class ImportSpotifyPlaylists implements ShouldQueue
                 $wasExisting ? $updated++ : $imported++;
 
                 $items = $client->playlistItems($playlistId);
-                $playlist->items()->delete();
+                DB::transaction(function () use ($catalog, $items, $playlist, &$artistIds, &$fetched, &$skipped): void {
+                    $playlist->items()->delete();
 
-                foreach ($items as $position => $item) {
-                    $track = $item['track'] ?? null;
-                    if (! is_array($track) || ! is_array($track['album'] ?? null)) {
-                        $skipped++;
+                    foreach ($items as $position => $item) {
+                        $track = $item['track'] ?? null;
+                        if (! is_array($track) || ! is_array($track['album'] ?? null)) {
+                            $skipped++;
 
-                        continue;
-                    }
-
-                    foreach ($track['album']['artists'] ?? [] as $artist) {
-                        if (is_array($artist) && is_string($artist['id'] ?? null) && $artist['id'] !== '') {
-                            $artistIds[$artist['id']] = true;
+                            continue;
                         }
-                    }
 
-                    $album = $catalog->spotifyAlbum(
-                        $track['album'],
-                        null,
-                        'playlist',
-                        $playlistId,
-                    );
-                    $spotifyTrackId = $track['id'] ?? null;
-                    $playlist->items()->create([
-                        'album_id' => $album->id,
-                        'track_id' => $spotifyTrackId
-                            ? $album->tracks()->where('spotify_id', $spotifyTrackId)->value('id')
-                            : null,
-                        'spotify_track_id' => $spotifyTrackId,
-                        'spotify_uri' => $track['uri'] ?? null,
-                        'track_name' => $track['name'] ?? null,
-                        'position' => $position,
-                        'added_at' => $item['added_at'] ?? null,
-                        'is_local' => $item['is_local'] ?? false,
-                    ]);
-                    $fetched++;
-                }
+                        foreach ($track['album']['artists'] ?? [] as $artist) {
+                            if (is_array($artist) && is_string($artist['id'] ?? null) && $artist['id'] !== '') {
+                                $artistIds[$artist['id']] = true;
+                            }
+                        }
+
+                        $album = $catalog->spotifyAlbum(
+                            $track['album'],
+                            null,
+                            'playlist',
+                            $playlist->spotify_playlist_id,
+                        );
+                        $spotifyTrackId = $track['id'] ?? null;
+                        $playlist->items()->create([
+                            'album_id' => $album->id,
+                            'track_id' => $spotifyTrackId
+                                ? $album->tracks()->where('spotify_id', $spotifyTrackId)->value('id')
+                                : null,
+                            'spotify_track_id' => $spotifyTrackId,
+                            'spotify_uri' => $track['uri'] ?? null,
+                            'track_name' => $track['name'] ?? null,
+                            'position' => $position,
+                            'added_at' => $item['added_at'] ?? null,
+                            'is_local' => $item['is_local'] ?? false,
+                        ]);
+                        $fetched++;
+                    }
+                });
             }
 
             foreach ($client->artists(array_keys($artistIds)) as $artistData) {

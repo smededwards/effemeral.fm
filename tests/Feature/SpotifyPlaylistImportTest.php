@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Jobs\ImportSpotifyPlaylists;
+use App\Models\Album;
 use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
+use App\Models\SpotifyPlaylistItem;
 use App\Services\Spotify\SpotifyClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -102,6 +104,53 @@ class SpotifyPlaylistImportTest extends TestCase
             'status' => 'completed',
             'fetched_count' => 1,
             'updated_count' => 1,
+        ]);
+    }
+
+    public function test_failed_item_refresh_preserves_the_previous_playlist_items(): void
+    {
+        config()->set('services.spotify.access_token', 'test-token');
+        $playlist = SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'playlist-id',
+            'name' => 'Existing playlist',
+        ]);
+        $album = Album::query()->create([
+            'title' => 'Existing album',
+            'normalised_title' => 'existing album',
+        ]);
+        SpotifyPlaylistItem::query()->create([
+            'spotify_playlist_id' => $playlist->id,
+            'album_id' => $album->id,
+            'spotify_track_id' => 'existing-track-id',
+            'position' => 0,
+        ]);
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/me/playlists')) {
+                return Http::response([
+                    'next' => null,
+                    'items' => [[
+                        'id' => 'playlist-id',
+                        'name' => 'Updated playlist',
+                        'tracks' => ['total' => 1],
+                    ]],
+                ]);
+            }
+
+            return Http::response([], 500);
+        });
+
+        $run = SpotifyPlaylistImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'queued',
+            'requested_limit' => 10,
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        (new ImportSpotifyPlaylists($run->id))->handle(app(SpotifyClient::class));
+
+        $this->assertDatabaseHas('spotify_playlist_items', [
+            'spotify_playlist_id' => $playlist->id,
+            'spotify_track_id' => 'existing-track-id',
         ]);
     }
 }
