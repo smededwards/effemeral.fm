@@ -113,7 +113,7 @@ class DashboardController extends Controller
             ->keyBy('spotify_album_id');
 
         $candidates = $albums
-            ->map(function (Album $album) use ($contextArtistIds, $genre, $heardTrackIds, $savedAlbums): ?array {
+            ->map(function (Album $album) use ($contextArtistIds, $genre, $heardTrackIds, $savedAlbums, $validated): ?array {
                 /** @var \Illuminate\Database\Eloquent\Collection<int, Artist> $artists */
                 $artists = $album->artists;
                 /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
@@ -144,6 +144,7 @@ class DashboardController extends Controller
                     'heard' => $heard,
                     'total' => $tracks->count(),
                     'percentage' => (int) floor(($heard / $tracks->count()) * 100),
+                    'match_reason' => 'Genre: '.$validated['genre'].' · Release year: '.$validated['year'].($savedAlbum->completion_override === false ? ' · Manual incomplete override' : ''),
                 ];
             })
             ->filter()
@@ -171,6 +172,7 @@ class DashboardController extends Controller
                     'heard_tracks' => $candidate['heard'],
                     'total_tracks' => $candidate['total'],
                     'completion_percentage' => $candidate['percentage'],
+                    'match_reason' => $candidate['match_reason'],
                 ]);
             }
 

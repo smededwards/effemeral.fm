@@ -11,7 +11,7 @@ class AlbumRecommendation extends Model
 {
     protected $fillable = [
         'recommendation_run_id', 'album_id', 'spotify_saved_album_id', 'position', 'heard_tracks',
-        'total_tracks', 'completion_percentage', 'included',
+        'total_tracks', 'completion_percentage', 'match_reason', 'included',
     ];
 
     protected function casts(): array
