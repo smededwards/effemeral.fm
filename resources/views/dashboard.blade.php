@@ -8,10 +8,13 @@
     </head>
     <body class="min-h-screen bg-zinc-950 text-zinc-100">
         <main class="mx-auto max-w-5xl space-y-8 px-6 py-12">
-            <header>
-                <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
-                <h1 class="mt-3 text-4xl font-semibold">Listening history</h1>
-                <p class="mt-3 max-w-2xl text-zinc-400">Import Last.fm scrobbles manually while the matching and recommendation tools are built.</p>
+            <header class="flex flex-wrap items-start justify-between gap-6">
+                <div>
+                    <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
+                    <h1 class="mt-3 text-4xl font-semibold">Listening history</h1>
+                    <p class="mt-3 max-w-2xl text-zinc-400">Import Last.fm scrobbles manually while the matching and recommendation tools are built.</p>
+                </div>
+                <a class="rounded-md border border-emerald-700 px-4 py-2 text-sm font-medium text-emerald-300 hover:border-emerald-500" href="{{ route('catalogue.index') }}">Browse catalogue</a>
             </header>
 
             @if (session('success'))

@@ -21,6 +21,14 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_dashboard_links_to_the_catalogue(): void
+    {
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Browse catalogue')
+            ->assertSee('href="'.route('catalogue.index').'"', false);
+    }
+
     public function test_imported_spotify_albums_are_shown_on_the_dashboard(): void
     {
         SpotifySavedAlbum::query()->create([
@@ -301,7 +309,7 @@ class DashboardTest extends TestCase
 
     public function test_recommendation_review_page_summarises_included_tracks_and_albums(): void
     {
-        $run = RecommendationRun::factory()->create();
+        $run = RecommendationRun::factory()->create(['source' => 'spotify_saved_albums']);
         $includedAlbum = SpotifySavedAlbum::query()->create([
             'spotify_album_id' => 'review-included-album-id',
             'spotify_uri' => 'spotify:album:review-included-album-id',
@@ -337,6 +345,7 @@ class DashboardTest extends TestCase
 
         $this->get(route('recommendations.review.page', $run))
             ->assertOk()
+            ->assertSee('Source: Spotify Saved Albums')
             ->assertSee('1', false)
             ->assertSee('2 Spotify tracks available')
             ->assertSee('Included Review Album')

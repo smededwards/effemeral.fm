@@ -13,6 +13,7 @@
                     <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
                     <h1 class="mt-3 text-4xl font-semibold">Review playlist draft</h1>
                     <p class="mt-3 max-w-2xl text-zinc-400">Check the exact albums and Spotify tracks before syncing this draft.</p>
+                    <p class="mt-2 text-sm text-emerald-300">Source: {{ str($recommendationRun->source)->replace('_', ' ')->title() }}</p>
                 </div>
                 <a class="text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ route('dashboard') }}">Back to dashboard</a>
             </header>
