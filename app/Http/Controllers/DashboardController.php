@@ -31,6 +31,51 @@ use Throwable;
 
 class DashboardController extends Controller
 {
+    public function catalogue(Request $request): View
+    {
+        $search = trim((string) $request->query('q'));
+        $artistId = $request->integer('artist');
+        $albumId = $request->integer('album');
+        $artists = collect();
+        $albums = collect();
+
+        if ($search !== '') {
+            $artists = Artist::query()
+                ->where(function ($query) use ($search): void {
+                    $query->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('normalised_name', 'like', '%'.$this->normalise($search).'%');
+                })
+                ->orderBy('name')
+                ->limit(25)
+                ->get();
+            $albums = Album::query()
+                ->with('artists')
+                ->where(function ($query) use ($search): void {
+                    $query->where('title', 'like', '%'.$search.'%')
+                        ->orWhere('normalised_title', 'like', '%'.$this->normalise($search).'%')
+                        ->orWhereHas('artists', function ($artistQuery) use ($search): void {
+                            $artistQuery->where('name', 'like', '%'.$search.'%')
+                                ->orWhere('normalised_name', 'like', '%'.$this->normalise($search).'%');
+                        });
+                })
+                ->orderBy('title')
+                ->limit(25)
+                ->get();
+        }
+
+        return view('catalogue.index', [
+            'search' => $search,
+            'artists' => $artists,
+            'albums' => $albums,
+            'selectedArtist' => $artistId > 0
+                ? Artist::query()->with(['albums' => fn ($query) => $query->orderBy('title')])->find($artistId)
+                : null,
+            'selectedAlbum' => $albumId > 0
+                ? Album::query()->with('artists', 'tracks')->find($albumId)
+                : null,
+        ]);
+    }
+
     public function index(): View
     {
         $incompleteAlbums = $this->incompleteAlbums();
