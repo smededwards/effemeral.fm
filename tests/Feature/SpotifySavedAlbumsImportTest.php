@@ -38,6 +38,17 @@ class SpotifySavedAlbumsImportTest extends TestCase
     {
         config()->set('services.spotify.access_token', 'test-token');
         Http::fake(function ($request) {
+            if (str_contains($request->url(), '/albums/album-id/tracks')) {
+                return Http::response([
+                    'next' => str_contains($request->url(), 'offset=0') ? 'next-page' : null,
+                    'items' => [
+                        str_contains($request->url(), 'offset=0')
+                            ? ['id' => 'track-id', 'name' => 'A Track']
+                            : ['id' => 'track-id-2', 'name' => 'A Second Track'],
+                    ],
+                ]);
+            }
+
             if (str_contains($request->url(), '/artists?ids=artist-id')) {
                 return Http::response([
                     'artists' => [['id' => 'artist-id', 'genres' => ['post-metal', 'post metal']]],
@@ -54,7 +65,7 @@ class SpotifySavedAlbumsImportTest extends TestCase
                             'uri' => 'spotify:album:album-id',
                             'name' => 'A Saved Album',
                             'album_type' => 'album',
-                            'total_tracks' => 8,
+                            'total_tracks' => 2,
                             'release_date' => '2020-01-01',
                             'release_date_precision' => 'day',
                             'artists' => [['id' => 'artist-id', 'name' => 'An Artist']],
@@ -87,8 +98,10 @@ class SpotifySavedAlbumsImportTest extends TestCase
         $this->assertDatabaseHas('artists', ['spotify_id' => 'artist-id', 'name' => 'An Artist']);
         $this->assertDatabaseHas('albums', ['spotify_id' => 'album-id', 'title' => 'A Saved Album']);
         $this->assertDatabaseHas('tracks', ['spotify_id' => 'track-id', 'title' => 'A Track']);
+        $this->assertDatabaseHas('tracks', ['spotify_id' => 'track-id-2', 'title' => 'A Second Track']);
         $this->assertDatabaseHas('spotify_album_collections', ['collection_type' => 'saved']);
         $this->assertCount(1, Album::query()->firstOrFail()->artists);
+        $this->assertCount(2, Album::query()->firstOrFail()->tracks);
         $this->assertSame('A Track', Track::query()->firstOrFail()->title);
         $this->assertSame('An Artist', Artist::query()->firstOrFail()->name);
         $this->assertSame(1, Genre::query()->count());
