@@ -78,7 +78,7 @@
                                 <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="text" name="genre" value="{{ old('genre', $selectedAlbum->artists->flatMap->acceptedGenres->first()?->name) }}" placeholder="post-metal" required>
                             </label>
                             <label class="block text-sm text-zinc-300">Release year
-                                <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="year" value="{{ old('year', now()->year) }}" min="1900" max="2100" required>
+                                <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="year" value="{{ old('year', substr((string) $selectedAlbum->release_date, 0, 4) ?: now()->year) }}" min="1900" max="2100" required>
                             </label>
                         </div>
                         <button class="mt-4 rounded-md bg-amber-400 px-4 py-2 font-medium text-zinc-950 hover:bg-amber-300" type="submit">Generate suggestions</button>

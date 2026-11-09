@@ -128,5 +128,6 @@ class CatalogueDiscoveryTest extends TestCase
         $response->assertRedirect(route('recommendations.review.page', $run));
         $this->assertSame('catalogue_discovery', $run->source);
         $this->assertSame([$savedAlbum->id], $run->albumRecommendations->pluck('spotify_saved_album_id')->all());
+        $this->assertSame('Genre: post metal · Release year: 2024', $run->albumRecommendations->firstOrFail()->match_reason);
     }
 }
