@@ -67,4 +67,25 @@ class SpotifyAuthenticationTest extends TestCase
         Http::assertSent(fn ($request): bool => str_starts_with($request->url(), config('services.spotify.api_endpoint').'/me/albums') && $request->header('Authorization') === ['Bearer new-token']);
         $this->assertSame('new-token', SpotifyConnection::query()->firstOrFail()->access_token);
     }
+
+    public function test_spotify_rate_limit_is_retried(): void
+    {
+        $attempts = 0;
+        config()->set('services.spotify.access_token', 'test-token');
+        Http::fake(function ($request) use (&$attempts) {
+            if (! str_contains($request->url(), '/me/albums')) {
+                return Http::response(['next' => null, 'items' => []]);
+            }
+
+            $attempts++;
+
+            return $attempts === 1
+                ? Http::response([], 429, ['Retry-After' => '0'])
+                : Http::response(['next' => null, 'items' => []]);
+        });
+
+        app(SpotifyClient::class)->savedAlbums(1);
+
+        $this->assertSame(2, $attempts);
+    }
 }
