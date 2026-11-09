@@ -68,12 +68,116 @@ class DashboardController extends Controller
             'artists' => $artists,
             'albums' => $albums,
             'selectedArtist' => $artistId > 0
-                ? Artist::query()->with(['albums' => fn ($query) => $query->orderBy('title')])->find($artistId)
+                ? Artist::query()->with(['albums' => fn ($query) => $query->orderBy('title'), 'acceptedGenres'])->find($artistId)
                 : null,
             'selectedAlbum' => $albumId > 0
-                ? Album::query()->with('artists', 'tracks')->find($albumId)
+                ? Album::query()->with('artists.acceptedGenres', 'tracks')->find($albumId)
                 : null,
         ]);
+    }
+
+    public function discoverRecommendations(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'artist_id' => ['nullable', 'integer', 'exists:artists,id'],
+            'album_id' => ['nullable', 'integer', 'exists:albums,id'],
+            'genre' => ['required', 'string', 'max:100'],
+            'year' => ['required', 'integer', 'between:1900,2100'],
+        ]);
+
+        if (empty($validated['artist_id']) === empty($validated['album_id'])) {
+            return back()->withErrors(['context' => 'Choose one artist or album before generating discovery suggestions.']);
+        }
+
+        $selectedAlbum = isset($validated['album_id'])
+            ? Album::query()->with('artists')->findOrFail($validated['album_id'])
+            : null;
+        $selectedArtist = isset($validated['artist_id'])
+            ? Artist::query()->findOrFail($validated['artist_id'])
+            : null;
+        $contextArtistIds = $selectedAlbum?->artists->pluck('id')->all() ?? [$selectedArtist->id];
+        $genre = $this->normalise($validated['genre']);
+        $heardTrackIds = Scrobble::query()
+            ->whereNotNull('track_id')
+            ->pluck('track_id')
+            ->flip();
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums */
+        $albums = Album::query()
+            ->with(['artists.acceptedGenres', 'tracks'])
+            ->where('release_date', 'like', $validated['year'].'%')
+            ->whereHas('spotifyCollections', fn ($query) => $query->where('collection_type', 'saved'))
+            ->get();
+        $savedAlbums = SpotifySavedAlbum::query()
+            ->whereIn('spotify_album_id', $albums->pluck('spotify_id')->filter())
+            ->get()
+            ->keyBy('spotify_album_id');
+
+        $candidates = $albums
+            ->map(function (Album $album) use ($contextArtistIds, $genre, $heardTrackIds, $savedAlbums): ?array {
+                /** @var \Illuminate\Database\Eloquent\Collection<int, Artist> $artists */
+                $artists = $album->artists;
+                /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+                $tracks = $album->tracks;
+
+                if ($artists->pluck('id')->intersect($contextArtistIds)->isNotEmpty()) {
+                    return null;
+                }
+
+                $hasGenre = $artists
+                    ->flatMap(fn (Artist $artist) => $artist->acceptedGenres->pluck('normalised_name'))
+                    ->contains($genre);
+                $savedAlbum = $savedAlbums->get($album->spotify_id);
+
+                if (! $hasGenre || $savedAlbum === null || $savedAlbum->completion_override === true
+                    || $tracks->isEmpty() || ($album->total_tracks !== null && $tracks->count() !== $album->total_tracks)) {
+                    return null;
+                }
+
+                $heard = $tracks->filter(fn (Track $track): bool => $heardTrackIds->has($track->id))->count();
+                if ($savedAlbum->completion_override !== false && $heard === $tracks->count()) {
+                    return null;
+                }
+
+                return [
+                    'album' => $album,
+                    'saved_album' => $savedAlbum,
+                    'heard' => $heard,
+                    'total' => $tracks->count(),
+                    'percentage' => (int) floor(($heard / $tracks->count()) * 100),
+                ];
+            })
+            ->filter()
+            ->sortBy(fn (array $candidate): string => sprintf('%03d-%s', $candidate['percentage'], $candidate['album']->title))
+            ->take(10)
+            ->values();
+
+        if ($candidates->isEmpty()) {
+            return back()->with('error', 'No incomplete saved albums matched that genre and year.');
+        }
+
+        $recommendationRun = DB::transaction(function () use ($candidates): RecommendationRun {
+            $run = RecommendationRun::query()->create([
+                'source' => 'catalogue_discovery',
+                'status' => 'draft',
+                'generated_at' => now(),
+            ]);
+
+            foreach ($candidates as $position => $candidate) {
+                AlbumRecommendation::query()->create([
+                    'recommendation_run_id' => $run->id,
+                    'album_id' => $candidate['album']->id,
+                    'spotify_saved_album_id' => $candidate['saved_album']->id,
+                    'position' => $position + 1,
+                    'heard_tracks' => $candidate['heard'],
+                    'total_tracks' => $candidate['total'],
+                    'completion_percentage' => $candidate['percentage'],
+                ]);
+            }
+
+            return $run;
+        });
+
+        return redirect()->route('recommendations.review.page', $recommendationRun);
     }
 
     public function index(): View

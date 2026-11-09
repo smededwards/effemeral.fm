@@ -40,6 +40,20 @@
                     @else
                         <p class="mt-5 text-sm text-zinc-500">No canonical albums are linked to this artist yet.</p>
                     @endif
+                    <form class="mt-6 border-t border-emerald-900 pt-6" method="POST" action="{{ route('catalogue.discover') }}">
+                        @csrf
+                        <input type="hidden" name="artist_id" value="{{ $selectedArtist->id }}">
+                        <p class="text-sm font-medium text-zinc-200">Find incomplete albums in this style</p>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                            <label class="block text-sm text-zinc-300">Genre
+                                <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="text" name="genre" value="{{ old('genre', $selectedArtist->acceptedGenres->first()?->name) }}" placeholder="post-metal" required>
+                            </label>
+                            <label class="block text-sm text-zinc-300">Release year
+                                <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="year" value="{{ old('year', now()->year) }}" min="1900" max="2100" required>
+                            </label>
+                        </div>
+                        <button class="mt-4 rounded-md bg-amber-400 px-4 py-2 font-medium text-zinc-950 hover:bg-amber-300" type="submit">Generate suggestions</button>
+                    </form>
                 </section>
             @endif
 
@@ -50,6 +64,20 @@
                     <p class="mt-2 text-zinc-300">{{ $selectedAlbum->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
                     <p class="mt-2 text-sm text-zinc-500">{{ $selectedAlbum->tracks->count() }} canonical tracks{{ $selectedAlbum->release_date ? ' · '.$selectedAlbum->release_date : '' }}</p>
                     <p class="mt-5 text-sm text-zinc-400">This album is ready to become the context for genre, year, and completion-aware discovery.</p>
+                    <form class="mt-6 border-t border-emerald-900 pt-6" method="POST" action="{{ route('catalogue.discover') }}">
+                        @csrf
+                        <input type="hidden" name="album_id" value="{{ $selectedAlbum->id }}">
+                        <p class="text-sm font-medium text-zinc-200">Find incomplete albums in this style</p>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                            <label class="block text-sm text-zinc-300">Genre
+                                <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="text" name="genre" value="{{ old('genre', $selectedAlbum->artists->flatMap->acceptedGenres->first()?->name) }}" placeholder="post-metal" required>
+                            </label>
+                            <label class="block text-sm text-zinc-300">Release year
+                                <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="year" value="{{ old('year', now()->year) }}" min="1900" max="2100" required>
+                            </label>
+                        </div>
+                        <button class="mt-4 rounded-md bg-amber-400 px-4 py-2 font-medium text-zinc-950 hover:bg-amber-300" type="submit">Generate suggestions</button>
+                    </form>
                 </section>
             @endif
 
