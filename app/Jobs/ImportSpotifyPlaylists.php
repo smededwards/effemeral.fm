@@ -2,9 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Models\Artist;
 use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
 use App\Services\Catalog\CatalogWriter;
+use App\Services\Catalog\GenreWriter;
 use App\Services\Spotify\SpotifyClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -16,9 +18,10 @@ class ImportSpotifyPlaylists implements ShouldQueue
 
     public function __construct(public int $importRunId) {}
 
-    public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null): void
+    public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
     {
         $catalog ??= app(CatalogWriter::class);
+        $genreWriter ??= app(GenreWriter::class);
         $run = SpotifyPlaylistImportRun::query()->findOrFail($this->importRunId);
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
@@ -28,6 +31,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
             $imported = 0;
             $updated = 0;
             $skipped = 0;
+            $artistIds = [];
 
             foreach ($playlists as $playlistData) {
                 $playlistId = (string) ($playlistData['id'] ?? '');
@@ -65,6 +69,12 @@ class ImportSpotifyPlaylists implements ShouldQueue
                         continue;
                     }
 
+                    foreach ($track['album']['artists'] ?? [] as $artist) {
+                        if (is_array($artist) && is_string($artist['id'] ?? null) && $artist['id'] !== '') {
+                            $artistIds[$artist['id']] = true;
+                        }
+                    }
+
                     $album = $catalog->spotifyAlbum(
                         $track['album'],
                         null,
@@ -85,6 +95,13 @@ class ImportSpotifyPlaylists implements ShouldQueue
                         'is_local' => $item['is_local'] ?? false,
                     ]);
                     $fetched++;
+                }
+            }
+
+            foreach ($client->artists(array_keys($artistIds)) as $artistData) {
+                $artist = Artist::query()->where('spotify_id', $artistData['id'])->first();
+                if ($artist !== null) {
+                    $genreWriter->syncSpotify($artist, $artistData['genres'] ?? []);
                 }
             }
 

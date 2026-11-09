@@ -18,6 +18,7 @@ use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
 use App\Models\SpotifySavedAlbum;
 use App\Models\Track;
+use App\Services\Catalog\GenreWriter;
 use App\Services\Spotify\SpotifyClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -106,6 +107,7 @@ class DashboardController extends Controller
             'incompleteAlbums' => $incompleteAlbums,
             'topArtists' => $artists,
             'topAlbums' => $albums,
+            'genreArtists' => Artist::query()->with('genres')->whereHas('genres')->orderBy('name')->get(),
             'latestRecommendation' => $latestRecommendation,
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),
@@ -297,6 +299,16 @@ class DashboardController extends Controller
         }
 
         return back()->with('success', 'Draft album recommendations generated.');
+    }
+
+    public function updateArtistGenres(Request $request, Artist $artist, GenreWriter $genreWriter): RedirectResponse
+    {
+        $validated = $request->validate(['genres' => ['nullable', 'string', 'max:2000']]);
+        $genres = preg_split('/[,\n]+/', (string) ($validated['genres'] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+
+        $genreWriter->applyManualOverride($artist, array_map('trim', $genres ?: []));
+
+        return back()->with('success', 'Artist genres updated.');
     }
 
     public function createManualRecommendations(Request $request): RedirectResponse

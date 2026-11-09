@@ -13,4 +13,14 @@ class Artist extends Model
     {
         return $this->belongsToMany(Album::class);
     }
+
+    public function genres(): BelongsToMany
+    {
+        return $this->belongsToMany(Genre::class)->withPivot('source', 'suppressed')->withTimestamps();
+    }
+
+    public function acceptedGenres(): BelongsToMany
+    {
+        return $this->genres()->wherePivot('suppressed', false)->select('genres.*')->distinct();
+    }
 }

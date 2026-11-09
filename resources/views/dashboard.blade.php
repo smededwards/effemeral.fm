@@ -92,6 +92,24 @@
                 </div>
             </section>
 
+            @if ($genreArtists->isNotEmpty())
+                <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                    <h2 class="text-xl font-medium">Artist genres</h2>
+                    <p class="mt-1 text-sm text-zinc-400">Review normalized Spotify genres. Separate genres with commas; removing one keeps it suppressed on future imports.</p>
+                    <div class="mt-6 grid gap-4 md:grid-cols-2">
+                        @foreach ($genreArtists as $artist)
+                            @php($acceptedGenres = $artist->genres->filter(fn ($genre): bool => ! $genre->pivot->suppressed)->unique('normalised_name')->pluck('name')->implode(', '))
+                            <form class="rounded-lg border border-zinc-800 bg-zinc-950 p-4" method="POST" action="{{ route('artists.genres.update', $artist) }}">
+                                @csrf
+                                <label class="block text-sm font-medium text-zinc-200" for="artist-genres-{{ $artist->id }}">{{ $artist->name }}</label>
+                                <input id="artist-genres-{{ $artist->id }}" class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" type="text" name="genres" value="{{ $acceptedGenres }}">
+                                <button class="mt-3 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-500" type="submit">Save genres</button>
+                            </form>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>

@@ -2,9 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Models\Artist;
 use App\Models\SpotifyAlbumImportRun;
 use App\Models\SpotifySavedAlbum;
 use App\Services\Catalog\CatalogWriter;
+use App\Services\Catalog\GenreWriter;
 use App\Services\Spotify\SpotifyClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -16,9 +18,10 @@ class ImportSpotifySavedAlbums implements ShouldQueue
 
     public function __construct(public int $importRunId) {}
 
-    public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null): void
+    public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
     {
         $catalog ??= app(CatalogWriter::class);
+        $genreWriter ??= app(GenreWriter::class);
         $run = SpotifyAlbumImportRun::query()->findOrFail($this->importRunId);
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
@@ -27,10 +30,17 @@ class ImportSpotifySavedAlbums implements ShouldQueue
             $imported = 0;
             $updated = 0;
             $skipped = 0;
+            $artistIds = [];
 
             foreach ($items as $item) {
                 $album = $item['album'];
                 $albumId = (string) ($album['id'] ?? '');
+
+                foreach ($album['artists'] ?? [] as $artist) {
+                    if (is_array($artist) && is_string($artist['id'] ?? null) && $artist['id'] !== '') {
+                        $artistIds[$artist['id']] = true;
+                    }
+                }
 
                 if ($albumId === '') {
                     $skipped++;
@@ -64,6 +74,13 @@ class ImportSpotifySavedAlbums implements ShouldQueue
                     $wasExisting ? $updated++ : $imported++;
                 } else {
                     $skipped++;
+                }
+            }
+
+            foreach ($client->artists(array_keys($artistIds)) as $artistData) {
+                $artist = Artist::query()->where('spotify_id', $artistData['id'])->first();
+                if ($artist !== null) {
+                    $genreWriter->syncSpotify($artist, $artistData['genres'] ?? []);
                 }
             }
 
