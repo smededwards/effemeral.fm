@@ -48,7 +48,8 @@ class ImportSpotifySavedAlbums implements ShouldQueue
                     continue;
                 }
 
-                $catalog->spotifyAlbum($album, $item['added_at'] ?? null);
+                $canonicalAlbum = $catalog->spotifyAlbum($album, $item['added_at'] ?? null);
+                $catalog->spotifyAlbumTracks($canonicalAlbum, $client->albumTracks($albumId));
 
                 $savedAlbum = SpotifySavedAlbum::query()->firstOrNew(['spotify_album_id' => $albumId]);
                 $wasExisting = $savedAlbum->exists;

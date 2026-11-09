@@ -60,8 +60,21 @@ class CatalogWriter
             $album->artists()->syncWithoutDetaching([$artist->id => ['artist_position' => $position]]);
         }
 
-        foreach (Arr::wrap(data_get($albumData, 'tracks.items', [])) as $trackData) {
-            if (! is_array($trackData) || ! is_string($trackData['name'] ?? null)) {
+        $this->spotifyAlbumTracks($album, Arr::wrap(data_get($albumData, 'tracks.items', [])));
+
+        SpotifyAlbumCollection::query()->updateOrCreate(
+            ['album_id' => $album->id, 'collection_type' => $collectionType, 'spotify_playlist_id' => $playlistId],
+            ['saved_at' => $savedAt],
+        );
+
+        return $album;
+    }
+
+    /** @param list<array<string, mixed>> $tracks */
+    public function spotifyAlbumTracks(Album $album, array $tracks): void
+    {
+        foreach ($tracks as $trackData) {
+            if (! is_string($trackData['name'] ?? null)) {
                 continue;
             }
 
@@ -84,13 +97,6 @@ class CatalogWriter
             ]);
             $track->save();
         }
-
-        SpotifyAlbumCollection::query()->updateOrCreate(
-            ['album_id' => $album->id, 'collection_type' => $collectionType, 'spotify_playlist_id' => $playlistId],
-            ['saved_at' => $savedAt],
-        );
-
-        return $album;
     }
 
     public function lastFmScrobble(array $data): ?Track

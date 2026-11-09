@@ -67,6 +67,16 @@ class SpotifyClient
     }
 
     /** @return list<array<string, mixed>> */
+    public function albumTracks(string $albumId): array
+    {
+        return $this->paginate(
+            '/albums/'.$albumId.'/tracks',
+            null,
+            fn (array $track): bool => isset($track['id']),
+        );
+    }
+
+    /** @return list<array<string, mixed>> */
     public function playlistItems(string $playlistId): array
     {
         return $this->paginate(
