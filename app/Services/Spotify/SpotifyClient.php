@@ -5,6 +5,7 @@ namespace App\Services\Spotify;
 use App\Models\SpotifyConnection;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -20,7 +21,7 @@ class SpotifyClient
 
         do {
             $pageLimit = $limit === null ? 50 : min(50, $limit - count($albums));
-            $response = $this->request()->get('/me/albums', [
+            $response = $this->get('/me/albums', [
                 'limit' => $pageLimit,
                 'offset' => $offset,
             ]);
@@ -51,7 +52,7 @@ class SpotifyClient
         $artists = [];
 
         foreach (array_chunk(array_values(array_unique($ids)), 50) as $chunk) {
-            $response = $this->request()->get('/artists', ['ids' => implode(',', $chunk)]);
+            $response = $this->get('/artists', ['ids' => implode(',', $chunk)]);
 
             if ($response->failed()) {
                 throw new RuntimeException('Spotify returned HTTP '.$response->status().'.');
@@ -139,7 +140,7 @@ class SpotifyClient
                 break;
             }
 
-            $response = $this->request()->get($path, [
+            $response = $this->get($path, [
                 'limit' => $pageLimit,
                 'offset' => $offset,
             ]);
@@ -167,6 +168,24 @@ class SpotifyClient
             ->acceptJson()
             ->timeout(15)
             ->retry(3, 1000, throw: false);
+    }
+
+    /** @param array<string, int|string> $query */
+    private function get(string $path, array $query): Response
+    {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $response = $this->request()->get($path, $query);
+
+            if ($response->status() !== 429 || $attempt === 3) {
+                return $response;
+            }
+
+            $headers = array_change_key_case($response->headers());
+
+            sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
+        }
+
+        return $response;
     }
 
     private function accessToken(): string

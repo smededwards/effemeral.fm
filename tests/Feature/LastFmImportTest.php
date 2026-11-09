@@ -123,4 +123,31 @@ class LastFmImportTest extends TestCase
         ]);
         Queue::assertPushed(ImportLastFmScrobbles::class);
     }
+
+    public function test_lastfm_rate_limit_is_retried(): void
+    {
+        $attempts = 0;
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+
+            if ($attempts === 1) {
+                return Http::response(['error' => 29, 'message' => 'Rate limit exceeded'], 200, ['Retry-After' => '0']);
+            }
+
+            return Http::response([
+                'recenttracks' => [
+                    '@attr' => ['totalPages' => '1'],
+                    'track' => [],
+                ],
+            ]);
+        });
+
+        app(LastFmClient::class)->recentTracks(
+            now()->subDay()->toImmutable(),
+            now()->toImmutable(),
+            1,
+        );
+
+        $this->assertSame(2, $attempts);
+    }
 }

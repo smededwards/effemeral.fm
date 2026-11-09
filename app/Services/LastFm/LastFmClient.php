@@ -4,6 +4,7 @@ namespace App\Services\LastFm;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -32,6 +33,12 @@ class LastFmClient
                     'to' => $to->timestamp,
                 ]);
 
+                if ($response->status() === 429 && $attempt < 3) {
+                    $this->waitForRateLimit($response);
+
+                    continue;
+                }
+
                 if ($response->failed()) {
                     throw new RuntimeException('Last.fm returned HTTP '.$response->status().'.');
                 }
@@ -42,7 +49,7 @@ class LastFmClient
                     break;
                 }
 
-                sleep(1);
+                $this->waitForRateLimit($response);
             }
 
             if (isset($payload['error'])) {
@@ -68,5 +75,12 @@ class LastFmClient
                 'User-Agent' => config('services.lastfm.user_agent'),
                 'Accept' => 'application/json',
             ])->timeout(15)->retry(3, 1000, throw: false);
+    }
+
+    private function waitForRateLimit(Response $response): void
+    {
+        $headers = array_change_key_case($response->headers());
+
+        sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
     }
 }
