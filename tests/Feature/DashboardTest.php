@@ -8,6 +8,8 @@ use App\Models\Artist;
 use App\Models\RecommendationRun;
 use App\Models\Scrobble;
 use App\Models\SpotifyAlbumCollection;
+use App\Models\SpotifyPlaylist;
+use App\Models\SpotifyPlaylistItem;
 use App\Models\SpotifySavedAlbum;
 use App\Models\Track;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -340,6 +342,46 @@ class DashboardTest extends TestCase
             ->assertSee('Included Review Album')
             ->assertSee('Excluded Review Album')
             ->assertSee('Syncing will create a private Spotify playlist containing 2 tracks.');
+    }
+
+    public function test_playlist_audit_can_compare_any_saved_draft_with_imported_playlists(): void
+    {
+        $run = RecommendationRun::factory()->create(['source' => 'manual']);
+        $album = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'audit-album-id',
+            'spotify_uri' => 'spotify:album:audit-album-id',
+            'name' => 'Audit Album',
+            'album_type' => 'album',
+            'primary_artist_name' => 'Audit Artist',
+            'tracks' => ['items' => [['uri' => 'spotify:track:audit-one'], ['uri' => 'spotify:track:audit-two']]],
+        ]);
+        AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $album->id,
+            'position' => 1,
+            'heard_tracks' => 0,
+            'total_tracks' => 2,
+            'completion_percentage' => 0,
+        ]);
+        $playlist = SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'audit-playlist-id',
+            'name' => 'Existing Playlist',
+            'spotify_url' => 'https://open.spotify.com/playlist/audit-playlist-id',
+        ]);
+        SpotifyPlaylistItem::query()->create([
+            'spotify_playlist_id' => $playlist->id,
+            'spotify_track_id' => 'audit-one',
+            'spotify_uri' => 'spotify:track:audit-one',
+            'track_name' => 'Audit Track One',
+            'position' => 1,
+        ]);
+
+        $this->get(route('recommendations.audit', ['run' => $run->id]))
+            ->assertOk()
+            ->assertSee('Partial albums')
+            ->assertSee('Audit Album')
+            ->assertSee('1 / 2 tracks found in imported playlists')
+            ->assertSee('Existing Playlist');
     }
 
     public function test_a_recommendation_draft_can_be_reordered_and_reviewed(): void

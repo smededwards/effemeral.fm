@@ -19,6 +19,7 @@ Route::post('/recommendations/create', [DashboardController::class, 'createManua
 Route::post('/recommendations/{recommendationRun}/albums', [DashboardController::class, 'addAlbumsToRecommendations'])->name('recommendations.albums.add');
 Route::post('/recommendations/{recommendationRun}/albums/{albumRecommendation}/remove', [DashboardController::class, 'removeAlbumFromRecommendations'])->name('recommendations.albums.remove');
 Route::get('/recommendations/{recommendationRun}/review', [DashboardController::class, 'recommendationReview'])->name('recommendations.review.page');
+Route::get('/recommendations/audit', [DashboardController::class, 'playlistAudit'])->name('recommendations.audit');
 Route::post('/recommendations/{recommendationRun}/sync', [DashboardController::class, 'syncRecommendations'])->name('recommendations.sync');
 Route::post('/recommendations/{recommendationRun}/review', [DashboardController::class, 'reviewRecommendations'])->name('recommendations.review');
 Route::get('/auth/spotify', [SpotifyAuthController::class, 'redirect'])->name('auth.spotify');

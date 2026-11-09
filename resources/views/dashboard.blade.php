@@ -350,6 +350,7 @@
                         </form>
                     @endif
                     <a class="mt-4 inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ route('recommendations.review.page', $latestRecommendation) }}">Open full review page</a>
+                    <a class="mt-4 ml-4 inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ route('recommendations.audit', ['run' => $latestRecommendation->id]) }}">Audit against playlists</a>
                 @else
                     <p class="mt-6 text-sm text-zinc-500">No recommendation draft has been generated yet.</p>
                 @endif

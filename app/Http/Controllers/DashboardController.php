@@ -366,6 +366,68 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function playlistAudit(): View
+    {
+        $recommendationRuns = RecommendationRun::query()->latest('generated_at')->get();
+        $selectedRun = $recommendationRuns->firstWhere('id', (int) request('run'));
+        $auditAlbums = collect();
+
+        if ($selectedRun !== null) {
+            /** @var Collection<int, AlbumRecommendation> $recommendations */
+            $recommendations = $selectedRun->albumRecommendations()
+                ->with('album.tracks', 'spotifySavedAlbum')
+                ->get();
+            $playlists = SpotifyPlaylist::query()->with('items')->latest('last_synced_at')->get();
+            $auditAlbums = $recommendations->map(function (AlbumRecommendation $recommendation) use ($playlists): array {
+                $expectedUris = $this->recommendationTrackUris($recommendation);
+                $coveredUris = collect();
+                $playlistMatches = collect();
+
+                foreach ($playlists as $playlist) {
+                    $playlistUris = $playlist->items
+                        ->pluck('spotify_uri')
+                        ->filter(fn (mixed $uri): bool => is_string($uri))
+                        ->unique();
+                    $matches = $playlistUris->intersect($expectedUris)->values();
+
+                    if ($matches->isNotEmpty()) {
+                        $coveredUris = $coveredUris->merge($matches);
+                        $playlistMatches->push([
+                            'name' => $playlist->name,
+                            'url' => $playlist->spotify_url,
+                            'tracks' => $matches->count(),
+                        ]);
+                    }
+                }
+
+                $coveredCount = $coveredUris->unique()->count();
+                $status = $expectedUris === [] ? 'unavailable' : match (true) {
+                    $coveredCount === count($expectedUris) => 'complete',
+                    $coveredCount > 0 => 'partial',
+                    default => 'missing',
+                };
+
+                return [
+                    'recommendation' => $recommendation,
+                    'status' => $status,
+                    'expected_tracks' => count($expectedUris),
+                    'covered_tracks' => $coveredCount,
+                    'missing_tracks' => max(0, count($expectedUris) - $coveredCount),
+                    'playlists' => $playlistMatches,
+                ];
+            });
+        }
+
+        return view('recommendations.audit', [
+            'recommendationRuns' => $recommendationRuns,
+            'selectedRun' => $selectedRun,
+            'auditAlbums' => $auditAlbums,
+            'completeAlbums' => $auditAlbums->where('status', 'complete')->count(),
+            'partialAlbums' => $auditAlbums->where('status', 'partial')->count(),
+            'missingAlbums' => $auditAlbums->where('status', 'missing')->count(),
+        ]);
+    }
+
     public function syncRecommendations(Request $request, RecommendationRun $recommendationRun, SpotifyClient $client): RedirectResponse
     {
         if ($recommendationRun->status === 'synced') {
