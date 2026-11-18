@@ -41,12 +41,64 @@ class CatalogueDiscographyTest extends TestCase
         $this->assertSame([$first->id, $second->id], $run->albumRecommendations->pluck('spotify_saved_album_id')->all());
     }
 
-    private function createSavedAlbum(Artist $artist, string $title, string $releaseDate, string $key): SpotifySavedAlbum
+    public function test_discography_prefers_original_editions_and_can_include_unmatched_non_albums(): void
     {
+        $artist = Artist::query()->create([
+            'name' => 'Baroness',
+            'normalised_name' => 'baroness',
+        ]);
+        $original = $this->createSavedAlbum($artist, 'Blue Record', '2009-10-13', 'original');
+        $remaster = $this->createSavedAlbum($artist, 'Blue Record (Remastered)', '2020-01-01', 'remaster');
+        $single = $this->createSavedAlbum($artist, 'Tour Single', '2011-01-01', 'single', 'single');
+        $unmatched = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'unmatched',
+            'spotify_uri' => 'spotify:album:unmatched',
+            'name' => 'Unmatched Album',
+            'album_type' => 'album',
+            'primary_artist_name' => 'Baroness',
+            'release_date' => '2012-01-01',
+            'tracks' => ['items' => [['uri' => 'spotify:track:unmatched']]],
+        ]);
+
+        $response = $this->post(route('catalogue.discography'), [
+            'artist_id' => $artist->id,
+            'include_non_albums' => true,
+        ]);
+
+        $run = RecommendationRun::query()->latest()->firstOrFail();
+        $response->assertRedirect(route('recommendations.review.page', $run));
+        $recommendations = $run->albumRecommendations()->orderBy('position')->get();
+
+        $this->assertSame([$original->id, $single->id, $unmatched->id], $recommendations->pluck('spotify_saved_album_id')->all());
+        $this->assertNotSame($remaster->id, $recommendations->first()->spotify_saved_album_id);
+        $this->assertNull($recommendations->last()->album_id);
+    }
+
+    public function test_discography_excludes_non_albums_by_default(): void
+    {
+        $artist = Artist::query()->create([
+            'name' => 'Baroness',
+            'normalised_name' => 'baroness',
+        ]);
+        $this->createSavedAlbum($artist, 'Tour Single', '2011-01-01', 'single', 'single');
+
+        $response = $this->post(route('catalogue.discography'), ['artist_id' => $artist->id]);
+
+        $response->assertSessionHas('error', 'No saved albums are available for this artist.');
+        $this->assertDatabaseCount('recommendation_runs', 0);
+    }
+
+    private function createSavedAlbum(
+        Artist $artist,
+        string $title,
+        string $releaseDate,
+        string $key,
+        string $albumType = 'album',
+    ): SpotifySavedAlbum {
         $album = Album::query()->create([
             'title' => $title,
             'normalised_title' => strtolower($title),
-            'album_type' => 'album',
+            'album_type' => $albumType,
             'spotify_id' => 'album-'.$key,
             'total_tracks' => 1,
             'release_date' => $releaseDate,
@@ -63,8 +115,9 @@ class CatalogueDiscographyTest extends TestCase
             'spotify_album_id' => 'album-'.$key,
             'spotify_uri' => 'spotify:album:album-'.$key,
             'name' => $title,
-            'album_type' => 'album',
+            'album_type' => $albumType,
             'total_tracks' => 1,
+            'tracks' => ['items' => [['uri' => 'spotify:track:track-'.$key]]],
         ]);
         SpotifyAlbumCollection::query()->create([
             'album_id' => $album->id,

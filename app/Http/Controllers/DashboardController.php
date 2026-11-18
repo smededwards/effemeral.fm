@@ -186,12 +186,14 @@ class DashboardController extends Controller
     {
         $validated = $request->validate([
             'artist_id' => ['required', 'integer', 'exists:artists,id'],
+            'include_non_albums' => ['nullable', 'boolean'],
         ]);
         $artist = Artist::query()->findOrFail($validated['artist_id']);
+        $includeNonAlbums = (bool) ($validated['include_non_albums'] ?? false);
         /** @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums */
         $albums = $artist->albums()
             ->with('tracks')
-            ->where('album_type', 'album')
+            ->when(! $includeNonAlbums, fn ($query) => $query->where('album_type', 'album'))
             ->whereHas('spotifyCollections', fn ($query) => $query->where('collection_type', 'saved'))
             ->orderBy('release_date')
             ->orderBy('title')
@@ -200,19 +202,47 @@ class DashboardController extends Controller
             ->whereIn('spotify_album_id', $albums->pluck('spotify_id')->filter())
             ->get()
             ->keyBy('spotify_album_id');
-        $albums = $albums->filter(function (Album $album) use ($savedAlbums): bool {
+        $candidates = $albums->filter(function (Album $album) use ($savedAlbums): bool {
             $savedAlbum = $savedAlbums->get($album->spotify_id);
 
             return $savedAlbum !== null
-                && $album->tracks->isNotEmpty()
-                && ($album->total_tracks === null || $album->tracks->count() === $album->total_tracks);
-        })->values();
+                && ($album->tracks->isNotEmpty() || data_get($savedAlbum->tracks, 'items', []) !== []);
+        })->map(fn (Album $album): array => [
+            'album' => $album,
+            'saved_album' => $savedAlbums->get($album->spotify_id),
+            'title' => $album->title,
+            'release_date' => $album->release_date,
+        ]);
 
-        if ($albums->isEmpty()) {
-            return back()->with('error', 'No complete saved albums are available for this artist.');
+        $matchedSavedAlbumIds = $candidates->pluck('saved_album.id');
+        $unmatchedCandidates = SpotifySavedAlbum::query()
+            ->whereNotIn('id', $matchedSavedAlbumIds)
+            ->get()
+            ->filter(function (SpotifySavedAlbum $savedAlbum) use ($artist, $includeNonAlbums): bool {
+                return $this->normalise((string) $savedAlbum->primary_artist_name) === $artist->normalised_name
+                    && ($includeNonAlbums || $savedAlbum->album_type === 'album')
+                    && data_get($savedAlbum->tracks, 'items', []) !== [];
+            })
+            ->map(fn (SpotifySavedAlbum $savedAlbum): array => [
+                'album' => null,
+                'saved_album' => $savedAlbum,
+                'title' => $savedAlbum->name,
+                'release_date' => $savedAlbum->release_date,
+            ]);
+
+        $candidates = $candidates
+            ->merge($unmatchedCandidates)
+            ->sortBy(fn (array $candidate): string => sprintf('%s-%03d-%s', $candidate['release_date'] ?? '9999', $this->editionPenalty($candidate['title']), $candidate['title']))
+            ->groupBy(fn (array $candidate): string => $this->editionTitle($candidate['title']))
+            ->map(fn ($variants): array => $variants->sortBy(fn (array $candidate): string => sprintf('%03d-%s', $this->editionPenalty($candidate['title']), $candidate['title']))->first())
+            ->sortBy(fn (array $candidate): string => sprintf('%s-%s', $candidate['release_date'] ?? '9999', $candidate['title']))
+            ->values();
+
+        if ($candidates->isEmpty()) {
+            return back()->with('error', 'No saved albums are available for this artist.');
         }
 
-        $recommendationRun = DB::transaction(function () use ($albums, $savedAlbums): RecommendationRun {
+        $recommendationRun = DB::transaction(function () use ($candidates): RecommendationRun {
             $heardTrackIds = Scrobble::query()
                 ->whereNotNull('track_id')
                 ->pluck('track_id')
@@ -223,20 +253,26 @@ class DashboardController extends Controller
                 'generated_at' => now(),
             ]);
 
-            foreach ($albums as $position => $album) {
-                $savedAlbum = $savedAlbums->get($album->spotify_id);
-                /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
-                $tracks = $album->tracks;
+            foreach ($candidates as $position => $candidate) {
+                /** @var Album|null $album */
+                $album = $candidate['album'];
+                /** @var SpotifySavedAlbum $savedAlbum */
+                $savedAlbum = $candidate['saved_album'];
+                $tracks = $album === null ? collect() : $album->tracks;
+                $trackUris = collect(data_get($savedAlbum->tracks, 'items', []))
+                    ->filter(fn (mixed $track): bool => is_array($track) && is_string($track['uri'] ?? null))
+                    ->values();
+                $totalTracks = $tracks->count() > 0 ? $tracks->count() : $trackUris->count();
                 $heard = $tracks->filter(fn (Track $track): bool => $heardTrackIds->has($track->id))->count();
 
                 AlbumRecommendation::query()->create([
                     'recommendation_run_id' => $run->id,
-                    'album_id' => $album->id,
+                    'album_id' => $album?->id,
                     'spotify_saved_album_id' => $savedAlbum->id,
                     'position' => $position + 1,
                     'heard_tracks' => $heard,
-                    'total_tracks' => $tracks->count(),
-                    'completion_percentage' => (int) floor(($heard / $tracks->count()) * 100),
+                    'total_tracks' => $totalTracks,
+                    'completion_percentage' => $totalTracks === 0 ? 0 : (int) floor(($heard / $totalTracks) * 100),
                 ]);
             }
 
@@ -244,6 +280,24 @@ class DashboardController extends Controller
         });
 
         return redirect()->route('recommendations.review.page', $recommendationRun);
+    }
+
+    private function editionTitle(string $title): string
+    {
+        $title = preg_replace('/\b(?:remaster(?:ed)?|deluxe|expanded|anniversary|special edition|bonus tracks?)\b/i', '', $title) ?? $title;
+        $title = preg_replace('/[^\pL\pN]+/u', ' ', $title) ?? $title;
+
+        return $this->normalise($title);
+    }
+
+    private function editionPenalty(string $title): int
+    {
+        return match (true) {
+            preg_match('/\banniversary\b/i', $title) === 1 => 3,
+            preg_match('/\b(?:deluxe|expanded|special edition|bonus tracks?)\b/i', $title) === 1 => 2,
+            preg_match('/\bremaster(?:ed)?\b/i', $title) === 1 => 1,
+            default => 0,
+        };
     }
 
     public function index(): View
