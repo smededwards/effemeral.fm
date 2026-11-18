@@ -8,6 +8,13 @@
     </head>
     <body class="min-h-screen bg-zinc-950 text-zinc-100">
         <main class="mx-auto max-w-5xl space-y-8 px-6 py-12">
+            <nav class="flex flex-wrap gap-4 border-b border-zinc-800 pb-4 text-sm">
+                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('dashboard') }}">Overview</a>
+                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('imports.index') }}">Imports</a>
+                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('library.index') }}">Library</a>
+                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('catalogue.index') }}">Catalogue</a>
+                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('recommendations.index') }}">Recommendations</a>
+            </nav>
             <header class="flex flex-wrap items-start justify-between gap-6">
                 <div>
                     <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
