@@ -8,8 +8,8 @@ The prototype is intentionally album-first and manual-first:
 - Spotify provides saved albums, liked songs, playlists, catalogue metadata, and the eventual playlist export.
 - Effemeral stores a canonical catalogue of artists, albums, and tracks, with source identifiers and Spotify collection membership.
 - Recommendations remain drafts until they are reviewed, reordered, and explicitly synced.
-- The next discovery workflows are selected-album similarity and artist discography playlist drafts.
-- Discogs metadata, full-history import, liked-song import, and richer playlist-content analysis remain follow-up slices.
+- Selected-album similarity and artist discography playlist drafts are now available through the shared review workflow.
+- Discogs metadata, richer playlist-content analysis, deployment hardening, and multi-user support remain follow-up slices.
 
 ## Current import foundation
 
@@ -17,6 +17,8 @@ The current import layer supports:
 
 - Last.fm scrobbles linked to canonical artists, albums, and tracks.
 - Spotify saved albums linked to canonical artists, albums, tracks, and saved-collection membership.
+- Spotify liked songs linked to canonical artists, albums, tracks, and liked-track collection membership.
+- Spotify artist genres and filtered Last.fm tags with normalized manual corrections.
 - Idempotent retries and cross-source matching using provider IDs first, then normalized identity.
 - Existing compatibility storage for the current dashboard while the canonical model becomes the source for future features.
 
@@ -76,4 +78,4 @@ The implementation order is:
 7. Add Discogs as the preferred metadata and genre authority when ready.
 8. Expand to the complete Last.fm history, Spotify liked songs, and deeper playlist-content analysis.
 
-The current prototype has steps 1 and 6 in place for saved-album recommendations. It does not yet provide steps 2–5 for arbitrary catalogue selections.
+The current `dev` branch contains the complete `v0.2.0` Baroness feature set. The next workflow step is user validation on the working prototype, followed by merging `dev` into `main` and creating the matching release/tag. New feature work should begin only after that release decision.
