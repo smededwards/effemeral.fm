@@ -5,6 +5,9 @@ use App\Http\Controllers\SpotifyAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/imports', [DashboardController::class, 'imports'])->name('imports.index');
+Route::get('/library', [DashboardController::class, 'library'])->name('library.index');
+Route::get('/recommendations', [DashboardController::class, 'recommendations'])->name('recommendations.index');
 Route::get('/catalogue', [DashboardController::class, 'catalogue'])->name('catalogue.index');
 Route::post('/catalogue/discover', [DashboardController::class, 'discoverRecommendations'])->name('catalogue.discover');
 Route::post('/catalogue/discography', [DashboardController::class, 'discographyRecommendations'])->name('catalogue.discography');

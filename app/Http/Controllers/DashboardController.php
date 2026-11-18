@@ -303,6 +303,27 @@ class DashboardController extends Controller
 
     public function index(): View
     {
+        return view('dashboard', $this->dashboardData());
+    }
+
+    public function imports(): View
+    {
+        return view('imports.index', $this->dashboardData());
+    }
+
+    public function library(): View
+    {
+        return view('library.index', $this->dashboardData());
+    }
+
+    public function recommendations(): View
+    {
+        return view('recommendations.index', $this->dashboardData());
+    }
+
+    /** @return array<string, mixed> */
+    private function dashboardData(): array
+    {
         $incompleteAlbums = $this->incompleteAlbums();
         $latestRecommendation = RecommendationRun::query()
             ->with('albumRecommendations.album', 'albumRecommendations.spotifySavedAlbum')
@@ -357,7 +378,7 @@ class DashboardController extends Controller
                 'last_listened_at' => CarbonImmutable::parse((string) $album->latest_listened_at)->toDateString(),
             ]);
 
-        return view('dashboard', [
+        return [
             'latestImport' => LastFmImportRun::query()->latest()->first(),
             'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
             'latestSpotifyImport' => SpotifyAlbumImportRun::query()->latest()->first(),
@@ -382,7 +403,7 @@ class DashboardController extends Controller
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),
             'defaultTo' => now()->toDateString(),
-        ]);
+        ];
     }
 
     private function normalise(string $value): string
