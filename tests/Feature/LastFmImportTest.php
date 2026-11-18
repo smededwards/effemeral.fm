@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Jobs\ImportLastFmScrobbles;
+use App\Models\Artist;
+use App\Models\Genre;
 use App\Models\LastFmImportRun;
 use App\Models\Scrobble;
 use App\Services\LastFm\LastFmClient;
@@ -82,6 +84,57 @@ class LastFmImportTest extends TestCase
         $this->assertDatabaseHas('albums', ['lastfm_mbid' => 'album-mbid']);
         $this->assertDatabaseHas('tracks', ['lastfm_mbid' => 'track-mbid']);
         Http::assertSent(fn ($request): bool => str_starts_with($request->url(), config('services.lastfm.endpoint')));
+    }
+
+    public function test_lastfm_artist_tags_are_imported_with_allowlist_filtering(): void
+    {
+        config()->set('services.lastfm.api_key', 'test-key');
+        config()->set('services.lastfm.username', 'test-user');
+        config()->set('services.lastfm.genre_allowlist', ['post-metal']);
+        Http::fake(function ($request) {
+            if ($request['method'] === 'artist.getInfo') {
+                return Http::response([
+                    'artist' => ['tags' => ['tag' => [
+                        ['name' => 'post metal'],
+                        ['name' => 'nonsense tag'],
+                    ]]],
+                ]);
+            }
+
+            return Http::response([
+                'recenttracks' => [
+                    '@attr' => ['totalPages' => '1'],
+                    'track' => [[
+                        'name' => 'Track',
+                        'artist' => ['#text' => 'The Artist', 'mbid' => 'artist-mbid'],
+                        'album' => ['#text' => 'The Album'],
+                        'url' => 'https://last.fm/track/genre',
+                        'date' => ['uts' => '1760000000'],
+                    ]],
+                ],
+            ]);
+        });
+
+        $run = LastFmImportRun::query()->create([
+            'source' => 'lastfm',
+            'status' => 'queued',
+            'from_at' => '2026-01-01 00:00:00',
+            'to_at' => '2026-03-31 23:59:59',
+            'requested_limit' => 100,
+        ]);
+
+        (new ImportLastFmScrobbles($run->id))->handle(app(LastFmClient::class));
+
+        $artist = Artist::query()->firstOrFail();
+        $genre = Genre::query()->firstOrFail();
+        $this->assertSame('post metal', $genre->normalised_name);
+        $this->assertDatabaseHas('artist_genre', [
+            'artist_id' => $artist->id,
+            'genre_id' => $genre->id,
+            'source' => 'lastfm',
+            'suppressed' => false,
+        ]);
+        $this->assertDatabaseCount('genres', 1);
     }
 
     public function test_a_full_import_can_be_queued_without_an_item_limit(): void

@@ -12,6 +12,24 @@ class GenreWriter
     /** @param list<string> $genres */
     public function syncSpotify(Artist $artist, array $genres): void
     {
+        $this->syncImported($artist, $genres, 'spotify');
+    }
+
+    /** @param list<string> $genres */
+    public function syncLastFm(Artist $artist, array $genres): void
+    {
+        $allowlist = config('services.lastfm.genre_allowlist', []);
+        $allowedGenres = $this->normalisedGenres($allowlist);
+        $genres = $allowlist === []
+            ? $genres
+            : array_filter($genres, fn (string $genre): bool => array_key_exists($this->normalise($genre), $allowedGenres));
+
+        $this->syncImported($artist, $genres, 'lastfm');
+    }
+
+    /** @param list<string> $genres */
+    private function syncImported(Artist $artist, array $genres, string $source): void
+    {
         foreach ($this->normalisedGenres($genres) as $normalisedName => $name) {
             $genre = Genre::query()->firstOrCreate(
                 ['normalised_name' => $normalisedName],
@@ -20,14 +38,14 @@ class GenreWriter
             $artistGenre = DB::table('artist_genre')
                 ->where('artist_id', $artist->id)
                 ->where('genre_id', $genre->id)
-                ->where('source', 'spotify')
+                ->where('source', $source)
                 ->exists();
 
             if (! $artistGenre) {
                 DB::table('artist_genre')->insert([
                     'artist_id' => $artist->id,
                     'genre_id' => $genre->id,
-                    'source' => 'spotify',
+                    'source' => $source,
                     'suppressed' => false,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -108,5 +126,12 @@ class GenreWriter
         }
 
         return $normalisedGenres;
+    }
+
+    private function normalise(string $genre): string
+    {
+        $normalised = preg_replace('/[^\pL\pN]+/u', ' ', mb_strtolower(trim($genre)));
+
+        return trim(preg_replace('/\s+/', ' ', (string) $normalised));
     }
 }

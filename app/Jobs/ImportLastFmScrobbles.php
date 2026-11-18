@@ -3,9 +3,11 @@
 namespace App\Jobs;
 
 use App\Models\Album;
+use App\Models\Artist;
 use App\Models\LastFmImportRun;
 use App\Models\Scrobble;
 use App\Services\Catalog\CatalogWriter;
+use App\Services\Catalog\GenreWriter;
 use App\Services\LastFm\LastFmClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -18,9 +20,10 @@ class ImportLastFmScrobbles implements ShouldQueue
 
     public function __construct(public int $importRunId) {}
 
-    public function handle(LastFmClient $client, ?CatalogWriter $catalog = null): void
+    public function handle(LastFmClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
     {
         $catalog ??= app(CatalogWriter::class);
+        $genreWriter ??= app(GenreWriter::class);
         $run = LastFmImportRun::query()->findOrFail($this->importRunId);
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
@@ -32,6 +35,7 @@ class ImportLastFmScrobbles implements ShouldQueue
             );
             $imported = 0;
             $skipped = 0;
+            $artistIds = [];
 
             foreach ($tracks as $track) {
                 if ((bool) data_get($track, '@attr.nowplaying', false) || ! data_get($track, 'date.uts')) {
@@ -72,6 +76,9 @@ class ImportLastFmScrobbles implements ShouldQueue
                 ]);
                 $album = $track === null ? null : Album::query()->with('artists')->find($track->album_id);
                 $artistId = $album?->artists()->value('artists.id');
+                if ($artistId !== null) {
+                    $artistIds[(int) $artistId] = true;
+                }
                 $scrobble->update([
                     'artist_id' => $artistId === null ? null : (int) $artistId,
                     'album_id' => $track?->album_id,
@@ -79,6 +86,10 @@ class ImportLastFmScrobbles implements ShouldQueue
                 ]);
 
                 $scrobble->wasRecentlyCreated ? $imported++ : $skipped++;
+            }
+
+            foreach (Artist::query()->whereIn('id', array_keys($artistIds))->get() as $artist) {
+                $genreWriter->syncLastFm($artist, $client->artistTags($artist->name, $artist->lastfm_mbid));
             }
 
             $run->update([

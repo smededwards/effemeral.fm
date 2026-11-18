@@ -68,6 +68,31 @@ class LastFmClient
         return array_slice($tracks, 0, $limit);
     }
 
+    /** @return list<string> */
+    public function artistTags(string $artist, ?string $mbid = null): array
+    {
+        $response = $this->request()->get('', array_filter([
+            'method' => 'artist.getInfo',
+            'artist' => $artist,
+            'mbid' => $mbid,
+            'api_key' => config('services.lastfm.api_key'),
+            'format' => 'json',
+        ]));
+
+        if ($response->failed()) {
+            throw new RuntimeException('Last.fm returned HTTP '.$response->status().'.');
+        }
+
+        $tags = data_get($response->json(), 'artist.tags.tag', []);
+        $tags = isset($tags['name']) ? [$tags] : $tags;
+
+        return collect($tags)
+            ->map(fn (mixed $tag): mixed => is_array($tag) ? ($tag['name'] ?? null) : null)
+            ->filter(fn (mixed $tag): bool => is_string($tag) && $tag !== '')
+            ->values()
+            ->all();
+    }
+
     private function request(): PendingRequest
     {
         return Http::baseUrl((string) config('services.lastfm.endpoint'))
