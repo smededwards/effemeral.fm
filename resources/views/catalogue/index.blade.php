@@ -57,6 +57,10 @@
                     <form class="mt-4" method="POST" action="{{ route('catalogue.discography') }}">
                         @csrf
                         <input type="hidden" name="artist_id" value="{{ $selectedArtist->id }}">
+                        <label class="mt-4 flex items-start gap-2 text-sm text-zinc-300">
+                            <input class="mt-1" type="checkbox" name="include_non_albums" value="1">
+                            <span>Include singles and other non-album releases</span>
+                        </label>
                         <button class="rounded-md border border-emerald-700 px-4 py-2 font-medium text-emerald-300 hover:border-emerald-500" type="submit">Generate discography draft</button>
                     </form>
                 </section>

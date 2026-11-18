@@ -64,6 +64,9 @@
                                 <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum->name }}</h3>
                                 <p class="mt-1 text-sm text-zinc-400">{{ $recommendation->spotifySavedAlbum->primary_artist_name ?? 'Unknown artist' }}</p>
                                 <p class="mt-1 text-xs text-zinc-500">{{ $item['track_count'] }} Spotify tracks available</p>
+                                @if ($recommendation->album === null)
+                                    <p class="mt-2 text-xs text-amber-300">Needs catalogue match; review before syncing.</p>
+                                @endif
                                 @if ($recommendation->match_reason)
                                     <p class="mt-2 text-xs text-emerald-300">{{ $recommendation->match_reason }}</p>
                                 @endif
