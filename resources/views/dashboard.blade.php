@@ -162,10 +162,16 @@
                         <h2 class="text-xl font-medium">Spotify saved albums</h2>
                         <p class="mt-1 text-sm text-zinc-400">Import the 100 most recently saved albums as supporting library data.</p>
                     </div>
-                    <form method="POST" action="{{ route('imports.spotify.albums') }}">
-                        @csrf
-                        <button class="rounded-md bg-[#BF3989] px-4 py-2 font-medium text-white hover:bg-[#a93278]" type="submit">Queue Spotify import</button>
-                    </form>
+                    <div class="flex flex-wrap gap-3">
+                        <form method="POST" action="{{ route('imports.spotify.albums') }}">
+                            @csrf
+                            <button class="rounded-md bg-[#BF3989] px-4 py-2 font-medium text-white hover:bg-[#a93278]" type="submit">Queue saved albums</button>
+                        </form>
+                        <form method="POST" action="{{ route('imports.spotify.liked-tracks') }}">
+                            @csrf
+                            <button class="rounded-md border border-[#BF3989] px-4 py-2 font-medium text-[#f08cc4] hover:bg-[#3c1830]" type="submit">Queue liked songs</button>
+                        </form>
+                    </div>
                 </div>
                 @if ($latestSpotifyImport)
                     <dl class="mt-6 grid gap-4 text-sm sm:grid-cols-4">
