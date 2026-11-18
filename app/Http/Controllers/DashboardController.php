@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StartLastFmImportRequest;
 use App\Jobs\ImportLastFmScrobbles;
+use App\Jobs\ImportSpotifyLikedTracks;
 use App\Jobs\ImportSpotifyPlaylists;
 use App\Jobs\ImportSpotifySavedAlbums;
 use App\Models\Album;
@@ -980,6 +981,27 @@ class DashboardController extends Controller
         ImportSpotifySavedAlbums::dispatch($run->id);
 
         return back()->with('success', 'Spotify saved albums import queued.');
+    }
+
+    public function spotifyLikedTracksImport(): RedirectResponse
+    {
+        $activeImport = SpotifyAlbumImportRun::query()
+            ->whereIn('status', ['queued', 'running'])
+            ->exists();
+
+        if ($activeImport) {
+            return back()->with('error', 'A Spotify library import is already in progress.');
+        }
+
+        $run = SpotifyAlbumImportRun::query()->create([
+            'source' => 'liked_tracks',
+            'status' => 'queued',
+            'requested_limit' => null,
+        ]);
+
+        ImportSpotifyLikedTracks::dispatch($run->id);
+
+        return back()->with('success', 'Spotify liked songs import queued.');
     }
 
     public function spotifyPlaylistsImport(): RedirectResponse

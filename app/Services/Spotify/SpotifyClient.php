@@ -41,6 +41,16 @@ class SpotifyClient
     }
 
     /** @return list<array<string, mixed>> */
+    public function likedTracks(?int $limit = null): array
+    {
+        return $this->paginate(
+            '/me/tracks',
+            $limit,
+            fn (array $item): bool => is_array($item['track'] ?? null) && isset($item['track']['id']),
+        );
+    }
+
+    /** @return list<array<string, mixed>> */
     public function playlists(?int $limit = null): array
     {
         return $this->paginate('/me/playlists', $limit, fn (array $item): bool => isset($item['id']));
