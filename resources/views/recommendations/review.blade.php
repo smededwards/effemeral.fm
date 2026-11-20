@@ -70,18 +70,43 @@
                 </ol>
             </section>
 
-            <section class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#355b3d] bg-[#142319] p-6">
-                <p class="text-sm text-[#d7ffe2]">Syncing will create a private Spotify playlist containing {{ $includedTracks }} tracks.</p>
+            <section class="border border-[#355b3d] bg-[#142319] p-6">
+                <div>
+                    <p class="text-sm text-[#d7ffe2]">Syncing will append {{ $includedTracks }} reviewed tracks to Spotify. Existing tracks are preserved.</p>
+                </div>
                 @if ($recommendationRun->spotify_playlist_url)
-                    <a class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950" href="{{ $recommendationRun->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify playlist</a>
-                @else
-                    <form method="POST" action="{{ route('recommendations.sync', $recommendationRun) }}">
+                    <a class="mt-5 inline-block bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#061108] hover:bg-[#b7ffd1]" href="{{ $recommendationRun->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify playlist</a>
+                @endif
+                @if ($recommendationRun->status !== 'synced')
+                    <form class="mt-6 grid gap-5 border-t border-[#355b3d] pt-6" method="POST" action="{{ route('recommendations.sync', $recommendationRun) }}">
                         @csrf
-                        <label class="mb-3 flex items-start gap-2 text-sm text-[#d7ffe2]">
-                            <input class="mt-1" type="checkbox" name="confirmed" value="1" required>
-                            <span>I have reviewed the included albums and confirm this private Spotify playlist should be created.</span>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <label class="text-sm text-[#d7ffe2]">
+                                <span class="mb-2 block font-semibold">Playlist destination</span>
+                                <select class="w-full border border-[#445148] bg-[#0b0c0a] px-3 py-3 text-sm text-[#f3f5f3]" name="playlist_target">
+                                    <option value="new">Create a new private playlist</option>
+                                    <option value="existing">Use an imported playlist</option>
+                                </select>
+                            </label>
+                            <label class="text-sm text-[#d7ffe2]">
+                                <span class="mb-2 block font-semibold">New playlist name</span>
+                                <input class="w-full border border-[#445148] bg-[#0b0c0a] px-3 py-3 text-sm text-[#f3f5f3]" type="text" name="playlist_name" value="{{ $playlistNameSuggestion }}" maxlength="100">
+                            </label>
+                        </div>
+                        <label class="text-sm text-[#d7ffe2]">
+                            <span class="mb-2 block font-semibold">Imported playlist</span>
+                            <select class="w-full border border-[#445148] bg-[#0b0c0a] px-3 py-3 text-sm text-[#f3f5f3]" name="spotify_playlist_id">
+                                <option value="">Select an imported playlist when using an existing destination</option>
+                                @foreach ($playlists as $playlist)
+                                    <option value="{{ $playlist->spotify_playlist_id }}" @selected($recommendationRun->spotify_playlist_id === $playlist->spotify_playlist_id)>{{ $playlist->name }}{{ $playlist->public ? ' · public' : '' }}</option>
+                                @endforeach
+                            </select>
                         </label>
-                        <button class="rounded-md bg-[#00e676] px-4 py-2 text-sm font-medium text-white hover:bg-[#00b85c]" type="submit">Sync included albums</button>
+                        <label class="flex items-start gap-2 text-sm text-[#d7ffe2]">
+                            <input class="mt-1" type="checkbox" name="confirmed" value="1" required>
+                            <span>I have reviewed the included albums and confirm this playlist should be updated.</span>
+                        </label>
+                        <button class="w-fit bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#061108] hover:bg-[#b7ffd1]" type="submit">Sync included albums</button>
                     </form>
                 @endif
             </section>

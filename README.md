@@ -16,6 +16,7 @@ The prototype is intentionally album-first and manual-first:
 The current import layer supports:
 
 - Last.fm scrobbles linked to canonical artists, albums, and tracks.
+- Full Last.fm history can be queued from the account's earliest available scrobble.
 - Spotify saved albums linked to canonical artists, albums, tracks, and saved-collection membership.
 - Spotify liked songs linked to canonical artists, albums, tracks, and liked-track collection membership.
 - Spotify artist genres and filtered Last.fm tags with normalized manual corrections.
@@ -78,6 +79,6 @@ The implementation order is:
 5. Add artist discography discovery and album-level playlist drafts.
 6. Keep the existing review, audit, and Spotify sync flow as the shared delivery path.
 7. Add Discogs as the preferred metadata and genre authority when ready.
-8. Expand to the complete Last.fm history, Spotify liked songs, and deeper playlist-content analysis.
+8. Add deeper playlist-content analysis while preserving the complete Last.fm history and Spotify liked-song imports.
 
-The current `dev` branch contains the complete `v0.2.0` Baroness feature set. The next workflow step is user validation on the working prototype, followed by merging `dev` into `main` and creating the matching release/tag. New feature work should begin only after that release decision.
+The current `main` branch contains the complete `v0.2.0` Baroness feature set. The Baroness release PR is the release gate; Candlemass is the planned `v0.3.0` milestone for playlist organisation.

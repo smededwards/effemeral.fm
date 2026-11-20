@@ -316,6 +316,15 @@ class DashboardController extends Controller
         return view('library.index', $this->libraryData());
     }
 
+    public function playlists(): View
+    {
+        return view('playlists.index', [
+            'playlists' => SpotifyPlaylist::query()->withCount('items')->latest('name')->get(),
+            'latestPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
+            'failedPlaylists' => SpotifyPlaylist::query()->whereNotNull('last_import_error')->latest('last_import_attempted_at')->get(),
+        ]);
+    }
+
     public function recommendations(): View
     {
         return view('recommendations.index', $this->recommendationsData());
@@ -442,6 +451,43 @@ class DashboardController extends Controller
     private function normalise(string $value): string
     {
         return preg_replace('/\s+/', ' ', mb_strtolower(trim($value))) ?? '';
+    }
+
+    private function playlistNameSuggestion(iterable $reviewAlbums): string
+    {
+        $stopWords = ['a', 'an', 'and', 'for', 'in', 'of', 'the', 'to'];
+        $words = [];
+
+        foreach ($reviewAlbums as $item) {
+            $title = $item['recommendation']->spotifySavedAlbum->name ?? '';
+            $titleWords = preg_split('/[^\pL\pN]+/u', $title, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+            foreach ($titleWords as $word) {
+                $word = mb_strtolower($word);
+                if (mb_strlen($word) > 2 && ! in_array($word, $stopWords, true)) {
+                    $words[] = $word;
+                }
+            }
+        }
+
+        $counts = array_count_values($words);
+        arsort($counts);
+        $selected = array_slice(array_keys($counts), 0, 2);
+
+        while (count($selected) < 2) {
+            $selected[] = count($selected) === 0 ? 'album' : 'draft';
+        }
+
+        $suggestion = implode(' ', array_map(fn (string $word): string => mb_convert_case($word, MB_CASE_TITLE), $selected));
+        $existingNames = SpotifyPlaylist::query()->pluck('name')->map(fn (string $name): string => mb_strtolower($name))->all();
+        $uniqueSuggestion = $suggestion;
+        $suffix = 2;
+
+        while (in_array(mb_strtolower($uniqueSuggestion), $existingNames, true)) {
+            $uniqueSuggestion = $suggestion.' '.$suffix++;
+        }
+
+        return $uniqueSuggestion;
     }
 
     /**
@@ -687,13 +733,16 @@ class DashboardController extends Controller
             'includedTracks' => $reviewAlbums
                 ->where('recommendation.included', true)
                 ->sum('track_count'),
+            'playlists' => SpotifyPlaylist::query()->latest('name')->get(),
+            'playlistNameSuggestion' => $this->playlistNameSuggestion($reviewAlbums),
         ]);
     }
 
-    public function playlistAudit(): View
+    public function playlistAudit(Request $request): View
     {
         $recommendationRuns = RecommendationRun::query()->latest('generated_at')->get();
         $selectedRun = $recommendationRuns->firstWhere('id', (int) request('run'));
+        $selectedPlaylist = SpotifyPlaylist::query()->find($request->integer('playlist'));
         $auditAlbums = collect();
 
         if ($selectedRun !== null) {
@@ -701,7 +750,11 @@ class DashboardController extends Controller
             $recommendations = $selectedRun->albumRecommendations()
                 ->with('album.tracks', 'spotifySavedAlbum')
                 ->get();
-            $playlists = SpotifyPlaylist::query()->with('items')->latest('last_synced_at')->get();
+            $playlists = SpotifyPlaylist::query()
+                ->when($selectedPlaylist !== null, fn ($query) => $query->whereKey($selectedPlaylist->id))
+                ->with('items')
+                ->latest('last_synced_at')
+                ->get();
             $auditAlbums = $recommendations->map(function (AlbumRecommendation $recommendation) use ($playlists): array {
                 $expectedUris = $this->recommendationTrackUris($recommendation);
                 $coveredUris = collect();
@@ -749,6 +802,8 @@ class DashboardController extends Controller
             'completeAlbums' => $auditAlbums->where('status', 'complete')->count(),
             'partialAlbums' => $auditAlbums->where('status', 'partial')->count(),
             'missingAlbums' => $auditAlbums->where('status', 'missing')->count(),
+            'playlists' => SpotifyPlaylist::query()->latest('name')->get(),
+            'selectedPlaylist' => $selectedPlaylist,
         ]);
     }
 
@@ -764,6 +819,23 @@ class DashboardController extends Controller
 
         if ($request->boolean('confirmed') !== true) {
             return back()->with('error', 'Confirm the reviewed albums before syncing to Spotify.');
+        }
+
+        $validated = $request->validate([
+            'playlist_target' => ['nullable', 'in:new,existing'],
+            'playlist_name' => ['nullable', 'string', 'max:100'],
+            'spotify_playlist_id' => ['nullable', 'string', 'max:255'],
+        ]);
+        $targetPlaylist = null;
+
+        if (($validated['playlist_target'] ?? null) === 'existing') {
+            $targetPlaylist = SpotifyPlaylist::query()
+                ->where('spotify_playlist_id', $validated['spotify_playlist_id'] ?? '')
+                ->first();
+
+            if ($targetPlaylist === null) {
+                return back()->with('error', 'Select an imported Spotify playlist before syncing.');
+            }
         }
 
         /** @var Collection<int, AlbumRecommendation> $recommendations */
@@ -787,9 +859,17 @@ class DashboardController extends Controller
         try {
             $playlistId = $recommendationRun->spotify_playlist_id;
 
+            if ($targetPlaylist !== null) {
+                $playlistId = $targetPlaylist->spotify_playlist_id;
+                $recommendationRun->update([
+                    'spotify_playlist_id' => $playlistId,
+                    'spotify_playlist_url' => $targetPlaylist->spotify_url,
+                ]);
+            }
+
             if ($playlistId === null) {
                 $playlist = $client->createPrivatePlaylist(
-                    'Effemeral recommendations - '.now()->toDateString(),
+                    trim((string) ($validated['playlist_name'] ?? '')) ?: $this->playlistNameSuggestion($recommendations->map(fn (AlbumRecommendation $recommendation): array => ['recommendation' => $recommendation])),
                     'Reviewed album recommendations generated by Effemeral.',
                 );
                 $playlistId = $playlist['id'];
@@ -1071,12 +1151,33 @@ class DashboardController extends Controller
         $run = SpotifyPlaylistImportRun::query()->create([
             'source' => 'spotify',
             'status' => 'queued',
-            'requested_limit' => 10,
+            'requested_limit' => null,
         ]);
 
         ImportSpotifyPlaylists::dispatch($run->id);
 
         return back()->with('success', 'Spotify playlists import queued.');
+    }
+
+    public function spotifyPlaylistRetry(SpotifyPlaylist $playlist): RedirectResponse
+    {
+        $activeImport = SpotifyPlaylistImportRun::query()
+            ->whereIn('status', ['queued', 'running'])
+            ->exists();
+
+        if ($activeImport) {
+            return back()->with('error', 'A Spotify playlist import is already in progress.');
+        }
+
+        $run = SpotifyPlaylistImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'queued',
+            'requested_limit' => 1,
+        ]);
+
+        ImportSpotifyPlaylists::dispatch($run->id, $playlist->spotify_playlist_id);
+
+        return back()->with('success', 'Spotify playlist retry queued.');
     }
 
     private function queueImport(

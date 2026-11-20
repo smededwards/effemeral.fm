@@ -5,18 +5,24 @@
                 <div>
                     <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
                     <h1 class="mt-3 text-4xl font-semibold">Playlist coverage audit</h1>
-                    <p class="mt-3 max-w-2xl text-zinc-400">Compare any recommendation draft with the imported Spotify playlists.</p>
+                    <p class="mt-3 max-w-2xl text-zinc-400">Compare a recommendation draft with every imported Spotify playlist or one selected destination.</p>
                 </div>
                 <a class="text-sm text-[#00e676] hover:text-[#b7ffd1]" href="{{ route('dashboard') }}">Back to dashboard</a>
             </header>
 
             <form class="rounded-xl border border-zinc-800 bg-zinc-900 p-6" method="GET" action="{{ route('recommendations.audit') }}">
                 <label class="block text-sm text-zinc-300" for="run">Recommendation draft</label>
-                <div class="mt-3 flex flex-wrap gap-3">
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
                     <select class="min-w-0 flex-1 rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" id="run" name="run" required>
                         <option value="">Select a saved draft</option>
                         @foreach ($recommendationRuns as $run)
                             <option value="{{ $run->id }}" @selected($selectedRun?->id === $run->id)>{{ $run->generated_at?->format('Y-m-d H:i') }} · {{ $run->source }} · {{ $run->status }}</option>
+                        @endforeach
+                    </select>
+                    <select class="min-w-0 flex-1 rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" id="playlist" name="playlist">
+                        <option value="">All imported playlists</option>
+                        @foreach ($playlists as $playlist)
+                            <option value="{{ $playlist->id }}" @selected($selectedPlaylist?->id === $playlist->id)>{{ $playlist->name }}</option>
                         @endforeach
                     </select>
                     <button class="rounded-md bg-[#c6ff4a] px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-[#d8ff80]" type="submit">Run audit</button>

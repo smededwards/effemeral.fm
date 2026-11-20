@@ -10,7 +10,7 @@ version.
 | --- | --- | --- |
 | `v0.1.0` | Agalloch | Complete |
 | `v0.2.0` | Baroness | Prototype validation pending |
-| `v0.3.0` | Cathedral | Planned |
+| `v0.3.0` | Candlemass | Planned |
 | `v0.4.0` | Darkthrone | Planned |
 | `v0.5.0` | Earth | Planned |
 | `v0.6.0` | Funeral | Planned |
