@@ -17,7 +17,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public int $importRunId) {}
+    public function __construct(public int $importRunId, public ?string $playlistId = null) {}
 
     public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
     {
@@ -27,12 +27,18 @@ class ImportSpotifyPlaylists implements ShouldQueue
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
         try {
-            $playlists = $client->playlists($run->requested_limit === null ? null : (int) $run->requested_limit);
+            $playlists = $this->playlistId === null
+                ? $client->playlists($run->requested_limit === null ? null : (int) $run->requested_limit)
+                : [[
+                    'id' => $this->playlistId,
+                    'name' => SpotifyPlaylist::query()->where('spotify_playlist_id', $this->playlistId)->value('name') ?? 'Untitled playlist',
+                ]];
             $fetched = 0;
             $imported = 0;
             $updated = 0;
             $skipped = 0;
             $artistIds = [];
+            $errors = [];
 
             foreach ($playlists as $playlistData) {
                 $playlistId = (string) ($playlistData['id'] ?? '');
@@ -54,51 +60,64 @@ class ImportSpotifyPlaylists implements ShouldQueue
                     'collaborative' => $playlistData['collaborative'] ?? false,
                     'tracks_total' => data_get($playlistData, 'tracks.total', 0),
                     'snapshot_id' => $playlistData['snapshot_id'] ?? null,
+                    'last_import_attempted_at' => now(),
                 ]);
-                $playlist->last_synced_at = now();
                 $playlist->save();
-                $wasExisting ? $updated++ : $imported++;
 
-                $items = $client->playlistItems($playlistId);
-                DB::transaction(function () use ($catalog, $items, $playlist, &$artistIds, &$fetched, &$skipped): void {
-                    $playlist->items()->delete();
+                try {
+                    $items = $client->playlistItems($playlistId);
+                    $playlistFetched = 0;
 
-                    foreach ($items as $position => $item) {
-                        $track = $item['track'] ?? null;
-                        if (! is_array($track) || ! is_array($track['album'] ?? null)) {
-                            $skipped++;
+                    DB::transaction(function () use ($catalog, $items, $playlist, &$artistIds, &$playlistFetched, &$skipped): void {
+                        $playlist->items()->delete();
 
-                            continue;
-                        }
+                        foreach ($items as $position => $item) {
+                            $track = $item['track'] ?? null;
+                            if (! is_array($track) || ! is_array($track['album'] ?? null)) {
+                                $skipped++;
 
-                        foreach ($track['album']['artists'] ?? [] as $artist) {
-                            if (is_array($artist) && is_string($artist['id'] ?? null) && $artist['id'] !== '') {
-                                $artistIds[$artist['id']] = true;
+                                continue;
                             }
-                        }
 
-                        $album = $catalog->spotifyAlbum(
-                            $track['album'],
-                            null,
-                            'playlist',
-                            $playlist->spotify_playlist_id,
-                        );
-                        $spotifyTrackId = $track['id'] ?? null;
-                        $playlist->items()->create([
-                            'album_id' => $album->id,
-                            'track_id' => $spotifyTrackId
-                                ? $album->tracks()->where('spotify_id', $spotifyTrackId)->value('id')
-                                : null,
-                            'spotify_track_id' => $spotifyTrackId,
-                            'spotify_uri' => $track['uri'] ?? null,
-                            'track_name' => $track['name'] ?? null,
-                            'position' => $position,
-                            'added_at' => $item['added_at'] ?? null,
-                            'is_local' => $item['is_local'] ?? false,
-                        ]);
-                        $fetched++;
-                    }
-                });
+                            foreach ($track['album']['artists'] ?? [] as $artist) {
+                                if (is_array($artist) && is_string($artist['id'] ?? null) && $artist['id'] !== '') {
+                                    $artistIds[$artist['id']] = true;
+                                }
+                            }
+
+                            $album = $catalog->spotifyAlbum(
+                                $track['album'],
+                                null,
+                                'playlist',
+                                $playlist->spotify_playlist_id,
+                            );
+                            $spotifyTrackId = $track['id'] ?? null;
+                            $playlist->items()->create([
+                                'album_id' => $album->id,
+                                'track_id' => $spotifyTrackId
+                                    ? $album->tracks()->where('spotify_id', $spotifyTrackId)->value('id')
+                                    : null,
+                                'spotify_track_id' => $spotifyTrackId,
+                                'spotify_uri' => $track['uri'] ?? null,
+                                'track_name' => $track['name'] ?? null,
+                                'position' => $position,
+                                'added_at' => $item['added_at'] ?? null,
+                                'is_local' => $item['is_local'] ?? false,
+                            ]);
+                            $playlistFetched++;
+                        }
+                    });
+
+                    $playlist->update([
+                        'last_synced_at' => now(),
+                        'last_import_error' => null,
+                    ]);
+                    $fetched += $playlistFetched;
+                    $wasExisting ? $updated++ : $imported++;
+                } catch (Throwable $exception) {
+                    $playlist->update(['last_import_error' => $exception->getMessage()]);
+                    $errors[] = $playlist->name.': '.$exception->getMessage();
+                }
             }
 
             foreach ($client->artists(array_keys($artistIds)) as $artistData) {
@@ -114,6 +133,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
                 'imported_count' => $imported,
                 'updated_count' => $updated,
                 'skipped_count' => $skipped,
+                'error' => $errors === [] ? null : implode("\n", $errors),
                 'completed_at' => now(),
             ]);
         } catch (Throwable $exception) {

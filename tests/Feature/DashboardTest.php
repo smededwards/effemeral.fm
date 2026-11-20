@@ -350,7 +350,7 @@ class DashboardTest extends TestCase
             ->assertSee('2 Spotify tracks available')
             ->assertSee('Included Review Album')
             ->assertSee('Excluded Review Album')
-            ->assertSee('Syncing will create a private Spotify playlist containing 2 tracks.');
+            ->assertSee('Syncing will append 2 reviewed tracks to Spotify. Existing tracks are preserved.');
     }
 
     public function test_playlist_audit_can_compare_any_saved_draft_with_imported_playlists(): void
@@ -607,6 +607,50 @@ class DashboardTest extends TestCase
             ->assertSessionHas('error', 'Confirm the reviewed albums before syncing to Spotify.');
 
         $this->assertSame('draft', $run->fresh()->status);
+    }
+
+    public function test_included_recommendations_can_append_to_an_imported_playlist(): void
+    {
+        config()->set('services.spotify.access_token', 'test-token');
+        $playlist = SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'existing-playlist-id',
+            'name' => 'Existing playlist',
+            'spotify_url' => 'https://open.spotify.com/playlist/existing-playlist-id',
+        ]);
+        Http::fake(function (HttpRequest $request) {
+            if ($request->method() === 'GET') {
+                return Http::response(['items' => [], 'next' => null]);
+            }
+
+            return Http::response(['snapshot_id' => 'snapshot-id'], 201);
+        });
+        $run = RecommendationRun::factory()->create();
+        $album = SpotifySavedAlbum::query()->create([
+            'spotify_album_id' => 'existing-target-album-id',
+            'spotify_uri' => 'spotify:album:existing-target-album-id',
+            'name' => 'Target Album',
+            'album_type' => 'album',
+            'tracks' => ['items' => [['uri' => 'spotify:track:target']]],
+        ]);
+        AlbumRecommendation::factory()->create([
+            'recommendation_run_id' => $run->id,
+            'spotify_saved_album_id' => $album->id,
+            'position' => 1,
+            'heard_tracks' => 0,
+            'total_tracks' => 1,
+            'completion_percentage' => 0,
+            'included' => true,
+        ]);
+
+        $this->post(route('recommendations.sync', $run), [
+            'confirmed' => true,
+            'playlist_target' => 'existing',
+            'spotify_playlist_id' => $playlist->spotify_playlist_id,
+        ])->assertSessionHas('success', 'Recommendation draft synced to Spotify.');
+
+        $this->assertSame($playlist->spotify_playlist_id, $run->fresh()->spotify_playlist_id);
+        Http::assertNotSent(fn (HttpRequest $request): bool => str_ends_with($request->url(), '/me/playlists'));
+        Http::assertSent(fn (HttpRequest $request): bool => $request->url() === config('services.spotify.api_endpoint').'/playlists/existing-playlist-id/items');
     }
 
     public function test_failed_sync_reuses_the_created_playlist_on_retry(): void

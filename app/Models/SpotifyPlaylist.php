@@ -10,6 +10,7 @@ class SpotifyPlaylist extends Model
     protected $fillable = [
         'spotify_playlist_id', 'name', 'description', 'spotify_url', 'owner_id',
         'public', 'collaborative', 'tracks_total', 'snapshot_id', 'last_synced_at',
+        'last_import_error', 'last_import_attempted_at',
     ];
 
     protected function casts(): array
@@ -18,6 +19,7 @@ class SpotifyPlaylist extends Model
             'public' => 'boolean',
             'collaborative' => 'boolean',
             'last_synced_at' => 'immutable_datetime',
+            'last_import_attempted_at' => 'immutable_datetime',
         ];
     }
 

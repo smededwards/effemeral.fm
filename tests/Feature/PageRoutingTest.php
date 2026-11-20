@@ -21,6 +21,11 @@ class PageRoutingTest extends TestCase
             ->assertSee('Saved albums')
             ->assertSee('Spotify playlists');
 
+        $this->get(route('playlists.index'))
+            ->assertOk()
+            ->assertSee('Spotify playlist organisation')
+            ->assertSee('Import all playlists');
+
         $this->get(route('recommendations.index'))
             ->assertOk()
             ->assertSee('Recommendations')

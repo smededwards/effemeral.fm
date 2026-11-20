@@ -27,7 +27,7 @@ class SpotifyPlaylistImportTest extends TestCase
         $response->assertSessionHas('success', 'Spotify playlists import queued.');
         $this->assertDatabaseHas('spotify_playlist_import_runs', [
             'status' => 'queued',
-            'requested_limit' => 10,
+            'requested_limit' => null,
         ]);
         Queue::assertPushed(ImportSpotifyPlaylists::class);
     }
@@ -36,7 +36,7 @@ class SpotifyPlaylistImportTest extends TestCase
     {
         config()->set('services.spotify.access_token', 'test-token');
         Http::fake(function ($request) {
-            if (str_ends_with($request->url(), '/me/playlists?limit=10&offset=0')) {
+            if (str_ends_with($request->url(), '/me/playlists?limit=50&offset=0')) {
                 return Http::response([
                     'next' => null,
                     'items' => [[
@@ -77,7 +77,7 @@ class SpotifyPlaylistImportTest extends TestCase
         $run = SpotifyPlaylistImportRun::query()->create([
             'source' => 'spotify',
             'status' => 'queued',
-            'requested_limit' => 10,
+            'requested_limit' => null,
         ]);
 
         $job = new ImportSpotifyPlaylists($run->id);
@@ -145,12 +145,38 @@ class SpotifyPlaylistImportTest extends TestCase
             'requested_limit' => 10,
         ]);
 
-        $this->expectException(\RuntimeException::class);
         (new ImportSpotifyPlaylists($run->id))->handle(app(SpotifyClient::class));
 
         $this->assertDatabaseHas('spotify_playlist_items', [
             'spotify_playlist_id' => $playlist->id,
             'spotify_track_id' => 'existing-track-id',
         ]);
+        $this->assertDatabaseHas('spotify_playlists', [
+            'spotify_playlist_id' => 'playlist-id',
+            'last_import_error' => 'Spotify returned HTTP 500.',
+        ]);
+        $this->assertDatabaseHas('spotify_playlist_import_runs', [
+            'id' => $run->id,
+            'status' => 'completed',
+            'error' => 'Updated playlist: Spotify returned HTTP 500.',
+        ]);
+    }
+
+    public function test_a_failed_playlist_can_be_retried_individually(): void
+    {
+        Queue::fake();
+        $playlist = SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'failed-playlist-id',
+            'name' => 'Failed playlist',
+            'last_import_error' => 'Spotify returned HTTP 500.',
+        ]);
+
+        $this->post(route('imports.spotify.playlists.retry', $playlist))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Spotify playlist retry queued.');
+
+        Queue::assertPushed(ImportSpotifyPlaylists::class, function (ImportSpotifyPlaylists $job) use ($playlist): bool {
+            return $job->playlistId === $playlist->spotify_playlist_id;
+        });
     }
 }

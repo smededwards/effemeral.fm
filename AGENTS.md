@@ -159,11 +159,11 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - The selected-album discovery target is implemented on `dev`: choose an album or artist, find similar incomplete albums from a requested genre and year, or generate an album-level artist discography draft.
 - Similarity recommendations require normalized genre data, release-year filtering, canonical catalogue records, and Last.fm completion evidence; do not make Spotify playlist membership the recommendation authority.
 - Artist discography drafts should reuse the existing recommendation review, ordering, exclusion, audit, and Spotify sync flow rather than creating a second playlist workflow.
-- The agreed milestone sequence is `Agalloch`, `Baroness`, `Cathedral`, `Darkthrone`, `Earth`, `Funeral`, `Gallows`, `Hawkwind`, `Interpol`, `Jinjer`, `Kyuss`, `Lucifer`, `Mastodon`, `Neurosis`, `Opeth`, `Pallbearer`, `Quicksand`, `Rammstein`, `Slayer`, `Tombs`, `Ulver`, `Venom`, `Windhand`, `Xasthur`, `Yob`, and `Zao`; then cycle back to `A`.
+- The agreed milestone sequence is `Agalloch`, `Baroness`, `Candlemass`, `Darkthrone`, `Earth`, `Funeral`, `Gallows`, `Hawkwind`, `Interpol`, `Jinjer`, `Kyuss`, `Lucifer`, `Mastodon`, `Neurosis`, `Opeth`, `Pallbearer`, `Quicksand`, `Rammstein`, `Slayer`, `Tombs`, `Ulver`, `Venom`, `Windhand`, `Xasthur`, `Yob`, and `Zao`; then cycle back to `A`.
 - The sequence starts with `Agalloch` as the closed `v0.1.0` prototype baseline and `Baroness` as the next `v0.2.0` milestone. Do not pre-create future milestones; create each one as its release work begins.
 - A milestone is complete only after its issues are merged into `dev`, CI/Pint/PHPStan/PHPUnit pass, the user reviews the working prototype, and `dev` is merged into `main`.
 - Milestone completion creates the matching semantic-version tag, GitHub release, and Conventional Commit changelog summary. Patch releases are reserved for fixes; new feature milestones increment the minor version while the project remains below `v1.0.0`.
-- The `v0.2.0` Baroness issues are now merged into `dev` and closed. The current workflow state is prototype validation pending; do not start the next feature milestone until the user has tested the working app and decided whether `dev` is ready to merge into `main`.
+- The `v0.2.0` Baroness issues are merged into `main`; the release PR remains the release gate. Candlemass is the planned `v0.3.0` playlist-organisation milestone and begins from the restored `dev` branch after the release is complete.
 - After a milestone release, create the next issue and feature branch from the updated `dev`, open a PR into `dev`, and close the linked issue only after the PR is merged.
 
 ## Effemeral delivery workflow

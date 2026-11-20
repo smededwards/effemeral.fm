@@ -8,6 +8,7 @@ Route::middleware('private')->group(function (): void {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/imports', [DashboardController::class, 'imports'])->name('imports.index');
     Route::get('/library', [DashboardController::class, 'library'])->name('library.index');
+    Route::get('/playlists', [DashboardController::class, 'playlists'])->name('playlists.index');
     Route::get('/recommendations', [DashboardController::class, 'recommendations'])->name('recommendations.index');
     Route::get('/catalogue', [DashboardController::class, 'catalogue'])->name('catalogue.index');
     Route::post('/catalogue/discover', [DashboardController::class, 'discoverRecommendations'])->name('catalogue.discover');
@@ -18,6 +19,7 @@ Route::middleware('private')->group(function (): void {
     Route::post('/imports/spotify/albums', [DashboardController::class, 'spotifyAlbumsImport'])->name('imports.spotify.albums');
     Route::post('/imports/spotify/liked-tracks', [DashboardController::class, 'spotifyLikedTracksImport'])->name('imports.spotify.liked-tracks');
     Route::post('/imports/spotify/playlists', [DashboardController::class, 'spotifyPlaylistsImport'])->name('imports.spotify.playlists');
+    Route::post('/imports/spotify/playlists/{playlist}/retry', [DashboardController::class, 'spotifyPlaylistRetry'])->name('imports.spotify.playlists.retry');
     Route::post('/albums/{album}/completion/complete', [DashboardController::class, 'markAlbumComplete'])->name('albums.completion.complete');
     Route::post('/albums/{album}/completion/incomplete', [DashboardController::class, 'markAlbumIncomplete'])->name('albums.completion.incomplete');
     Route::post('/albums/{album}/completion/clear', [DashboardController::class, 'clearAlbumCompletionOverride'])->name('albums.completion.clear');

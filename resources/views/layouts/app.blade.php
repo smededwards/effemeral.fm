@@ -26,6 +26,7 @@
                                 ['route' => 'dashboard', 'label' => 'Overview'],
                                 ['route' => 'imports.index', 'label' => 'Imports'],
                                 ['route' => 'library.index', 'label' => 'Library'],
+                                ['route' => 'playlists.index', 'label' => 'Playlists'],
                                 ['route' => 'catalogue.index', 'label' => 'Catalogue'],
                                 ['route' => 'recommendations.index', 'label' => 'Drafts'],
                             ] as $item)
