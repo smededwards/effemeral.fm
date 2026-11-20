@@ -9,7 +9,7 @@ class LastFmImportRun extends Model
 {
     protected $fillable = [
         'source', 'status', 'from_at', 'to_at', 'requested_limit',
-        'fetched_count', 'imported_count', 'skipped_count', 'error',
+        'fetched_count', 'imported_count', 'skipped_count', 'failed_count', 'error',
         'started_at', 'completed_at', 'retry_of_id',
     ];
 
