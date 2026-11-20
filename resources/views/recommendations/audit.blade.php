@@ -7,10 +7,10 @@
                     <h1 class="mt-3 text-4xl font-semibold">Playlist coverage audit</h1>
                     <p class="mt-3 max-w-2xl text-zinc-400">Compare a recommendation draft with every imported Spotify playlist or one selected destination.</p>
                 </div>
-                <a class="text-sm text-[#00e676] hover:text-[#b7ffd1]" href="{{ route('dashboard') }}">Back to dashboard</a>
+                <a class="text-sm text-[#00e676] hover:text-[#b7ffd1]" href="{{ route('dashboard', [], false) }}">Back to dashboard</a>
             </header>
 
-            <form class="rounded-xl border border-zinc-800 bg-zinc-900 p-6" method="GET" action="{{ route('recommendations.audit') }}">
+            <form class="rounded-xl border border-zinc-800 bg-zinc-900 p-6" method="GET" action="{{ route('recommendations.audit', [], false) }}">
                 <label class="block text-sm text-zinc-300" for="run">Recommendation draft</label>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                     <select class="min-w-0 flex-1 rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" id="run" name="run" required>
