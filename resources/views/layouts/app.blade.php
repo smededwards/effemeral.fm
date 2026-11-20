@@ -4,7 +4,15 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ $title ?? 'Effemeral' }}</title>
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @php
+            $vite = app(\Illuminate\Foundation\Vite::class);
+            $stylesheet = parse_url($vite->asset('resources/css/app.css'), PHP_URL_PATH);
+            $script = parse_url($vite->asset('resources/js/app.js'), PHP_URL_PATH);
+        @endphp
+        <link rel="preload" as="style" href="{{ $stylesheet }}" />
+        <link rel="modulepreload" as="script" href="{{ $script }}" />
+        <link rel="stylesheet" href="{{ $stylesheet }}" />
+        <script type="module" src="{{ $script }}"></script>
     </head>
     <body class="min-h-screen bg-[#0b0c0a] text-[#f3f5f3] antialiased">
         <div class="min-h-screen border-t-4 border-[#00e676]">
