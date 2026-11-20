@@ -112,4 +112,30 @@ class SpotifyAuthenticationTest extends TestCase
 
         $this->assertSame(2, $attempts);
     }
+
+    public function test_spotify_pagination_advances_by_raw_page_size(): void
+    {
+        config()->set('services.spotify.access_token', 'test-token');
+        Http::fake(function ($request) {
+            if (str_ends_with($request->url(), '/me/playlists?limit=50&offset=0')) {
+                return Http::response([
+                    'next' => 'https://api.spotify.com/v1/me/playlists?limit=50&offset=2',
+                    'items' => [
+                        ['name' => 'Unavailable playlist'],
+                        ['id' => 'first-playlist', 'name' => 'First playlist'],
+                    ],
+                ]);
+            }
+
+            return Http::response([
+                'next' => null,
+                'items' => [['id' => 'second-playlist', 'name' => 'Second playlist']],
+            ]);
+        });
+
+        $playlists = app(SpotifyClient::class)->playlists();
+
+        $this->assertSame(['first-playlist', 'second-playlist'], array_column($playlists, 'id'));
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/me/playlists?limit=50&offset=2'));
+    }
 }

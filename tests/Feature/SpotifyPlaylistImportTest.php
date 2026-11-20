@@ -184,4 +184,25 @@ class SpotifyPlaylistImportTest extends TestCase
     {
         $this->assertSame(3600, (new ImportSpotifyPlaylists(1))->timeout);
     }
+
+    public function test_a_stale_spotify_playlist_import_is_cleared_before_a_new_import_is_queued(): void
+    {
+        Queue::fake();
+        $staleRun = SpotifyPlaylistImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'running',
+        ]);
+        SpotifyPlaylistImportRun::query()->whereKey($staleRun->id)->update([
+            'updated_at' => now()->subHours(2),
+        ]);
+
+        $this->post(route('imports.spotify.playlists'))
+            ->assertSessionHas('success', 'Spotify playlists import queued.');
+
+        $this->assertDatabaseHas('spotify_playlist_import_runs', [
+            'id' => $staleRun->id,
+            'status' => 'failed',
+            'error' => 'Import marked failed because its worker heartbeat expired.',
+        ]);
+    }
 }

@@ -1098,6 +1098,7 @@ class DashboardController extends Controller
 
     public function spotifyAlbumsImport(): RedirectResponse
     {
+        $this->clearStaleImportRuns();
         $activeImport = SpotifyImportRun::query()
             ->whereIn('status', ['queued', 'running'])
             ->exists();
@@ -1119,6 +1120,7 @@ class DashboardController extends Controller
 
     public function spotifyLikedTracksImport(): RedirectResponse
     {
+        $this->clearStaleImportRuns();
         $activeImport = SpotifyImportRun::query()
             ->whereIn('status', ['queued', 'running'])
             ->exists();
@@ -1140,6 +1142,7 @@ class DashboardController extends Controller
 
     public function spotifyPlaylistsImport(): RedirectResponse
     {
+        $this->clearStaleImportRuns();
         $activeImport = SpotifyPlaylistImportRun::query()
             ->whereIn('status', ['queued', 'running'])
             ->exists();
@@ -1161,6 +1164,7 @@ class DashboardController extends Controller
 
     public function spotifyPlaylistRetry(SpotifyPlaylist $playlist): RedirectResponse
     {
+        $this->clearStaleImportRuns();
         $activeImport = SpotifyPlaylistImportRun::query()
             ->whereIn('status', ['queued', 'running'])
             ->exists();

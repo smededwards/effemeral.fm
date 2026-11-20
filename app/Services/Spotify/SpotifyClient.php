@@ -31,11 +31,12 @@ class SpotifyClient
             }
 
             $payload = $response->json();
-            $items = data_get($payload, 'items', []);
-            $items = array_values(array_filter($items, fn (mixed $item): bool => is_array($item) && is_array($item['album'] ?? null)));
+            $pageItems = data_get($payload, 'items', []);
+            $pageItems = is_array($pageItems) ? array_values($pageItems) : [];
+            $items = array_values(array_filter($pageItems, fn (mixed $item): bool => is_array($item) && is_array($item['album'] ?? null)));
             $albums = array_merge($albums, $items);
-            $offset += count($items);
-        } while (($limit === null || count($albums) < $limit) && data_get($payload, 'next') !== null && $items !== []);
+            $offset += count($pageItems);
+        } while (($limit === null || count($albums) < $limit) && data_get($payload, 'next') !== null && $pageItems !== []);
 
         return $limit === null ? $albums : array_slice($albums, 0, $limit);
     }
@@ -160,13 +161,15 @@ class SpotifyClient
             }
 
             $payload = $response->json();
+            $rawItems = data_get($payload, 'items', []);
+            $rawItems = is_array($rawItems) ? array_values($rawItems) : [];
             $pageItems = array_values(array_filter(
-                data_get($payload, 'items', []),
+                $rawItems,
                 fn (mixed $item): bool => is_array($item) && $filter($item),
             ));
             $items = array_merge($items, $pageItems);
-            $offset += count($pageItems);
-        } while (($limit === null || count($items) < $limit) && data_get($payload, 'next') !== null && $pageItems !== []);
+            $offset += count($rawItems);
+        } while (($limit === null || count($items) < $limit) && data_get($payload, 'next') !== null && $rawItems !== []);
 
         return $limit === null ? $items : array_slice($items, 0, $limit);
     }

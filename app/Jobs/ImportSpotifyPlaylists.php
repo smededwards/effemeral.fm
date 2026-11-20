@@ -40,6 +40,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
             $updated = 0;
             $skipped = 0;
             $artistIds = [];
+            $trackIdsByAlbum = [];
             $errors = [];
 
             foreach ($playlists as $playlistData) {
@@ -70,7 +71,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
                     $items = $client->playlistItems($playlistId);
                     $playlistFetched = 0;
 
-                    DB::transaction(function () use ($catalog, $items, $playlist, &$artistIds, &$playlistFetched, &$skipped): void {
+                    DB::transaction(function () use ($catalog, $items, $playlist, &$artistIds, &$playlistFetched, &$skipped, &$trackIdsByAlbum): void {
                         $playlist->items()->delete();
 
                         foreach ($items as $position => $item) {
@@ -94,11 +95,12 @@ class ImportSpotifyPlaylists implements ShouldQueue
                                 $playlist->spotify_playlist_id,
                             );
                             $spotifyTrackId = $track['id'] ?? null;
+                            if (! array_key_exists($album->id, $trackIdsByAlbum)) {
+                                $trackIdsByAlbum[$album->id] = $album->tracks()->pluck('id', 'spotify_id')->all();
+                            }
                             $playlist->items()->create([
                                 'album_id' => $album->id,
-                                'track_id' => $spotifyTrackId
-                                    ? $album->tracks()->where('spotify_id', $spotifyTrackId)->value('id')
-                                    : null,
+                                'track_id' => $spotifyTrackId ? ($trackIdsByAlbum[$album->id][$spotifyTrackId] ?? null) : null,
                                 'spotify_track_id' => $spotifyTrackId,
                                 'spotify_uri' => $track['uri'] ?? null,
                                 'track_name' => $track['name'] ?? null,
