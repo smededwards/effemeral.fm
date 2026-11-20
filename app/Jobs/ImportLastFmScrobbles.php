@@ -18,6 +18,8 @@ class ImportLastFmScrobbles implements ShouldQueue
 {
     use Queueable;
 
+    public int $timeout = 3600;
+
     public function __construct(public int $importRunId) {}
 
     public function handle(LastFmClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void

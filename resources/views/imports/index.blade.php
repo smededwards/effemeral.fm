@@ -8,7 +8,7 @@
 
     <section class="grid gap-px border border-[#2e382f] bg-[#2e382f] lg:grid-cols-2">
         <div class="bg-[#0b0c0a] p-6 sm:p-8">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#00e676]">Source 01</p><h2 class="mt-3 text-2xl font-semibold">Last.fm history</h2><p class="mt-2 text-sm leading-6 text-[#9aa39d]">Import a bounded range while testing, or queue the complete history from 1 January 2024.</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#00e676]">Source 01</p><h2 class="mt-3 text-2xl font-semibold">Last.fm history</h2><p class="mt-2 text-sm leading-6 text-[#9aa39d]">Import a bounded range while testing, or queue your complete Last.fm history.</p>
             <form class="mt-8 space-y-5" method="POST" action="{{ route('imports.lastfm') }}">
                 @csrf
                 <div class="grid gap-4 sm:grid-cols-2"><label class="block text-sm text-[#d7ffe2]">From<input class="mt-2 block w-full border border-[#445148] bg-[#111612] px-3 py-3 text-[#f3f5f3]" type="date" name="from" value="{{ old('from', $defaultFrom) }}" required></label><label class="block text-sm text-[#d7ffe2]">To<input class="mt-2 block w-full border border-[#445148] bg-[#111612] px-3 py-3 text-[#f3f5f3]" type="date" name="to" value="{{ old('to', $defaultTo) }}" required></label></div>
