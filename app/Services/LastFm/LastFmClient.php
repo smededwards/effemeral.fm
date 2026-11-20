@@ -19,38 +19,22 @@ class LastFmClient
         $page = 1;
 
         do {
-            $payload = [];
+            $response = $this->getWithRateLimit([
+                'method' => 'user.getrecenttracks',
+                'user' => config('services.lastfm.username'),
+                'api_key' => config('services.lastfm.api_key'),
+                'format' => 'json',
+                'limit' => $limit === null ? 200 : min(200, $limit - count($tracks)),
+                'page' => $page,
+                'from' => $from->timestamp,
+                'to' => $to->timestamp,
+            ]);
 
-            for ($attempt = 1; $attempt <= 3; $attempt++) {
-                $response = $this->request()->get('', [
-                    'method' => 'user.getrecenttracks',
-                    'user' => config('services.lastfm.username'),
-                    'api_key' => config('services.lastfm.api_key'),
-                    'format' => 'json',
-                    'limit' => $limit === null ? 200 : min(200, $limit - count($tracks)),
-                    'page' => $page,
-                    'from' => $from->timestamp,
-                    'to' => $to->timestamp,
-                ]);
-
-                if ($response->status() === 429 && $attempt < 3) {
-                    $this->waitForRateLimit($response);
-
-                    continue;
-                }
-
-                if ($response->failed()) {
-                    throw new RuntimeException('Last.fm returned HTTP '.$response->status().'.');
-                }
-
-                $payload = $response->json();
-
-                if ((int) data_get($payload, 'error') !== 29 || $attempt === 3) {
-                    break;
-                }
-
-                $this->waitForRateLimit($response);
+            if ($response->failed()) {
+                throw new RuntimeException('Last.fm returned HTTP '.$response->status().'.');
             }
+
+            $payload = $response->json();
 
             if (isset($payload['error'])) {
                 throw new RuntimeException('Last.fm error '.$payload['error'].': '.($payload['message'] ?? 'Unknown error').'.');
@@ -71,7 +55,7 @@ class LastFmClient
     /** @return list<string> */
     public function artistTags(string $artist, ?string $mbid = null): array
     {
-        $response = $this->request()->get('', array_filter([
+        $response = $this->getWithRateLimit(array_filter([
             'method' => 'artist.getInfo',
             'artist' => $artist,
             'mbid' => $mbid,
@@ -100,6 +84,24 @@ class LastFmClient
                 'User-Agent' => config('services.lastfm.user_agent'),
                 'Accept' => 'application/json',
             ])->timeout(15)->retry(3, 1000, throw: false);
+    }
+
+    /** @param array<string, mixed> $query */
+    private function getWithRateLimit(array $query): Response
+    {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $response = $this->request()->get('', $query);
+            $payload = $response->json();
+            $rateLimited = $response->status() === 429 || (int) data_get($payload, 'error') === 29;
+
+            if (! $rateLimited || $attempt === 3) {
+                return $response;
+            }
+
+            $this->waitForRateLimit($response);
+        }
+
+        return $response;
     }
 
     private function waitForRateLimit(Response $response): void

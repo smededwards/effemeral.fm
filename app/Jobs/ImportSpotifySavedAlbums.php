@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Artist;
-use App\Models\SpotifyAlbumImportRun;
+use App\Models\SpotifyImportRun;
 use App\Models\SpotifySavedAlbum;
 use App\Services\Catalog\CatalogWriter;
 use App\Services\Catalog\GenreWriter;
@@ -22,7 +22,7 @@ class ImportSpotifySavedAlbums implements ShouldQueue
     {
         $catalog ??= app(CatalogWriter::class);
         $genreWriter ??= app(GenreWriter::class);
-        $run = SpotifyAlbumImportRun::query()->findOrFail($this->importRunId);
+        $run = SpotifyImportRun::query()->findOrFail($this->importRunId);
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
         try {

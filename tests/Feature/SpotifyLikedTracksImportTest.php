@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\ImportSpotifyLikedTracks;
 use App\Models\Album;
-use App\Models\SpotifyAlbumImportRun;
+use App\Models\SpotifyImportRun;
 use App\Models\SpotifyLikedTrack;
 use App\Models\Track;
 use App\Services\Spotify\SpotifyClient;
@@ -64,7 +64,7 @@ class SpotifyLikedTracksImportTest extends TestCase
             ]);
         });
 
-        $run = SpotifyAlbumImportRun::query()->create([
+        $run = SpotifyImportRun::query()->create([
             'source' => 'liked_tracks',
             'status' => 'queued',
         ]);

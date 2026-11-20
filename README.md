@@ -41,6 +41,8 @@ Then start Effemeral:
 
 Do not commit .env or provider credentials. Copy .env.example to .env and configure the Last.fm and Spotify credentials locally.
 
+For a private deployment, set `EFFEMERAL_ACCESS_USERNAME` and `EFFEMERAL_ACCESS_PASSWORD`. Local development remains open when the password is blank; production fails closed until a password is configured.
+
 ## Verification
 
 Run the standard checks from the application container:
