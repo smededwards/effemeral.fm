@@ -17,6 +17,8 @@ class ImportSpotifyPlaylists implements ShouldQueue
 {
     use Queueable;
 
+    public int $timeout = 3600;
+
     public function __construct(public int $importRunId, public ?string $playlistId = null) {}
 
     public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
@@ -114,9 +116,22 @@ class ImportSpotifyPlaylists implements ShouldQueue
                     ]);
                     $fetched += $playlistFetched;
                     $wasExisting ? $updated++ : $imported++;
+                    $run->update([
+                        'fetched_count' => $fetched,
+                        'imported_count' => $imported,
+                        'updated_count' => $updated,
+                        'skipped_count' => $skipped,
+                    ]);
                 } catch (Throwable $exception) {
                     $playlist->update(['last_import_error' => $exception->getMessage()]);
                     $errors[] = $playlist->name.': '.$exception->getMessage();
+                    $run->update([
+                        'fetched_count' => $fetched,
+                        'imported_count' => $imported,
+                        'updated_count' => $updated,
+                        'skipped_count' => $skipped,
+                        'error' => implode("\n", $errors),
+                    ]);
                 }
             }
 

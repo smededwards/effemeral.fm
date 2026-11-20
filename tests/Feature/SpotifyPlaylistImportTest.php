@@ -179,4 +179,9 @@ class SpotifyPlaylistImportTest extends TestCase
             return $job->playlistId === $playlist->spotify_playlist_id;
         });
     }
+
+    public function test_playlist_import_job_allows_long_running_imports(): void
+    {
+        $this->assertSame(3600, (new ImportSpotifyPlaylists(1))->timeout);
+    }
 }
