@@ -339,9 +339,20 @@ class DashboardController extends Controller
     /** @return array<string, mixed> */
     private function libraryData(): array
     {
+        $librarySearch = trim((string) request('library_search'));
+        $savedAlbums = SpotifySavedAlbum::query()->latest('saved_at');
+
+        if ($librarySearch !== '') {
+            $savedAlbums->where(function ($query) use ($librarySearch): void {
+                $query->where('name', 'like', '%'.$librarySearch.'%')
+                    ->orWhere('primary_artist_name', 'like', '%'.$librarySearch.'%');
+            });
+        }
+
         return [
-            'spotifyPlaylists' => SpotifyPlaylist::query()->with('items.album')->latest('last_synced_at')->get(),
-            'spotifySavedAlbums' => SpotifySavedAlbum::query()->latest('saved_at')->get(),
+            'librarySearch' => $librarySearch,
+            'spotifyPlaylists' => SpotifyPlaylist::query()->with('items.album')->latest('last_synced_at')->limit(24)->get(),
+            'spotifySavedAlbums' => $savedAlbums->limit(24)->get(),
             'spotifySavedAlbumCount' => SpotifySavedAlbum::query()->count(),
         ];
     }
@@ -367,7 +378,6 @@ class DashboardController extends Controller
             ->latest()
             ->first();
         $albumSearch = trim((string) request('album_search'));
-        $albumArtist = trim((string) request('album_artist'));
         $spotifySavedAlbumQuery = SpotifySavedAlbum::query()->latest('saved_at');
 
         if ($albumSearch !== '') {
@@ -377,11 +387,7 @@ class DashboardController extends Controller
             });
         }
 
-        if ($albumArtist !== '') {
-            $spotifySavedAlbumQuery->where('primary_artist_name', $albumArtist);
-        }
-
-        $spotifySavedAlbums = $spotifySavedAlbumQuery->get();
+        $spotifySavedAlbums = $spotifySavedAlbumQuery->limit(12)->get();
         $artists = Scrobble::query()
             ->select('artist_name')
             ->selectRaw('COUNT(*) as scrobble_count')
@@ -419,23 +425,13 @@ class DashboardController extends Controller
             'latestImport' => LastFmImportRun::query()->latest()->first(),
             'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
             'latestSpotifyImport' => SpotifyImportRun::query()->latest()->first(),
-            'latestSpotifyPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
-            'spotifyPlaylists' => SpotifyPlaylist::query()->with('items.album')->latest('last_synced_at')->get(),
             'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
             'spotifySavedAlbums' => $spotifySavedAlbums,
             'spotifySavedAlbumCount' => SpotifySavedAlbum::query()->count(),
-            'spotifyAlbumArtists' => SpotifySavedAlbum::query()
-                ->whereNotNull('primary_artist_name')
-                ->where('primary_artist_name', '<>', '')
-                ->distinct()
-                ->orderBy('primary_artist_name')
-                ->pluck('primary_artist_name'),
             'albumSearch' => $albumSearch,
-            'albumArtist' => $albumArtist,
             'incompleteAlbums' => $incompleteAlbums,
             'topArtists' => $artists,
             'topAlbums' => $albums,
-            'genreArtists' => Artist::query()->with('genres')->whereHas('genres')->orderBy('name')->get(),
             'latestRecommendation' => $latestRecommendation,
             'scrobbleCount' => Scrobble::query()->count(),
             'defaultFrom' => now()->subDays(90)->toDateString(),

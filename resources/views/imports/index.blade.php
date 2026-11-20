@@ -1,42 +1,29 @@
 @extends('layouts.app', ['title' => 'Imports · Effemeral'])
 
 @section('content')
-    <header>
-        <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
-        <h1 class="mt-3 text-4xl font-semibold">Imports</h1>
-        <p class="mt-3 max-w-2xl text-zinc-400">Bring Last.fm history and Spotify library data into the canonical catalogue.</p>
+    <header class="flex flex-col gap-4 border-b border-[#2e382f] pb-8 sm:flex-row sm:items-end sm:justify-between">
+        <div><p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#00e676]">Imports / 02</p><h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Keep the sources current</h1><p class="mt-4 max-w-2xl text-base leading-7 text-[#9aa39d]">Last.fm supplies listening evidence. Spotify supplies the working library and playlist context.</p></div>
+        <span class="text-xs uppercase tracking-[0.16em] text-[#9aa39d]">Manual sync</span>
     </header>
 
-    <section class="grid gap-6 md:grid-cols-2">
-        <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-            <h2 class="text-xl font-medium">Last.fm</h2>
-            <form class="mt-6 space-y-4" method="POST" action="{{ route('imports.lastfm') }}">
+    <section class="grid gap-px border border-[#2e382f] bg-[#2e382f] lg:grid-cols-2">
+        <div class="bg-[#0b0c0a] p-6 sm:p-8">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#00e676]">Source 01</p><h2 class="mt-3 text-2xl font-semibold">Last.fm history</h2><p class="mt-2 text-sm leading-6 text-[#9aa39d]">Import a bounded range while testing, or queue the complete history from 1 January 2024.</p>
+            <form class="mt-8 space-y-5" method="POST" action="{{ route('imports.lastfm') }}">
                 @csrf
-                <label class="block text-sm text-zinc-300">From<input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="date" name="from" value="{{ old('from', $defaultFrom) }}" required></label>
-                <label class="block text-sm text-zinc-300">To<input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="date" name="to" value="{{ old('to', $defaultTo) }}" required></label>
-                <label class="block text-sm text-zinc-300">Maximum scrobbles<input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="limit" min="1" max="1000" value="{{ old('limit', 100) }}" required></label>
-                <div class="flex flex-wrap gap-3">
-                    <button class="rounded-md bg-emerald-500 px-4 py-2 font-medium text-zinc-950" type="submit">Queue import</button>
-                    <button class="rounded-md border border-zinc-700 px-4 py-2 font-medium text-zinc-200" type="submit" formaction="{{ route('imports.lastfm.full') }}">Queue full import</button>
-                </div>
+                <div class="grid gap-4 sm:grid-cols-2"><label class="block text-sm text-[#d7ffe2]">From<input class="mt-2 block w-full border border-[#445148] bg-[#111612] px-3 py-3 text-[#f3f5f3]" type="date" name="from" value="{{ old('from', $defaultFrom) }}" required></label><label class="block text-sm text-[#d7ffe2]">To<input class="mt-2 block w-full border border-[#445148] bg-[#111612] px-3 py-3 text-[#f3f5f3]" type="date" name="to" value="{{ old('to', $defaultTo) }}" required></label></div>
+                <label class="block text-sm text-[#d7ffe2]">Maximum scrobbles<input class="mt-2 block w-full border border-[#445148] bg-[#111612] px-3 py-3 text-[#f3f5f3]" type="number" name="limit" min="1" max="1000" value="{{ old('limit', 100) }}" required></label>
+                <div class="flex flex-wrap gap-3"><button class="bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#061108] hover:bg-[#b7ffd1]" type="submit">Queue import</button><button class="border border-[#00e676] px-4 py-3 text-sm font-semibold text-[#00e676] hover:bg-[#142319]" type="submit" formaction="{{ route('imports.lastfm.full') }}">Queue full import</button></div>
             </form>
         </div>
-        <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-            <h2 class="text-xl font-medium">Spotify account</h2>
-            <p class="mt-2 text-sm text-zinc-400">{{ $spotifyConnection ? 'Connected'.($spotifyConnection->display_name ? ' as '.$spotifyConnection->display_name : '').'.' : 'Connect Spotify to import library data.' }}</p>
-            @if ($spotifyConnection)
-                <form class="mt-6" method="POST" action="{{ route('auth.spotify.disconnect') }}">@csrf<button class="rounded-md border border-zinc-700 px-4 py-2 font-medium text-zinc-200" type="submit">Disconnect Spotify</button></form>
-            @else
-                <a class="mt-6 inline-block rounded-md bg-[#BF3989] px-4 py-2 font-medium text-white" href="{{ route('auth.spotify') }}">Connect Spotify</a>
-            @endif
+        <div class="bg-[#111612] p-6 sm:p-8">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#00e676]">Source 02</p><h2 class="mt-3 text-2xl font-semibold">Spotify library</h2><p class="mt-2 text-sm leading-6 text-[#9aa39d]">Connect once, then refresh saved albums, liked songs, and playlists whenever you choose.</p>
+            <p class="mt-8 border-y border-[#2e382f] py-4 text-sm text-[#d7ffe2]">{{ $spotifyConnection ? 'Connected to Spotify.' : 'Spotify is not connected.' }}</p>
+            @if ($spotifyConnection)<form class="mt-6" method="POST" action="{{ route('auth.spotify.disconnect') }}">@csrf<button class="border border-[#445148] px-4 py-3 text-sm font-semibold text-[#f3f5f3] hover:border-[#00e676]" type="submit">Disconnect Spotify</button></form>@else<a class="mt-6 inline-block bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#061108] hover:bg-[#b7ffd1]" href="{{ route('auth.spotify') }}">Connect Spotify</a>@endif
         </div>
     </section>
 
-    <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-        <div class="flex flex-wrap items-center justify-between gap-4"><div><h2 class="text-xl font-medium">Spotify library imports</h2><p class="mt-1 text-sm text-zinc-400">Import saved albums, liked songs, or playlists as supporting catalogue data.</p></div><div class="flex flex-wrap gap-3"><form method="POST" action="{{ route('imports.spotify.albums') }}">@csrf<button class="rounded-md bg-[#BF3989] px-4 py-2 text-sm font-medium text-white" type="submit">Saved albums</button></form><form method="POST" action="{{ route('imports.spotify.liked-tracks') }}">@csrf<button class="rounded-md border border-[#BF3989] px-4 py-2 text-sm font-medium text-[#f08cc4]" type="submit">Liked songs</button></form><form method="POST" action="{{ route('imports.spotify.playlists') }}">@csrf<button class="rounded-md border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200" type="submit">Playlists</button></form></div></div>
-        @if ($latestSpotifyImport)<p class="mt-5 text-sm text-zinc-400">Latest library import: <span class="capitalize">{{ $latestSpotifyImport->status }}</span> · {{ number_format($latestSpotifyImport->fetched_count) }} fetched.</p>@endif
-        @if ($latestSpotifyPlaylistImport)<p class="mt-2 text-sm text-zinc-400">Latest playlist import: <span class="capitalize">{{ $latestSpotifyPlaylistImport->status }}</span> · {{ number_format($latestSpotifyPlaylistImport->fetched_count) }} tracks.</p>@endif
-    </section>
+    <section class="border border-[#2e382f] bg-[#111612] p-6 sm:p-8"><div class="flex flex-col gap-4 border-b border-[#2e382f] pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Spotify</p><h2 class="mt-2 text-2xl font-semibold">Library imports</h2></div><span class="text-xs text-[#9aa39d]">Supporting catalogue data</span></div><div class="mt-6 grid gap-3 sm:grid-cols-3"><form method="POST" action="{{ route('imports.spotify.albums') }}">@csrf<button class="w-full bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#061108] hover:bg-[#b7ffd1]" type="submit">Saved albums</button></form><form method="POST" action="{{ route('imports.spotify.liked-tracks') }}">@csrf<button class="w-full border border-[#00e676] px-4 py-3 text-sm font-semibold text-[#00e676] hover:bg-[#142319]" type="submit">Liked songs</button></form><form method="POST" action="{{ route('imports.spotify.playlists') }}">@csrf<button class="w-full border border-[#445148] px-4 py-3 text-sm font-semibold text-[#f3f5f3] hover:border-[#00e676]" type="submit">Playlists</button></form></div>@if ($latestSpotifyImport)<p class="mt-6 text-sm text-[#9aa39d]">Latest library import: <span class="font-semibold capitalize text-[#d7ffe2]">{{ $latestSpotifyImport->status }}</span> · {{ number_format($latestSpotifyImport->fetched_count) }} fetched.</p>@endif @if ($latestSpotifyPlaylistImport)<p class="mt-2 text-sm text-[#9aa39d]">Latest playlist import: <span class="font-semibold capitalize text-[#d7ffe2]">{{ $latestSpotifyPlaylistImport->status }}</span> · {{ number_format($latestSpotifyPlaylistImport->fetched_count) }} tracks.</p>@endif</section>
 
-    <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6"><h2 class="text-xl font-medium">Recent Last.fm imports</h2><p class="mt-1 text-sm text-zinc-400">{{ number_format($scrobbleCount) }} scrobbles stored.</p><div class="mt-5 space-y-2">@forelse ($recentImports as $import)<div class="flex flex-wrap justify-between gap-3 border-b border-zinc-800 pb-2 text-sm"><span>{{ $import->created_at?->format('Y-m-d H:i') }}</span><span class="capitalize text-zinc-400">{{ $import->status }}</span>@if ($import->status === 'failed')<form method="POST" action="{{ route('imports.lastfm.retry', $import) }}">@csrf<button class="text-emerald-400" type="submit">Retry</button></form>@endif</div>@empty<p class="text-sm text-zinc-500">No import history yet.</p>@endforelse</div></section>
+    <section class="border border-[#2e382f] bg-[#0b0c0a] p-6 sm:p-8"><div class="flex items-end justify-between gap-4 border-b border-[#2e382f] pb-5"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">History</p><h2 class="mt-2 text-2xl font-semibold">Recent Last.fm imports</h2></div><span class="text-sm tabular-nums text-[#9aa39d]">{{ number_format($scrobbleCount) }} scrobbles</span></div><div class="divide-y divide-[#2e382f]">@forelse ($recentImports as $import)<div class="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-sm text-[#f3f5f3]">{{ $import->created_at?->format('Y.m.d H:i') }}</p><p class="mt-1 text-xs text-[#9aa39d]">{{ $import->requested_limit ? 'Bounded import' : 'Full import' }}</p></div><div class="flex items-center gap-4 text-sm"><span class="capitalize text-[#d7ffe2]">{{ $import->status }}</span>@if ($import->status === 'failed')<form method="POST" action="{{ route('imports.lastfm.retry', $import) }}">@csrf<button class="font-semibold text-[#00e676] hover:underline" type="submit">Retry</button></form>@endif</div></div>@empty<p class="py-6 text-sm text-[#9aa39d]">No import history yet.</p>@endforelse</div></section>
 @endsection
