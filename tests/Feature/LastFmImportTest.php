@@ -180,6 +180,32 @@ class LastFmImportTest extends TestCase
         Queue::assertPushed(ImportLastFmScrobbles::class);
     }
 
+    public function test_a_stale_import_is_cleared_before_a_new_import_is_queued(): void
+    {
+        Queue::fake();
+        $staleRun = LastFmImportRun::query()->create([
+            'source' => 'lastfm',
+            'status' => 'running',
+            'from_at' => '2026-01-01 00:00:00',
+            'to_at' => '2026-03-31 23:59:59',
+        ]);
+        LastFmImportRun::query()->whereKey($staleRun->id)->update([
+            'updated_at' => now()->subHours(2),
+        ]);
+
+        $this->post(route('imports.lastfm'), [
+            'from' => '2026-04-01',
+            'to' => '2026-04-30',
+            'limit' => 10,
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('last_fm_import_runs', [
+            'id' => $staleRun->id,
+            'status' => 'failed',
+            'error' => 'Import marked failed because its worker heartbeat expired.',
+        ]);
+    }
+
     public function test_lastfm_rate_limit_is_retried(): void
     {
         $attempts = 0;
@@ -271,5 +297,39 @@ class LastFmImportTest extends TestCase
             'fetched_count' => 2,
             'failed_count' => 1,
         ]);
+    }
+
+    public function test_a_long_lastfm_source_url_is_stored(): void
+    {
+        config()->set('services.lastfm.api_key', 'test-key');
+        config()->set('services.lastfm.username', 'test-user');
+        $url = 'https://last.fm/music/Artist/_/'.str_repeat('very-long-track-name-', 20);
+
+        Http::fake([
+            '*' => Http::response([
+                'recenttracks' => [
+                    '@attr' => ['totalPages' => '1'],
+                    'track' => [[
+                        'name' => 'A long track',
+                        'artist' => ['#text' => 'An artist'],
+                        'album' => ['#text' => 'An album'],
+                        'url' => $url,
+                        'date' => ['uts' => '1760000000'],
+                    ]],
+                ],
+            ]),
+        ]);
+
+        $run = LastFmImportRun::query()->create([
+            'source' => 'lastfm',
+            'status' => 'queued',
+            'from_at' => '2026-01-01 00:00:00',
+            'to_at' => '2026-03-31 23:59:59',
+            'requested_limit' => 1,
+        ]);
+
+        (new ImportLastFmScrobbles($run->id))->handle(app(LastFmClient::class));
+
+        $this->assertDatabaseHas('scrobbles', ['source_url' => $url]);
     }
 }

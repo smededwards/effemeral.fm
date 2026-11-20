@@ -88,4 +88,28 @@ class SpotifyAuthenticationTest extends TestCase
 
         $this->assertSame(2, $attempts);
     }
+
+    public function test_spotify_playlist_writes_are_retried_after_rate_limiting(): void
+    {
+        $attempts = 0;
+        config()->set('services.spotify.access_token', 'test-token');
+        Http::fake(function ($request) use (&$attempts) {
+            if (! str_contains($request->url(), '/me/playlists')) {
+                return Http::response([], 429, ['Retry-After' => '0']);
+            }
+
+            $attempts++;
+
+            return $attempts === 1
+                ? Http::response([], 429, ['Retry-After' => '0'])
+                : Http::response([
+                    'id' => 'playlist-id',
+                    'external_urls' => ['spotify' => 'https://open.spotify.com/playlist/playlist-id'],
+                ]);
+        });
+
+        app(SpotifyClient::class)->createPrivatePlaylist('Draft', 'Effemeral draft');
+
+        $this->assertSame(2, $attempts);
+    }
 }
