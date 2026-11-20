@@ -81,4 +81,4 @@ The implementation order is:
 7. Add Discogs as the preferred metadata and genre authority when ready.
 8. Add deeper playlist-content analysis while preserving the complete Last.fm history and Spotify liked-song imports.
 
-The current `main` branch contains the complete `v0.2.0` Baroness feature set. The Baroness release PR is the release gate; Candlemass is the planned `v0.3.0` milestone for playlist organisation.
+The current `main` branch contains the complete `v0.2.0` Baroness feature set. Baroness remains open until the full Last.fm import and real-data prototype validation are complete. Candlemass is the active `v0.3.0` planning milestone for playlist organisation; its first task is [the playlist organisation overview](https://github.com/smededwards/effemeral.fm/issues/68).
