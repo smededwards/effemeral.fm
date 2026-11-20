@@ -3,6 +3,7 @@
 namespace App\Services\LastFm;
 
 use Carbon\CarbonImmutable;
+use Closure;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -16,15 +17,40 @@ class LastFmClient
     public function recentTracks(CarbonImmutable $from, CarbonImmutable $to, ?int $limit = null): array
     {
         $tracks = [];
+
+        $this->eachRecentTrack($from, $to, $limit, function (array $track) use (&$tracks): void {
+            $tracks[] = $track;
+        });
+
+        return $tracks;
+    }
+
+    /**
+     * @param  Closure(array<string, mixed>): void  $trackHandler
+     * @param  Closure(int): void|null  $pageHandler
+     */
+    public function eachRecentTrack(
+        CarbonImmutable $from,
+        CarbonImmutable $to,
+        ?int $limit,
+        Closure $trackHandler,
+        ?Closure $pageHandler = null,
+    ): void {
+        $fetched = 0;
         $page = 1;
 
         do {
+            $pageLimit = $limit === null ? 200 : min(200, $limit - $fetched);
+            if ($pageLimit < 1) {
+                break;
+            }
+
             $response = $this->getWithRateLimit([
                 'method' => 'user.getrecenttracks',
                 'user' => config('services.lastfm.username'),
                 'api_key' => config('services.lastfm.api_key'),
                 'format' => 'json',
-                'limit' => $limit === null ? 200 : min(200, $limit - count($tracks)),
+                'limit' => $pageLimit,
                 'page' => $page,
                 'from' => $from->timestamp,
                 'to' => $to->timestamp,
@@ -41,15 +67,22 @@ class LastFmClient
             }
 
             $pageTracks = data_get($payload, 'recenttracks.track', []);
-            $pageTracks = isset($pageTracks[0]) ? $pageTracks : [$pageTracks];
+            $pageTracks = $pageTracks === []
+                ? []
+                : (isset($pageTracks[0]) ? $pageTracks : [$pageTracks]);
             $pageTracks = array_values(array_filter($pageTracks, fn (mixed $track): bool => is_array($track)));
-            $tracks = array_merge($tracks, $pageTracks);
+
+            foreach ($pageTracks as $track) {
+                $trackHandler($track);
+                $fetched++;
+            }
+
+            if ($pageHandler !== null) {
+                $pageHandler($fetched);
+            }
             $totalPages = (int) data_get($payload, 'recenttracks.@attr.totalPages', $page);
-
             $page++;
-        } while (($limit === null || count($tracks) < $limit) && $page <= $totalPages && $pageTracks !== []);
-
-        return array_slice($tracks, 0, $limit);
+        } while (($limit === null || $fetched < $limit) && $page <= $totalPages && $pageTracks !== []);
     }
 
     /** @return list<string> */

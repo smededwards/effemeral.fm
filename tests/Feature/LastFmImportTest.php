@@ -7,10 +7,12 @@ use App\Models\Artist;
 use App\Models\Genre;
 use App\Models\LastFmImportRun;
 use App\Models\Scrobble;
+use App\Services\Catalog\CatalogWriter;
 use App\Services\LastFm\LastFmClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Mockery;
 use Tests\TestCase;
 
 class LastFmImportTest extends TestCase
@@ -220,5 +222,54 @@ class LastFmImportTest extends TestCase
 
         $this->assertSame(['post-metal'], $tags);
         $this->assertSame(2, $attempts);
+    }
+
+    public function test_a_track_failure_does_not_abort_the_full_import(): void
+    {
+        config()->set('services.lastfm.api_key', 'test-key');
+        config()->set('services.lastfm.username', 'test-user');
+        Http::fake([
+            '*' => Http::response([
+                'recenttracks' => [
+                    '@attr' => ['totalPages' => '1'],
+                    'track' => [
+                        [
+                            'name' => 'First track',
+                            'artist' => ['#text' => 'An artist'],
+                            'album' => ['#text' => 'An album'],
+                            'url' => 'https://last.fm/track/first',
+                            'date' => ['uts' => '1760000000'],
+                        ],
+                        [
+                            'name' => 'Second track',
+                            'artist' => ['#text' => 'Another artist'],
+                            'album' => ['#text' => 'Another album'],
+                            'url' => 'https://last.fm/track/second',
+                            'date' => ['uts' => '1760000001'],
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $run = LastFmImportRun::query()->create([
+            'source' => 'lastfm',
+            'status' => 'queued',
+            'from_at' => '2026-01-01 00:00:00',
+            'to_at' => '2026-03-31 23:59:59',
+            'requested_limit' => 2,
+        ]);
+        $catalog = Mockery::mock(CatalogWriter::class);
+        $catalog->shouldReceive('lastFmScrobble')->once()->andThrow(new \RuntimeException('bad catalogue record'));
+        $catalog->shouldReceive('lastFmScrobble')->once()->andReturn(null);
+
+        (new ImportLastFmScrobbles($run->id))->handle(app(LastFmClient::class), $catalog);
+
+        $this->assertDatabaseHas('last_fm_import_runs', [
+            'id' => $run->id,
+            'status' => 'completed',
+            'fetched_count' => 2,
+            'failed_count' => 1,
+        ]);
     }
 }

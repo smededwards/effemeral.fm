@@ -30,75 +30,99 @@ class ImportLastFmScrobbles implements ShouldQueue
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
         try {
-            $tracks = $client->recentTracks(
-                CarbonImmutable::parse((string) $run->getRawOriginal('from_at')),
-                CarbonImmutable::parse((string) $run->getRawOriginal('to_at')),
-                $run->requested_limit === null ? null : (int) $run->requested_limit,
-            );
+            $from = CarbonImmutable::parse((string) $run->getRawOriginal('from_at'));
+            $to = CarbonImmutable::parse((string) $run->getRawOriginal('to_at'));
             $imported = 0;
             $skipped = 0;
+            $failed = 0;
             $artistIds = [];
+            $errors = [];
 
-            foreach ($tracks as $track) {
-                if ((bool) data_get($track, '@attr.nowplaying', false) || ! data_get($track, 'date.uts')) {
-                    $skipped++;
+            $client->eachRecentTrack(
+                $from,
+                $to,
+                $run->requested_limit === null ? null : (int) $run->requested_limit,
+                function (array $track) use (&$imported, &$skipped, &$failed, &$artistIds, &$errors, $catalog): void {
+                    try {
+                        if ((bool) data_get($track, '@attr.nowplaying', false) || ! data_get($track, 'date.uts')) {
+                            $skipped++;
 
-                    continue;
-                }
+                            return;
+                        }
 
-                $sourceKey = hash('sha256', implode('|', [
-                    data_get($track, 'url', ''),
-                    data_get($track, 'date.uts', ''),
-                    data_get($track, 'artist.#text', ''),
-                    data_get($track, 'name', ''),
-                ]));
+                        $sourceKey = hash('sha256', implode('|', [
+                            data_get($track, 'url', ''),
+                            data_get($track, 'date.uts', ''),
+                            data_get($track, 'artist.#text', ''),
+                            data_get($track, 'name', ''),
+                        ]));
 
-                $scrobble = Scrobble::query()->firstOrCreate(
-                    ['source_key' => $sourceKey],
-                    [
-                        'source' => 'lastfm',
-                        'artist_name' => data_get($track, 'artist.#text', 'Unknown artist'),
-                        'artist_mbid' => data_get($track, 'artist.mbid') ?: null,
-                        'track_name' => data_get($track, 'name', 'Unknown track'),
-                        'track_mbid' => data_get($track, 'mbid') ?: null,
-                        'album_name' => data_get($track, 'album.#text') ?: null,
-                        'album_mbid' => data_get($track, 'album.mbid') ?: null,
-                        'source_url' => data_get($track, 'url') ?: null,
-                        'listened_at' => CarbonImmutable::createFromTimestampUTC((int) data_get($track, 'date.uts')),
-                    ],
-                );
+                        $scrobble = Scrobble::query()->firstOrCreate(
+                            ['source_key' => $sourceKey],
+                            [
+                                'source' => 'lastfm',
+                                'artist_name' => data_get($track, 'artist.#text', 'Unknown artist'),
+                                'artist_mbid' => data_get($track, 'artist.mbid') ?: null,
+                                'track_name' => data_get($track, 'name', 'Unknown track'),
+                                'track_mbid' => data_get($track, 'mbid') ?: null,
+                                'album_name' => data_get($track, 'album.#text') ?: null,
+                                'album_mbid' => data_get($track, 'album.mbid') ?: null,
+                                'source_url' => data_get($track, 'url') ?: null,
+                                'listened_at' => CarbonImmutable::createFromTimestampUTC((int) data_get($track, 'date.uts')),
+                            ],
+                        );
 
-                $track = $catalog->lastFmScrobble([
-                    'artist_name' => $scrobble->artist_name,
-                    'artist_mbid' => $scrobble->artist_mbid,
-                    'album_name' => $scrobble->album_name,
-                    'album_mbid' => $scrobble->album_mbid,
-                    'track_name' => $scrobble->track_name,
-                    'track_mbid' => $scrobble->track_mbid,
-                ]);
-                $album = $track === null ? null : Album::query()->with('artists')->find($track->album_id);
-                $artistId = $album?->artists()->value('artists.id');
-                if ($artistId !== null) {
-                    $artistIds[(int) $artistId] = true;
-                }
-                $scrobble->update([
-                    'artist_id' => $artistId === null ? null : (int) $artistId,
-                    'album_id' => $track?->album_id,
-                    'track_id' => $track?->id,
-                ]);
+                        $catalogTrack = $catalog->lastFmScrobble([
+                            'artist_name' => $scrobble->artist_name,
+                            'artist_mbid' => $scrobble->artist_mbid,
+                            'album_name' => $scrobble->album_name,
+                            'album_mbid' => $scrobble->album_mbid,
+                            'track_name' => $scrobble->track_name,
+                            'track_mbid' => $scrobble->track_mbid,
+                        ]);
+                        $album = $catalogTrack === null ? null : Album::query()->with('artists')->find($catalogTrack->album_id);
+                        $artistId = $album?->artists()->value('artists.id');
+                        if ($artistId !== null) {
+                            $artistIds[(int) $artistId] = true;
+                        }
+                        $scrobble->update([
+                            'artist_id' => $artistId === null ? null : (int) $artistId,
+                            'album_id' => $catalogTrack?->album_id,
+                            'track_id' => $catalogTrack?->id,
+                        ]);
 
-                $scrobble->wasRecentlyCreated ? $imported++ : $skipped++;
-            }
+                        $scrobble->wasRecentlyCreated ? $imported++ : $skipped++;
+                    } catch (Throwable $exception) {
+                        $failed++;
+                        $errors[] = 'Track import failed: '.$exception->getMessage();
+                    }
+                },
+                function (int $fetched) use ($run, &$imported, &$skipped, &$failed): void {
+                    $run->update([
+                        'fetched_count' => $fetched,
+                        'imported_count' => $imported,
+                        'skipped_count' => $skipped,
+                        'failed_count' => $failed,
+                    ]);
+                },
+            );
 
             foreach (Artist::query()->whereIn('id', array_keys($artistIds))->get() as $artist) {
-                $genreWriter->syncLastFm($artist, $client->artistTags($artist->name, $artist->lastfm_mbid));
+                try {
+                    $genreWriter->syncLastFm($artist, $client->artistTags($artist->name, $artist->lastfm_mbid));
+                } catch (Throwable $exception) {
+                    $failed++;
+                    $errors[] = 'Genre import failed for '.$artist->name.': '.$exception->getMessage();
+                }
             }
 
             $run->update([
                 'status' => 'completed',
-                'fetched_count' => count($tracks),
+                'fetched_count' => $run->fresh()->fetched_count,
                 'imported_count' => $imported,
                 'skipped_count' => $skipped,
+                'failed_count' => $failed,
+                'error' => $errors === [] ? null : implode("\n", array_slice($errors, 0, 20)),
                 'completed_at' => now(),
             ]);
         } catch (Throwable $exception) {
