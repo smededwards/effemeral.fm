@@ -1,0 +1,113 @@
+<?php
+
+namespace App\Services\LastFm;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
+
+class LastFmClient
+{
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function recentTracks(CarbonImmutable $from, CarbonImmutable $to, ?int $limit = null): array
+    {
+        $tracks = [];
+        $page = 1;
+
+        do {
+            $response = $this->getWithRateLimit([
+                'method' => 'user.getrecenttracks',
+                'user' => config('services.lastfm.username'),
+                'api_key' => config('services.lastfm.api_key'),
+                'format' => 'json',
+                'limit' => $limit === null ? 200 : min(200, $limit - count($tracks)),
+                'page' => $page,
+                'from' => $from->timestamp,
+                'to' => $to->timestamp,
+            ]);
+
+            if ($response->failed()) {
+                throw new RuntimeException('Last.fm returned HTTP '.$response->status().'.');
+            }
+
+            $payload = $response->json();
+
+            if (isset($payload['error'])) {
+                throw new RuntimeException('Last.fm error '.$payload['error'].': '.($payload['message'] ?? 'Unknown error').'.');
+            }
+
+            $pageTracks = data_get($payload, 'recenttracks.track', []);
+            $pageTracks = isset($pageTracks[0]) ? $pageTracks : [$pageTracks];
+            $pageTracks = array_values(array_filter($pageTracks, fn (mixed $track): bool => is_array($track)));
+            $tracks = array_merge($tracks, $pageTracks);
+            $totalPages = (int) data_get($payload, 'recenttracks.@attr.totalPages', $page);
+
+            $page++;
+        } while (($limit === null || count($tracks) < $limit) && $page <= $totalPages && $pageTracks !== []);
+
+        return array_slice($tracks, 0, $limit);
+    }
+
+    /** @return list<string> */
+    public function artistTags(string $artist, ?string $mbid = null): array
+    {
+        $response = $this->getWithRateLimit(array_filter([
+            'method' => 'artist.getInfo',
+            'artist' => $artist,
+            'mbid' => $mbid,
+            'api_key' => config('services.lastfm.api_key'),
+            'format' => 'json',
+        ]));
+
+        if ($response->failed()) {
+            throw new RuntimeException('Last.fm returned HTTP '.$response->status().'.');
+        }
+
+        $tags = data_get($response->json(), 'artist.tags.tag', []);
+        $tags = isset($tags['name']) ? [$tags] : $tags;
+
+        return collect($tags)
+            ->map(fn (mixed $tag): mixed => is_array($tag) ? ($tag['name'] ?? null) : null)
+            ->filter(fn (mixed $tag): bool => is_string($tag) && $tag !== '')
+            ->values()
+            ->all();
+    }
+
+    private function request(): PendingRequest
+    {
+        return Http::baseUrl((string) config('services.lastfm.endpoint'))
+            ->withHeaders([
+                'User-Agent' => config('services.lastfm.user_agent'),
+                'Accept' => 'application/json',
+            ])->timeout(15)->retry(3, 1000, throw: false);
+    }
+
+    /** @param array<string, mixed> $query */
+    private function getWithRateLimit(array $query): Response
+    {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $response = $this->request()->get('', $query);
+            $payload = $response->json();
+            $rateLimited = $response->status() === 429 || (int) data_get($payload, 'error') === 29;
+
+            if (! $rateLimited || $attempt === 3) {
+                return $response;
+            }
+
+            $this->waitForRateLimit($response);
+        }
+
+        return $response;
+    }
+
+    private function waitForRateLimit(Response $response): void
+    {
+        $headers = array_change_key_case($response->headers());
+
+        sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
+    }
+}

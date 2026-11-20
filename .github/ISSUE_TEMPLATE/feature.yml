@@ -1,0 +1,32 @@
+name: Feature
+description: Propose user-facing functionality.
+title: "feat: "
+labels: [feat]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Features need clear acceptance criteria before entering the project workflow.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem does this feature solve?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: List the observable conditions required for completion.
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: testing
+    attributes:
+      label: Test plan
+      description: How should this be verified?
+    validations:
+      required: true

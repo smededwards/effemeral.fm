@@ -1,0 +1,30 @@
+name: Bug
+description: Report incorrect or unexpected behaviour.
+title: "fix: "
+labels: [fix]
+body:
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: Observed behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: List the conditions that prove the bug is fixed.
+    validations:
+      required: true
+  - type: textarea
+    id: testing
+    attributes:
+      label: Test plan
+    validations:
+      required: true

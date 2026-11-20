@@ -2,6 +2,11 @@
 
 return [
 
+    'effemeral' => [
+        'access_username' => env('EFFEMERAL_ACCESS_USERNAME', 'effemeral'),
+        'access_password' => env('EFFEMERAL_ACCESS_PASSWORD'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -33,6 +38,26 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    'lastfm' => [
+        'api_key' => env('LASTFM_API_KEY'),
+        'username' => env('LASTFM_USERNAME'),
+        'import_start' => env('LASTFM_IMPORT_START', '2024-01-01'),
+        'endpoint' => env('LASTFM_API_ENDPOINT', 'https://ws.audioscrobbler.com/2.0/'),
+        'user_agent' => env('LASTFM_USER_AGENT', 'Effemeral/0.1 (+https://github.com/smededwards/effemeral.fm)'),
+        'genre_allowlist' => array_values(array_filter(array_map('trim', explode(',', (string) env('LASTFM_GENRE_ALLOWLIST', ''))))),
+    ],
+
+    'spotify' => [
+        'client_id' => env('SPOTIFY_CLIENT_ID'),
+        'client_secret' => env('SPOTIFY_CLIENT_SECRET'),
+        'redirect_uri' => env('SPOTIFY_REDIRECT_URI', 'https://app.effemeral.local/auth/spotify/callback'),
+        'access_token' => env('SPOTIFY_ACCESS_TOKEN'),
+        'refresh_token' => env('SPOTIFY_REFRESH_TOKEN'),
+        'api_endpoint' => env('SPOTIFY_API_ENDPOINT', 'https://api.spotify.com/v1'),
+        'token_endpoint' => env('SPOTIFY_TOKEN_ENDPOINT', 'https://accounts.spotify.com/api/token'),
+        'scopes' => env('SPOTIFY_SCOPES', 'user-library-read playlist-read-private playlist-read-collaborative playlist-modify-private'),
     ],
 
 ];

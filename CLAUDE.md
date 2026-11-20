@@ -5,7 +5,7 @@
 
 ## Foundational Context
 
-This application is a Laravel application running on PHP 8.4. Always use the APIs that match the installed major version of each package — do not assume a version.
+This application is a Laravel application running on PHP 8.3. Always use the APIs that match the installed major version of each package — do not assume a version.
 
 Before relying on a package's API, confirm its installed version:
 - PHP packages: run `composer show --direct` to list direct dependencies with versions, or `composer show <vendor/package>` for a single package.
@@ -146,3 +146,30 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Run `vendor/bin/phpunit` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
 
 </laravel-boost-guidelines>
+
+## Effemeral product focus
+
+- Effemeral is a private, single-user Laravel prototype for album-first listening intelligence.
+- Last.fm is the canonical source for listening history and completion evidence.
+- Spotify is a supporting library and export source: saved albums, liked songs, and playlists enrich the catalogue but do not prove that an album was heard.
+- The canonical catalogue is the artists, albums, and tracks tables, with source identifiers and collection membership. Do not add new features that depend only on embedded provider JSON when the canonical model can be used.
+- Importers must be idempotent, preserve source provenance, tolerate retries, and avoid creating cross-source duplicates. Existing compatibility tables should not be removed without a migration plan.
+- Discogs metadata, deeper playlist-content analysis, deployment hardening, and multi-user support remain later slices. Do not imply they are implemented when they are only represented in the model or roadmap.
+- Album-level workflows come before individual-track playlist workflows. Keep manual review, ordering, inclusion, and completion overrides available for consequential automation.
+- The selected-album discovery target is implemented on `dev`: choose an album or artist, find similar incomplete albums from a requested genre and year, or generate an album-level artist discography draft.
+- Similarity recommendations require normalized genre data, release-year filtering, canonical catalogue records, and Last.fm completion evidence; do not make Spotify playlist membership the recommendation authority.
+- Artist discography drafts should reuse the existing recommendation review, ordering, exclusion, audit, and Spotify sync flow rather than creating a second playlist workflow.
+- The agreed milestone sequence is `Agalloch`, `Baroness`, `Cathedral`, `Darkthrone`, `Earth`, `Funeral`, `Gallows`, `Hawkwind`, `Interpol`, `Jinjer`, `Kyuss`, `Lucifer`, `Mastodon`, `Neurosis`, `Opeth`, `Pallbearer`, `Quicksand`, `Rammstein`, `Slayer`, `Tombs`, `Ulver`, `Venom`, `Windhand`, `Xasthur`, `Yob`, and `Zao`; then cycle back to `A`.
+- The sequence starts with `Agalloch` as the closed `v0.1.0` prototype baseline and `Baroness` as the next `v0.2.0` milestone. Do not pre-create future milestones; create each one as its release work begins.
+- A milestone is complete only after its issues are merged into `dev`, CI/Pint/PHPStan/PHPUnit pass, the user reviews the working prototype, and `dev` is merged into `main`.
+- Milestone completion creates the matching semantic-version tag, GitHub release, and Conventional Commit changelog summary. Patch releases are reserved for fixes; new feature milestones increment the minor version while the project remains below `v1.0.0`.
+- The `v0.2.0` Baroness issues are now merged into `dev` and closed. The current workflow state is prototype validation pending; do not start the next feature milestone until the user has tested the working app and decided whether `dev` is ready to merge into `main`.
+- After a milestone release, create the next issue and feature branch from the updated `dev`, open a PR into `dev`, and close the linked issue only after the PR is merged.
+
+## Effemeral delivery workflow
+
+- Work from the latest dev branch using a feature branch without codex in its name.
+- Open pull requests into dev; do not merge them without the user's review.
+- Every pull request must include a non-empty description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
+- Use Conventional Commits and labels limited to Conventional Commit types.
+- Before handoff, run the narrowest relevant tests plus Pint and PHPStan. Report any skipped verification and remaining risks.
