@@ -6,7 +6,7 @@ use App\Jobs\ImportSpotifySavedAlbums;
 use App\Models\Album;
 use App\Models\Artist;
 use App\Models\Genre;
-use App\Models\SpotifyAlbumImportRun;
+use App\Models\SpotifyImportRun;
 use App\Models\SpotifySavedAlbum;
 use App\Models\Track;
 use App\Services\Spotify\SpotifyClient;
@@ -78,7 +78,7 @@ class SpotifySavedAlbumsImportTest extends TestCase
             ]);
         });
 
-        $run = SpotifyAlbumImportRun::query()->create([
+        $run = SpotifyImportRun::query()->create([
             'source' => 'spotify',
             'status' => 'queued',
             'requested_limit' => 100,

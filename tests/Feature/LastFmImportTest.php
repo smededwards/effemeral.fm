@@ -203,4 +203,21 @@ class LastFmImportTest extends TestCase
 
         $this->assertSame(2, $attempts);
     }
+
+    public function test_lastfm_artist_tag_rate_limit_is_retried(): void
+    {
+        $attempts = 0;
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+
+            return $attempts === 1
+                ? Http::response(['error' => 29, 'message' => 'Rate limit exceeded'], 200, ['Retry-After' => '0'])
+                : Http::response(['artist' => ['tags' => ['tag' => [['name' => 'post-metal']]]]]);
+        });
+
+        $tags = app(LastFmClient::class)->artistTags('An Artist');
+
+        $this->assertSame(['post-metal'], $tags);
+        $this->assertSame(2, $attempts);
+    }
 }

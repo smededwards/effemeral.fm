@@ -13,8 +13,8 @@ use App\Models\Artist;
 use App\Models\LastFmImportRun;
 use App\Models\RecommendationRun;
 use App\Models\Scrobble;
-use App\Models\SpotifyAlbumImportRun;
 use App\Models\SpotifyConnection;
+use App\Models\SpotifyImportRun;
 use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
 use App\Models\SpotifySavedAlbum;
@@ -308,17 +308,54 @@ class DashboardController extends Controller
 
     public function imports(): View
     {
-        return view('imports.index', $this->dashboardData());
+        return view('imports.index', $this->importsData());
     }
 
     public function library(): View
     {
-        return view('library.index', $this->dashboardData());
+        return view('library.index', $this->libraryData());
     }
 
     public function recommendations(): View
     {
-        return view('recommendations.index', $this->dashboardData());
+        return view('recommendations.index', $this->recommendationsData());
+    }
+
+    /** @return array<string, mixed> */
+    private function importsData(): array
+    {
+        return [
+            'latestImport' => LastFmImportRun::query()->latest()->first(),
+            'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
+            'latestSpotifyImport' => SpotifyImportRun::query()->latest()->first(),
+            'latestSpotifyPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
+            'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
+            'scrobbleCount' => Scrobble::query()->count(),
+            'defaultFrom' => now()->subDays(90)->toDateString(),
+            'defaultTo' => now()->toDateString(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function libraryData(): array
+    {
+        return [
+            'spotifyPlaylists' => SpotifyPlaylist::query()->with('items.album')->latest('last_synced_at')->get(),
+            'spotifySavedAlbums' => SpotifySavedAlbum::query()->latest('saved_at')->get(),
+            'spotifySavedAlbumCount' => SpotifySavedAlbum::query()->count(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function recommendationsData(): array
+    {
+        return [
+            'incompleteAlbums' => $this->incompleteAlbums(),
+            'latestRecommendation' => RecommendationRun::query()
+                ->with('albumRecommendations.album', 'albumRecommendations.spotifySavedAlbum')
+                ->latest()
+                ->first(),
+        ];
     }
 
     /** @return array<string, mixed> */
@@ -381,7 +418,7 @@ class DashboardController extends Controller
         return [
             'latestImport' => LastFmImportRun::query()->latest()->first(),
             'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
-            'latestSpotifyImport' => SpotifyAlbumImportRun::query()->latest()->first(),
+            'latestSpotifyImport' => SpotifyImportRun::query()->latest()->first(),
             'latestSpotifyPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
             'spotifyPlaylists' => SpotifyPlaylist::query()->with('items.album')->latest('last_synced_at')->get(),
             'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
@@ -985,7 +1022,7 @@ class DashboardController extends Controller
 
     public function spotifyAlbumsImport(): RedirectResponse
     {
-        $activeImport = SpotifyAlbumImportRun::query()
+        $activeImport = SpotifyImportRun::query()
             ->whereIn('status', ['queued', 'running'])
             ->exists();
 
@@ -993,7 +1030,7 @@ class DashboardController extends Controller
             return back()->with('error', 'A Spotify album import is already in progress.');
         }
 
-        $run = SpotifyAlbumImportRun::query()->create([
+        $run = SpotifyImportRun::query()->create([
             'source' => 'spotify',
             'status' => 'queued',
             'requested_limit' => 100,
@@ -1006,7 +1043,7 @@ class DashboardController extends Controller
 
     public function spotifyLikedTracksImport(): RedirectResponse
     {
-        $activeImport = SpotifyAlbumImportRun::query()
+        $activeImport = SpotifyImportRun::query()
             ->whereIn('status', ['queued', 'running'])
             ->exists();
 
@@ -1014,7 +1051,7 @@ class DashboardController extends Controller
             return back()->with('error', 'A Spotify library import is already in progress.');
         }
 
-        $run = SpotifyAlbumImportRun::query()->create([
+        $run = SpotifyImportRun::query()->create([
             'source' => 'liked_tracks',
             'status' => 'queued',
             'requested_limit' => null,

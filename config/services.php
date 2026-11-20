@@ -2,6 +2,11 @@
 
 return [
 
+    'effemeral' => [
+        'access_username' => env('EFFEMERAL_ACCESS_USERNAME', 'effemeral'),
+        'access_password' => env('EFFEMERAL_ACCESS_PASSWORD'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
