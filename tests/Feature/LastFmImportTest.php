@@ -178,6 +178,32 @@ class LastFmImportTest extends TestCase
         Queue::assertPushed(ImportLastFmScrobbles::class);
     }
 
+    public function test_a_stale_import_is_cleared_before_a_new_import_is_queued(): void
+    {
+        Queue::fake();
+        $staleRun = LastFmImportRun::query()->create([
+            'source' => 'lastfm',
+            'status' => 'running',
+            'from_at' => '2026-01-01 00:00:00',
+            'to_at' => '2026-03-31 23:59:59',
+        ]);
+        LastFmImportRun::query()->whereKey($staleRun->id)->update([
+            'updated_at' => now()->subHours(2),
+        ]);
+
+        $this->post(route('imports.lastfm'), [
+            'from' => '2026-04-01',
+            'to' => '2026-04-30',
+            'limit' => 10,
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('last_fm_import_runs', [
+            'id' => $staleRun->id,
+            'status' => 'failed',
+            'error' => 'Import marked failed because its worker heartbeat expired.',
+        ]);
+    }
+
     public function test_lastfm_rate_limit_is_retried(): void
     {
         $attempts = 0;

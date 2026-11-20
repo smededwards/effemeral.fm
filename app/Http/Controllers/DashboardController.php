@@ -1187,6 +1187,7 @@ class DashboardController extends Controller
         string $successMessage,
         ?int $retryOfId = null,
     ): RedirectResponse {
+        $this->clearStaleImportRuns();
         $activeImport = LastFmImportRun::query()
             ->whereIn('status', ['queued', 'running'])
             ->exists();
@@ -1207,5 +1208,24 @@ class DashboardController extends Controller
         ImportLastFmScrobbles::dispatch($run->id);
 
         return back()->with('success', $successMessage);
+    }
+
+    private function clearStaleImportRuns(): void
+    {
+        $cutoff = now()->subSeconds(max(3600, (int) config('queue.connections.redis.retry_after', 3900)));
+        $message = 'Import marked failed because its worker heartbeat expired.';
+
+        LastFmImportRun::query()
+            ->whereIn('status', ['queued', 'running'])
+            ->where('updated_at', '<', $cutoff)
+            ->update(['status' => 'failed', 'error' => $message, 'completed_at' => now()]);
+        SpotifyImportRun::query()
+            ->whereIn('status', ['queued', 'running'])
+            ->where('updated_at', '<', $cutoff)
+            ->update(['status' => 'failed', 'error' => $message, 'completed_at' => now()]);
+        SpotifyPlaylistImportRun::query()
+            ->whereIn('status', ['queued', 'running'])
+            ->where('updated_at', '<', $cutoff)
+            ->update(['status' => 'failed', 'error' => $message, 'completed_at' => now()]);
     }
 }
