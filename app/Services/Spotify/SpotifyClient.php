@@ -102,7 +102,7 @@ class SpotifyClient
      */
     public function createPrivatePlaylist(string $name, string $description): array
     {
-        $response = $this->request()->post('/me/playlists', [
+        $response = $this->post('/me/playlists', [
             'name' => $name,
             'description' => $description,
             'public' => false,
@@ -127,7 +127,7 @@ class SpotifyClient
     public function addPlaylistItems(string $playlistId, array $uris): void
     {
         foreach (array_chunk($uris, 100) as $chunk) {
-            $response = $this->request()->post('/playlists/'.$playlistId.'/items', ['uris' => $chunk]);
+            $response = $this->post('/playlists/'.$playlistId.'/items', ['uris' => $chunk]);
 
             if ($response->failed()) {
                 throw new RuntimeException('Spotify playlist items could not be added.');
@@ -185,6 +185,24 @@ class SpotifyClient
     {
         for ($attempt = 1; $attempt <= 3; $attempt++) {
             $response = $this->request()->get($path, $query);
+
+            if ($response->status() !== 429 || $attempt === 3) {
+                return $response;
+            }
+
+            $headers = array_change_key_case($response->headers());
+
+            sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
+        }
+
+        return $response;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function post(string $path, array $payload): Response
+    {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $response = $this->request()->post($path, $payload);
 
             if ($response->status() !== 429 || $attempt === 3) {
                 return $response;
