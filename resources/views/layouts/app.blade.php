@@ -20,8 +20,8 @@
                         </a>
                         <p class="text-xs tabular-nums text-[#9aa39d]">{{ now()->format('Y.m.d') }}</p>
                     </div>
-                    <nav class="mt-6 -mb-5 overflow-x-auto" aria-label="Primary navigation">
-                        <div class="flex min-w-max gap-1">
+                    <nav class="mt-6 -mb-5" aria-label="Primary navigation">
+                        <div class="flex flex-wrap gap-1">
                             @foreach ([
                                 ['route' => 'dashboard', 'label' => 'Overview'],
                                 ['route' => 'imports.index', 'label' => 'Imports'],
