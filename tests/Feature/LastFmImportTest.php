@@ -221,4 +221,38 @@ class LastFmImportTest extends TestCase
         $this->assertSame(['post-metal'], $tags);
         $this->assertSame(2, $attempts);
     }
+
+    public function test_a_long_lastfm_source_url_is_stored(): void
+    {
+        config()->set('services.lastfm.api_key', 'test-key');
+        config()->set('services.lastfm.username', 'test-user');
+        $url = 'https://last.fm/music/Artist/_/'.str_repeat('very-long-track-name-', 20);
+
+        Http::fake([
+            '*' => Http::response([
+                'recenttracks' => [
+                    '@attr' => ['totalPages' => '1'],
+                    'track' => [[
+                        'name' => 'A long track',
+                        'artist' => ['#text' => 'An artist'],
+                        'album' => ['#text' => 'An album'],
+                        'url' => $url,
+                        'date' => ['uts' => '1760000000'],
+                    ]],
+                ],
+            ]),
+        ]);
+
+        $run = LastFmImportRun::query()->create([
+            'source' => 'lastfm',
+            'status' => 'queued',
+            'from_at' => '2026-01-01 00:00:00',
+            'to_at' => '2026-03-31 23:59:59',
+            'requested_limit' => 1,
+        ]);
+
+        (new ImportLastFmScrobbles($run->id))->handle(app(LastFmClient::class));
+
+        $this->assertDatabaseHas('scrobbles', ['source_url' => $url]);
+    }
 }
