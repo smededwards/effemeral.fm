@@ -1,20 +1,13 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Audit playlist coverage · Effemeral</title>
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="min-h-screen bg-zinc-950 text-zinc-100">
-        <main class="mx-auto max-w-5xl space-y-8 px-6 py-12">
+@extends('layouts.app', ['title' => 'Audit playlist coverage · Effemeral'])
+
+@section('content')
             <header class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
                     <h1 class="mt-3 text-4xl font-semibold">Playlist coverage audit</h1>
                     <p class="mt-3 max-w-2xl text-zinc-400">Compare any recommendation draft with the imported Spotify playlists.</p>
                 </div>
-                <a class="text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ route('dashboard') }}">Back to dashboard</a>
+                <a class="text-sm text-[#00e676] hover:text-[#b7ffd1]" href="{{ route('dashboard') }}">Back to dashboard</a>
             </header>
 
             <form class="rounded-xl border border-zinc-800 bg-zinc-900 p-6" method="GET" action="{{ route('recommendations.audit') }}">
@@ -26,7 +19,7 @@
                             <option value="{{ $run->id }}" @selected($selectedRun?->id === $run->id)>{{ $run->generated_at?->format('Y-m-d H:i') }} · {{ $run->source }} · {{ $run->status }}</option>
                         @endforeach
                     </select>
-                    <button class="rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Run audit</button>
+                    <button class="rounded-md bg-[#c6ff4a] px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-[#d8ff80]" type="submit">Run audit</button>
                 </div>
             </form>
 
@@ -38,7 +31,7 @@
                     </div>
                     <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
                         <p class="text-sm text-zinc-500">Partial albums</p>
-                        <p class="mt-2 text-3xl font-semibold text-amber-300">{{ $partialAlbums }}</p>
+                        <p class="mt-2 text-3xl font-semibold text-[#c6ff4a]">{{ $partialAlbums }}</p>
                     </div>
                     <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
                         <p class="text-sm text-zinc-500">Missing albums</p>
@@ -57,14 +50,14 @@
                                         <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum->name }}</h3>
                                         <p class="mt-1 text-sm text-zinc-400">{{ $recommendation->spotifySavedAlbum->primary_artist_name ?? 'Unknown artist' }}</p>
                                     </div>
-                                    <span class="rounded-full px-3 py-1 text-xs {{ $item['status'] === 'complete' ? 'bg-emerald-950 text-emerald-300' : ($item['status'] === 'partial' ? 'bg-amber-950 text-amber-300' : 'bg-red-950 text-red-300') }}">{{ ucfirst($item['status']) }}</span>
+                                    <span class="rounded-full px-3 py-1 text-xs {{ $item['status'] === 'complete' ? 'bg-emerald-950 text-emerald-300' : ($item['status'] === 'partial' ? 'bg-amber-950 text-[#c6ff4a]' : 'bg-red-950 text-red-300') }}">{{ ucfirst($item['status']) }}</span>
                                 </div>
                                 <p class="mt-3 text-sm text-zinc-300">{{ $item['covered_tracks'] }} / {{ $item['expected_tracks'] }} tracks found in imported playlists</p>
                                 @if ($item['playlists']->isNotEmpty())
                                     <div class="mt-3 flex flex-wrap gap-2">
                                         @foreach ($item['playlists'] as $playlist)
                                             @if ($playlist['url'])
-                                                <a class="rounded bg-zinc-800 px-2 py-1 text-xs text-[#f08cc4] hover:text-white" href="{{ $playlist['url'] }}" target="_blank" rel="noreferrer">{{ $playlist['name'] }} · {{ $playlist['tracks'] }} tracks</a>
+                                                <a class="rounded bg-zinc-800 px-2 py-1 text-xs text-[#b7ffd1] hover:text-white" href="{{ $playlist['url'] }}" target="_blank" rel="noreferrer">{{ $playlist['name'] }} · {{ $playlist['tracks'] }} tracks</a>
                                             @else
                                                 <span class="rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300">{{ $playlist['name'] }} · {{ $playlist['tracks'] }} tracks</span>
                                             @endif
@@ -82,6 +75,4 @@
             @else
                 <p class="rounded-xl border border-zinc-800 bg-zinc-900 p-6 text-sm text-zinc-400">Select a saved recommendation draft to begin.</p>
             @endif
-        </main>
-    </body>
-</html>
+@endsection

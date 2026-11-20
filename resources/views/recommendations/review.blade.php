@@ -1,13 +1,6 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Review playlist draft · Effemeral</title>
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="min-h-screen bg-zinc-950 text-zinc-100">
-        <main class="mx-auto max-w-5xl space-y-8 px-6 py-12">
+@extends('layouts.app', ['title' => 'Review playlist draft · Effemeral'])
+
+@section('content')
             <header class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
@@ -15,7 +8,7 @@
                     <p class="mt-3 max-w-2xl text-zinc-400">Check the exact albums and Spotify tracks before syncing this draft.</p>
                     <p class="mt-2 text-sm text-emerald-300">Source: {{ str($recommendationRun->source)->replace('_', ' ')->title() }}</p>
                 </div>
-                <a class="text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ route('dashboard') }}">Back to dashboard</a>
+                <a class="text-sm text-[#00e676] hover:text-[#b7ffd1]" href="{{ route('dashboard') }}">Back to dashboard</a>
             </header>
 
             @if (session('success'))
@@ -65,7 +58,7 @@
                                 <p class="mt-1 text-sm text-zinc-400">{{ $recommendation->spotifySavedAlbum->primary_artist_name ?? 'Unknown artist' }}</p>
                                 <p class="mt-1 text-xs text-zinc-500">{{ $item['track_count'] }} Spotify tracks available</p>
                                 @if ($recommendation->album === null)
-                                    <p class="mt-2 text-xs text-amber-300">Needs catalogue match; review before syncing.</p>
+                                    <p class="mt-2 text-xs text-[#c6ff4a]">Needs catalogue match; review before syncing.</p>
                                 @endif
                                 @if ($recommendation->match_reason)
                                     <p class="mt-2 text-xs text-emerald-300">{{ $recommendation->match_reason }}</p>
@@ -77,21 +70,19 @@
                 </ol>
             </section>
 
-            <section class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-amber-900/60 bg-amber-950/20 p-6">
-                <p class="text-sm text-amber-100">Syncing will create a private Spotify playlist containing {{ $includedTracks }} tracks.</p>
+            <section class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#355b3d] bg-[#142319] p-6">
+                <p class="text-sm text-[#d7ffe2]">Syncing will create a private Spotify playlist containing {{ $includedTracks }} tracks.</p>
                 @if ($recommendationRun->spotify_playlist_url)
                     <a class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950" href="{{ $recommendationRun->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify playlist</a>
                 @else
                     <form method="POST" action="{{ route('recommendations.sync', $recommendationRun) }}">
                         @csrf
-                        <label class="mb-3 flex items-start gap-2 text-sm text-amber-100">
+                        <label class="mb-3 flex items-start gap-2 text-sm text-[#d7ffe2]">
                             <input class="mt-1" type="checkbox" name="confirmed" value="1" required>
                             <span>I have reviewed the included albums and confirm this private Spotify playlist should be created.</span>
                         </label>
-                        <button class="rounded-md bg-[#BF3989] px-4 py-2 text-sm font-medium text-white hover:bg-[#a93278]" type="submit">Sync included albums</button>
+                        <button class="rounded-md bg-[#00e676] px-4 py-2 text-sm font-medium text-white hover:bg-[#00b85c]" type="submit">Sync included albums</button>
                     </form>
                 @endif
             </section>
-        </main>
-    </body>
-</html>
+@endsection

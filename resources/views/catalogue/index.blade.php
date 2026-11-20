@@ -1,16 +1,8 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Catalogue · Effemeral</title>
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="min-h-screen bg-zinc-950 text-zinc-100">
-        <main class="mx-auto max-w-5xl space-y-8 px-6 py-12">
-            <header>
-                <a class="text-sm text-emerald-400 hover:text-emerald-300" href="{{ route('dashboard') }}">← Dashboard</a>
-                <p class="mt-8 text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
+@extends('layouts.app', ['title' => 'Catalogue · Effemeral'])
+
+@section('content')
+        <header>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#00e676]">Catalogue / 05</p>
                 <h1 class="mt-3 text-4xl font-semibold">Catalogue</h1>
                 <p class="mt-3 max-w-2xl text-zinc-400">Choose a canonical artist or album to use as the starting point for discovery.</p>
             </header>
@@ -52,7 +44,7 @@
                                 <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="year" value="{{ old('year', now()->year) }}" min="1900" max="2100" required>
                             </label>
                         </div>
-                        <button class="mt-4 rounded-md bg-amber-400 px-4 py-2 font-medium text-zinc-950 hover:bg-amber-300" type="submit">Generate suggestions</button>
+                        <button class="mt-4 rounded-md bg-[#c6ff4a] px-4 py-2 font-medium text-zinc-950 hover:bg-[#d8ff80]" type="submit">Generate suggestions</button>
                     </form>
                     <form class="mt-4" method="POST" action="{{ route('catalogue.discography') }}">
                         @csrf
@@ -85,7 +77,7 @@
                                 <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="year" value="{{ old('year', substr((string) $selectedAlbum->release_date, 0, 4) ?: now()->year) }}" min="1900" max="2100" required>
                             </label>
                         </div>
-                        <button class="mt-4 rounded-md bg-amber-400 px-4 py-2 font-medium text-zinc-950 hover:bg-amber-300" type="submit">Generate suggestions</button>
+                        <button class="mt-4 rounded-md bg-[#c6ff4a] px-4 py-2 font-medium text-zinc-950 hover:bg-[#d8ff80]" type="submit">Generate suggestions</button>
                     </form>
                 </section>
             @endif
@@ -128,6 +120,4 @@
             @else
                 <p class="rounded-xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">Search the catalogue to choose an artist or album.</p>
             @endif
-        </main>
-    </body>
-</html>
+@endsection

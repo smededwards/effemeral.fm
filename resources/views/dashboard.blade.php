@@ -1,515 +1,138 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Effemeral</title>
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="min-h-screen bg-zinc-950 text-zinc-100">
-        <main class="mx-auto max-w-5xl space-y-8 px-6 py-12">
-            <nav class="flex flex-wrap gap-4 border-b border-zinc-800 pb-4 text-sm">
-                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('dashboard') }}">Overview</a>
-                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('imports.index') }}">Imports</a>
-                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('library.index') }}">Library</a>
-                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('catalogue.index') }}">Catalogue</a>
-                <a class="text-emerald-400 hover:text-emerald-300" href="{{ route('recommendations.index') }}">Recommendations</a>
-            </nav>
-            <header class="flex flex-wrap items-start justify-between gap-6">
+@extends('layouts.app', ['title' => 'Overview · Effemeral'])
+
+@section('content')
+    <header class="flex flex-col gap-6 border-b border-[#2e382f] pb-10 lg:flex-row lg:items-end lg:justify-between">
+        <div class="max-w-3xl">
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#00e676]">Overview / 01</p>
+            <h1 class="mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Your listening archive</h1>
+            <p class="mt-5 max-w-2xl text-lg leading-8 text-[#9aa39d]">Last.fm is your listening record. Spotify is the working library. Effemeral brings them together so unfinished albums become deliberate next listens.</p>
+        </div>
+        <a class="inline-flex w-fit items-center border border-[#00e676] bg-[#00e676] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#00994d]" href="{{ route('catalogue.index') }}">Browse catalogue <span class="ml-4" aria-hidden="true">→</span></a>
+    </header>
+
+    <section class="grid border-y border-[#2e382f] bg-[#111612] sm:grid-cols-2 lg:grid-cols-4" aria-label="Archive summary">
+        <div class="border-b border-[#2e382f] p-5 sm:border-r lg:border-b-0">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Scrobbles stored</p>
+            <p class="mt-4 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($scrobbleCount) }}</p>
+        </div>
+        <div class="border-b border-[#2e382f] p-5 lg:border-r lg:border-b-0">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Albums to complete</p>
+            <p class="mt-4 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($incompleteAlbums->count()) }}</p>
+        </div>
+        <div class="border-b border-[#2e382f] p-5 sm:border-r sm:border-b-0">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Spotify albums</p>
+            <p class="mt-4 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($spotifySavedAlbumCount) }}</p>
+        </div>
+        <div class="p-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Latest import</p>
+            <p class="mt-4 text-2xl font-semibold capitalize">{{ $latestImport?->status ?? 'Not started' }}</p>
+            <p class="mt-1 text-sm text-[#9aa39d]">{{ $latestImport?->created_at?->format('Y.m.d H:i') ?? 'Import Last.fm to begin' }}</p>
+        </div>
+    </section>
+
+    <section class="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <div class="min-w-0 border border-[#2e382f] bg-[#111612] p-6 sm:p-8">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p class="text-sm uppercase tracking-[0.3em] text-emerald-400">Effemeral</p>
-                    <h1 class="mt-3 text-4xl font-semibold">Listening history</h1>
-                    <p class="mt-3 max-w-2xl text-zinc-400">Import Last.fm scrobbles manually while the matching and recommendation tools are built.</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#00e676]">Next listening</p>
+                    <h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Albums to complete</h2>
+                    <p class="mt-2 text-sm text-[#9aa39d]">Saved albums with tracks not yet heard in Last.fm.</p>
                 </div>
-                <a class="rounded-md border border-emerald-700 px-4 py-2 text-sm font-medium text-emerald-300 hover:border-emerald-500" href="{{ route('catalogue.index') }}">Browse catalogue</a>
-            </header>
-
-            @if (session('success'))
-                <div class="rounded-lg border border-emerald-800 bg-emerald-950/60 p-4 text-emerald-200">{{ session('success') }}</div>
-            @endif
-
-            @if (session('error'))
-                <div class="rounded-lg border border-red-800 bg-red-950/60 p-4 text-red-200">{{ session('error') }}</div>
-            @endif
-
-            @if ($errors->any())
-                <div class="rounded-lg border border-red-800 bg-red-950/60 p-4 text-red-200">
-                    <ul class="list-disc space-y-1 pl-5">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <section class="grid gap-6 md:grid-cols-2">
-                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                    <h2 class="text-xl font-medium">Import Last.fm</h2>
-                    <p class="mt-2 text-sm text-zinc-400">The first prototype defaults to the most recent 90 days and 100 scrobbles.</p>
-
-                    <form class="mt-6 space-y-4" method="POST" action="{{ route('imports.lastfm') }}">
-                        @csrf
-                        <label class="block text-sm text-zinc-300">
-                            From
-                            <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="date" name="from" value="{{ old('from', $defaultFrom) }}" required>
-                        </label>
-                        <label class="block text-sm text-zinc-300">
-                            To
-                            <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="date" name="to" value="{{ old('to', $defaultTo) }}" required>
-                        </label>
-                        <label class="block text-sm text-zinc-300">
-                            Maximum scrobbles
-                            <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-950 text-zinc-100" type="number" name="limit" min="1" max="1000" value="{{ old('limit', 100) }}" required>
-                        </label>
-                        <div class="flex flex-wrap gap-3">
-                            <button class="rounded-md bg-emerald-500 px-4 py-2 font-medium text-zinc-950 hover:bg-emerald-400" type="submit">Queue import</button>
-                            <button class="rounded-md border border-zinc-700 px-4 py-2 font-medium text-zinc-200 hover:border-zinc-500" type="submit" formaction="{{ route('imports.lastfm.full') }}">Queue full import</button>
-                        </div>
-                        <p class="text-xs text-zinc-500">Full import starts at {{ config('services.lastfm.import_start') }} and continues through today. It may take much longer.</p>
-                    </form>
-                </div>
-
-                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                    <h2 class="text-xl font-medium">Import status</h2>
-                    <dl class="mt-6 space-y-4 text-sm">
-                        <div class="flex justify-between gap-4 border-b border-zinc-800 pb-3"><dt class="text-zinc-400">Stored scrobbles</dt><dd>{{ number_format($scrobbleCount) }}</dd></div>
-                        @if ($latestImport)
-                            <div class="flex justify-between gap-4 border-b border-zinc-800 pb-3"><dt class="text-zinc-400">Latest status</dt><dd class="capitalize">{{ $latestImport->status }}</dd></div>
-                            <div class="flex justify-between gap-4 border-b border-zinc-800 pb-3"><dt class="text-zinc-400">Fetched</dt><dd>{{ number_format($latestImport->fetched_count) }}</dd></div>
-                            <div class="flex justify-between gap-4 border-b border-zinc-800 pb-3"><dt class="text-zinc-400">Imported</dt><dd>{{ number_format($latestImport->imported_count) }}</dd></div>
-                            <div class="flex justify-between gap-4"><dt class="text-zinc-400">Skipped duplicates</dt><dd>{{ number_format($latestImport->skipped_count) }}</dd></div>
-                            @if ($latestImport->error)
-                                <p class="rounded-md bg-red-950/60 p-3 text-red-200">{{ $latestImport->error }}</p>
+                <a class="text-sm font-semibold text-[#00e676] hover:underline" href="{{ route('recommendations.index') }}">Open drafts →</a>
+            </div>
+            @if ($incompleteAlbums->isNotEmpty())
+                <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($incompleteAlbums->take(6) as $album)
+                        <article class="group overflow-hidden border border-[#2e382f] bg-[#0b0c0a]">
+                            @if ($album['cover_image_url'])
+                                <img class="aspect-square w-full object-cover transition duration-300 group-hover:scale-[1.02]" src="{{ $album['cover_image_url'] }}" alt="Cover art for {{ $album['name'] }}">
+                            @else
+                                <div class="flex aspect-square items-center justify-center bg-[#1a211c] text-xs font-medium uppercase tracking-[0.12em] text-[#9aa39d]">No artwork</div>
                             @endif
-                        @else
-                            <p class="text-zinc-400">No imports have been run yet.</p>
-                        @endif
-                    </dl>
-                </div>
-
-                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                    <h2 class="text-xl font-medium">Spotify account</h2>
-                    @if ($spotifyConnection)
-                        <p class="mt-2 text-sm text-zinc-400">Connected{{ $spotifyConnection->display_name ? ' as '.$spotifyConnection->display_name : '' }}.</p>
-                        <form class="mt-6" method="POST" action="{{ route('auth.spotify.disconnect') }}">
-                            @csrf
-                            <button class="rounded-md border border-zinc-700 px-4 py-2 font-medium text-zinc-200 hover:border-zinc-500" type="submit">Disconnect Spotify</button>
-                        </form>
-                    @else
-                        <p class="mt-2 text-sm text-zinc-400">Connect Spotify to import your saved albums.</p>
-                        <a class="mt-6 inline-block rounded-md bg-[#BF3989] px-4 py-2 font-medium text-white hover:bg-[#a93278]" href="{{ route('auth.spotify') }}">Connect Spotify</a>
-                    @endif
-                </div>
-            </section>
-
-            @if ($genreArtists->isNotEmpty())
-                <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                    <h2 class="text-xl font-medium">Artist genres</h2>
-                    <p class="mt-1 text-sm text-zinc-400">Review normalized Spotify genres. Separate genres with commas; removing one keeps it suppressed on future imports.</p>
-                    <div class="mt-6 grid gap-4 md:grid-cols-2">
-                        @foreach ($genreArtists as $artist)
-                            @php($acceptedGenres = $artist->genres->filter(fn ($genre): bool => ! $genre->pivot->suppressed)->unique('normalised_name')->pluck('name')->implode(', '))
-                            <form class="rounded-lg border border-zinc-800 bg-zinc-950 p-4" method="POST" action="{{ route('artists.genres.update', $artist) }}">
-                                @csrf
-                                <label class="block text-sm font-medium text-zinc-200" for="artist-genres-{{ $artist->id }}">{{ $artist->name }}</label>
-                                <input id="artist-genres-{{ $artist->id }}" class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" type="text" name="genres" value="{{ $acceptedGenres }}">
-                                <button class="mt-3 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-500" type="submit">Save genres</button>
-                            </form>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
-
-            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-medium">Spotify playlists</h2>
-                        <p class="mt-1 text-sm text-zinc-400">Audit your ten most recent playlists by album and track membership.</p>
-                    </div>
-                    <form method="POST" action="{{ route('imports.spotify.playlists') }}">
-                        @csrf
-                        <button class="rounded-md bg-[#BF3989] px-4 py-2 text-sm font-medium text-white hover:bg-[#a93278]" type="submit">Import playlists</button>
-                    </form>
-                </div>
-
-                @if ($latestSpotifyPlaylistImport)
-                    <dl class="mt-6 grid gap-4 text-sm sm:grid-cols-4">
-                        <div><dt class="text-zinc-500">Status</dt><dd class="mt-1 capitalize">{{ $latestSpotifyPlaylistImport->status }}</dd></div>
-                        <div><dt class="text-zinc-500">Playlist rows</dt><dd class="mt-1">{{ number_format($latestSpotifyPlaylistImport->imported_count + $latestSpotifyPlaylistImport->updated_count) }}</dd></div>
-                        <div><dt class="text-zinc-500">Track items</dt><dd class="mt-1">{{ number_format($latestSpotifyPlaylistImport->fetched_count) }}</dd></div>
-                        <div><dt class="text-zinc-500">Skipped</dt><dd class="mt-1">{{ number_format($latestSpotifyPlaylistImport->skipped_count) }}</dd></div>
-                    </dl>
-                @endif
-
-                @if ($spotifyPlaylists->isNotEmpty())
-                    <div class="mt-6 space-y-3">
-                        @foreach ($spotifyPlaylists as $playlist)
-                            <article class="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-                                <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <h3 class="font-medium">{{ $playlist->name }}</h3>
-                                        <p class="mt-1 text-sm text-zinc-400">{{ $playlist->items->count() }} imported tracks · {{ $playlist->items->pluck('album_id')->filter()->unique()->count() }} albums</p>
-                                    </div>
-                                    @if ($playlist->spotify_url)
-                                        <a class="text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $playlist->spotify_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
-                                    @endif
-                                </div>
-                                <p class="mt-3 text-xs text-zinc-500">{{ $playlist->description ?: 'No description' }}</p>
-                            </article>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="mt-6 text-sm text-zinc-500">No Spotify playlists have been imported yet.</p>
-                @endif
-            </section>
-
-            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-medium">Spotify saved albums</h2>
-                        <p class="mt-1 text-sm text-zinc-400">Import the 100 most recently saved albums as supporting library data.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-3">
-                        <form method="POST" action="{{ route('imports.spotify.albums') }}">
-                            @csrf
-                            <button class="rounded-md bg-[#BF3989] px-4 py-2 font-medium text-white hover:bg-[#a93278]" type="submit">Queue saved albums</button>
-                        </form>
-                        <form method="POST" action="{{ route('imports.spotify.liked-tracks') }}">
-                            @csrf
-                            <button class="rounded-md border border-[#BF3989] px-4 py-2 font-medium text-[#f08cc4] hover:bg-[#3c1830]" type="submit">Queue liked songs</button>
-                        </form>
-                    </div>
-                </div>
-                @if ($latestSpotifyImport)
-                    <dl class="mt-6 grid gap-4 text-sm sm:grid-cols-4">
-                        <div><dt class="text-zinc-400">Status</dt><dd class="mt-1 capitalize">{{ $latestSpotifyImport->status }}</dd></div>
-                        <div><dt class="text-zinc-400">Fetched</dt><dd class="mt-1">{{ number_format($latestSpotifyImport->fetched_count) }}</dd></div>
-                        <div><dt class="text-zinc-400">Imported</dt><dd class="mt-1">{{ number_format($latestSpotifyImport->imported_count) }}</dd></div>
-                        <div><dt class="text-zinc-400">Updated</dt><dd class="mt-1">{{ number_format($latestSpotifyImport->updated_count) }}</dd></div>
-                    </dl>
-                    @if ($latestSpotifyImport->error)
-                        <p class="mt-4 rounded-md bg-red-950/60 p-3 text-red-200">{{ $latestSpotifyImport->error }}</p>
-                    @endif
-                @else
-                    <p class="mt-5 text-sm text-zinc-500">No Spotify album imports have been run yet.</p>
-                @endif
-            </section>
-
-            <section class="grid gap-6 md:grid-cols-2">
-                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                    <h2 class="text-xl font-medium">Top artists</h2>
-                    <p class="mt-1 text-sm text-zinc-400">Based on imported Last.fm scrobbles.</p>
-                    @if ($topArtists->isNotEmpty())
-                        <div class="mt-6 space-y-4">
-                            @foreach ($topArtists as $artist)
-                                <div class="flex items-start justify-between gap-4 border-b border-zinc-800 pb-3 last:border-0 last:pb-0">
-                                    <div>
-                                        <h3 class="font-medium">{{ $artist['name'] }}</h3>
-                                        <p class="mt-1 text-xs text-zinc-500">Last heard {{ $artist['last_listened_at'] }}</p>
-                                    </div>
-                                    <span class="whitespace-nowrap text-sm text-zinc-400">{{ number_format($artist['scrobbles']) }} plays</span>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <p class="mt-6 text-sm text-zinc-500">No Last.fm scrobbles have been imported yet.</p>
-                    @endif
-                </div>
-
-                <div class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                    <h2 class="text-xl font-medium">Top albums</h2>
-                    <p class="mt-1 text-sm text-zinc-400">Based on imported Last.fm scrobbles with album data.</p>
-                    @if ($topAlbums->isNotEmpty())
-                        <div class="mt-6 space-y-4">
-                            @foreach ($topAlbums as $album)
-                                <div class="flex items-start justify-between gap-4 border-b border-zinc-800 pb-3 last:border-0 last:pb-0">
-                                    <div>
-                                        <h3 class="font-medium">{{ $album['name'] }}</h3>
-                                        <p class="mt-1 text-sm text-zinc-400">{{ $album['artist'] }}</p>
-                                        <p class="mt-1 text-xs text-zinc-500">Last heard {{ $album['last_listened_at'] }}</p>
-                                    </div>
-                                    <span class="whitespace-nowrap text-sm text-zinc-400">{{ number_format($album['scrobbles']) }} plays</span>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <p class="mt-6 text-sm text-zinc-500">No albums are available from the imported scrobbles yet.</p>
-                    @endif
-                </div>
-            </section>
-
-            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-medium">Albums to complete</h2>
-                        <p class="mt-1 text-sm text-zinc-400">Saved Spotify albums with tracks not yet heard in Last.fm.</p>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <span class="text-sm text-zinc-500">{{ number_format($incompleteAlbums->count()) }} shown</span>
-                        <form method="POST" action="{{ route('recommendations.generate') }}">
-                            @csrf
-                            <button class="rounded-md bg-amber-400 px-3 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Generate draft</button>
-                        </form>
-                    </div>
-                </div>
-
-                @if ($incompleteAlbums->isNotEmpty())
-                    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                        @foreach ($incompleteAlbums as $album)
-                            <article class="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
-                                @if ($album['cover_image_url'])
-                                    <img class="aspect-square w-full object-cover" src="{{ $album['cover_image_url'] }}" alt="Cover art for {{ $album['name'] }}">
-                                @else
-                                    <div class="flex aspect-square items-center justify-center bg-zinc-900 text-sm text-zinc-600">No artwork</div>
-                                @endif
-                                <div class="space-y-2 p-4">
-                                    <h3 class="font-medium">{{ $album['name'] }}</h3>
-                                    <p class="text-sm text-zinc-400">{{ $album['artist'] }}</p>
-                                    <p class="text-sm text-zinc-300">{{ $album['heard'] }} / {{ $album['total'] }} tracks heard</p>
-                                    <div class="h-1.5 overflow-hidden rounded-full bg-zinc-800" role="progressbar" aria-label="{{ $album['name'] }} completion" aria-valuenow="{{ $album['percentage'] }}" aria-valuemin="0" aria-valuemax="100">
-                                        <div class="h-full rounded-full bg-amber-400" style="width: {{ $album['percentage'] }}%"></div>
-                                    </div>
-                                    @if ($album['spotify_url'])
-                                        <a class="inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $album['spotify_url'] }}" target="_blank" rel="noreferrer">Open in Spotify</a>
-                                    @endif
-                                </div>
-                            </article>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="mt-6 text-sm text-zinc-500">No incomplete albums are available yet.</p>
-                @endif
-            </section>
-
-            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-medium">Latest recommendation draft</h2>
-                        <p class="mt-1 text-sm text-zinc-400">Generated from incomplete albums for your review.</p>
-                    </div>
-                    @if ($latestRecommendation)
-                        <span class="text-sm text-zinc-500">{{ $latestRecommendation->generated_at?->format('Y-m-d H:i') }}</span>
-                    @endif
-                </div>
-
-                @if ($latestRecommendation?->albumRecommendations->isNotEmpty())
-                    @php($draftAlbumIds = $latestRecommendation->albumRecommendations->pluck('spotify_saved_album_id')->all())
-                    @php($availableSavedAlbums = $spotifySavedAlbums->whereNotIn('id', $draftAlbumIds))
-                    @if ($availableSavedAlbums->isNotEmpty())
-                        <form class="mt-6 rounded-lg border border-zinc-800 bg-zinc-950 p-4" method="POST" action="{{ route('recommendations.albums.add', $latestRecommendation) }}">
-                            @csrf
-                            <label class="block text-sm text-zinc-300" for="album_ids">Add saved Spotify albums</label>
-                            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                                @foreach ($availableSavedAlbums as $album)
-                                    <label class="relative rounded-lg border border-zinc-800 bg-zinc-900 p-3 has-[:checked]:border-[#BF3989]">
-                                        <input class="absolute right-3 top-3" type="checkbox" name="album_ids[]" value="{{ $album->id }}">
-                                        @if ($album->cover_image_url)
-                                            <img class="aspect-square w-full rounded object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->name }}">
-                                        @else
-                                            <div class="flex aspect-square items-center justify-center rounded bg-zinc-950 text-xs text-zinc-600">No artwork</div>
-                                        @endif
-                                        <span class="mt-2 block text-sm font-medium">{{ $album->name }}</span>
-                                        <span class="mt-1 block text-xs text-zinc-400">{{ $album->primary_artist_name ?? 'Unknown artist' }} · {{ $album->total_tracks ?? 0 }} tracks</span>
-                                    </label>
-                                @endforeach
+                            <div class="p-4">
+                                <h3 class="truncate font-semibold">{{ $album['name'] }}</h3>
+                                <p class="mt-1 truncate text-sm text-[#9aa39d]">{{ $album['artist'] }}</p>
+                                <div class="mt-4 flex items-center justify-between text-xs font-medium tabular-nums text-[#9aa39d]"><span>{{ $album['heard'] }} / {{ $album['total'] }} tracks heard</span><span>{{ $album['percentage'] }}%</span></div>
+                                <div class="mt-2 h-1 bg-[#334038]" role="progressbar" aria-label="{{ $album['name'] }} completion" aria-valuenow="{{ $album['percentage'] }}" aria-valuemin="0" aria-valuemax="100"><div class="h-full bg-[#00e676]" style="width: {{ $album['percentage'] }}%"></div></div>
                             </div>
-                            <button class="mt-4 rounded-md border border-[#BF3989] px-4 py-2 text-sm font-medium text-[#f08cc4] hover:bg-[#BF3989] hover:text-white" type="submit">Add to draft</button>
-                        </form>
-                    @endif
-                    <form class="mt-6" method="POST" action="{{ route('recommendations.review', $latestRecommendation) }}">
-                        @csrf
-                        <ol class="space-y-3">
-                        @foreach ($latestRecommendation->albumRecommendations as $recommendation)
-                            <li class="flex items-center justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-                                <div class="flex items-center gap-4">
-                                    <label class="flex items-center gap-2 text-sm text-zinc-400">
-                                        <span class="sr-only">Include {{ $recommendation->spotifySavedAlbum->name }}</span>
-                                        <input type="checkbox" name="included[]" value="{{ $recommendation->id }}" @checked($recommendation->included)>
-                                        Include
-                                    </label>
-                                    <label class="flex items-center gap-2 text-sm text-zinc-400">
-                                        <span class="sr-only">Position for {{ $recommendation->spotifySavedAlbum->name }}</span>
-                                        <select class="rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" name="positions[{{ $recommendation->id }}]">
-                                            @foreach ($latestRecommendation->albumRecommendations as $positionOption)
-                                                <option value="{{ $positionOption->position }}" @selected($recommendation->position === $positionOption->position)>{{ $positionOption->position }}</option>
-                                            @endforeach
-                                        </select>
-                                    </label>
-                                    <div>
-                                        <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum->name }}</h3>
-                                        <p class="mt-1 text-sm text-zinc-400">{{ $recommendation->spotifySavedAlbum->primary_artist_name }} · {{ $recommendation->heard_tracks }} / {{ $recommendation->total_tracks }} tracks heard</p>
-                                    </div>
-                                    <button class="text-sm text-red-400 hover:text-red-300" type="submit" form="remove-recommendation-{{ $recommendation->id }}">Remove</button>
-                                </div>
-                                @if ($recommendation->spotifySavedAlbum->spotify_url)
-                                    <a class="text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $recommendation->spotifySavedAlbum->spotify_url }}" target="_blank" rel="noreferrer">Spotify</a>
-                                @endif
-                            </li>
-                        @endforeach
-                        </ol>
-                        <button class="mt-6 rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Save review</button>
-                    </form>
-                    @foreach ($latestRecommendation->albumRecommendations as $recommendation)
-                        <form id="remove-recommendation-{{ $recommendation->id }}" method="POST" action="{{ route('recommendations.albums.remove', [$latestRecommendation, $recommendation]) }}">
-                            @csrf
-                        </form>
+                        </article>
                     @endforeach
-                    @if ($latestRecommendation->spotify_playlist_url)
-                        <p class="mt-4 text-sm text-emerald-400">Synced {{ $latestRecommendation->synced_at?->format('Y-m-d H:i') }} · <a class="underline" href="{{ $latestRecommendation->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify playlist</a></p>
-                    @elseif ($latestRecommendation->status === 'sync_failed')
-                        <p class="mt-4 rounded-md bg-red-950/60 p-3 text-sm text-red-200">Spotify sync failed: {{ $latestRecommendation->sync_error }}</p>
-                    @else
-                        <form class="mt-4" method="POST" action="{{ route('recommendations.sync', $latestRecommendation) }}">
-                            @csrf
-                            <input type="hidden" name="confirmed" value="1">
-                            <button class="rounded-md bg-[#BF3989] px-4 py-2 text-sm font-medium text-white hover:bg-[#a93278]" type="submit">Sync included albums to Spotify</button>
-                        </form>
-                    @endif
-                    <a class="mt-4 inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ route('recommendations.review.page', $latestRecommendation) }}">Open full review page</a>
-                    <a class="mt-4 ml-4 inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ route('recommendations.audit', ['run' => $latestRecommendation->id]) }}">Audit against playlists</a>
-                @else
-                    <p class="mt-6 text-sm text-zinc-500">No recommendation draft has been generated yet.</p>
-                @endif
-            </section>
-
-            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-medium">Imported Spotify albums</h2>
-                        <p class="mt-1 text-sm text-zinc-400">Saved albums are shown newest first for review.</p>
-                    </div>
-                    <span class="text-sm text-zinc-500">{{ number_format($spotifySavedAlbums->count()) }} of {{ number_format($spotifySavedAlbumCount) }} albums</span>
                 </div>
+            @else
+                <p class="mt-8 border border-dashed border-[#2e382f] p-6 text-sm text-[#9aa39d]">No incomplete albums are available yet.</p>
+            @endif
+        </div>
 
-                @if ($spotifySavedAlbumCount > 0)
-                    <form class="mt-6 grid gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-[1fr_16rem_auto] md:items-end" method="GET" action="{{ route('dashboard') }}">
-                        <label class="block text-sm text-zinc-300">
-                            Search albums or artists
-                            <input class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" type="search" name="album_search" value="{{ $albumSearch }}" placeholder="Album or artist">
-                        </label>
-                        <label class="block text-sm text-zinc-300">
-                            Artist
-                            <select class="mt-2 block w-full rounded-md border-zinc-700 bg-zinc-900 text-zinc-100" name="album_artist">
-                                <option value="">All artists</option>
-                                @foreach ($spotifyAlbumArtists as $artist)
-                                    <option value="{{ $artist }}" @selected($albumArtist === $artist)>{{ $artist }}</option>
-                                @endforeach
-                            </select>
-                        </label>
-                        <button class="rounded-md border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-500" type="submit">Filter</button>
-                    </form>
-                @endif
-
-                @if ($spotifySavedAlbums->isNotEmpty())
-                    @php($draftAlbumIds = $latestRecommendation?->albumRecommendations->pluck('spotify_saved_album_id')->all() ?? [])
-                    <form class="mt-6 rounded-lg border border-zinc-800 bg-zinc-950 p-4" method="POST" action="{{ route('recommendations.create') }}">
-                        @csrf
-                        <label class="block text-sm text-zinc-300" for="manual_album_ids">Create a playlist draft from saved albums</label>
-                        <p class="mt-1 text-xs text-zinc-500">Select albums in the order you want them reviewed. Albums already in the latest draft are marked.</p>
-                        <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            @foreach ($spotifySavedAlbums as $album)
-                                <label class="relative rounded-lg border border-zinc-800 bg-zinc-900 p-3 has-[:checked]:border-amber-400">
-                                    <input class="absolute right-3 top-3" type="checkbox" name="album_ids[]" value="{{ $album->id }}" @disabled(in_array($album->id, $draftAlbumIds, true))>
-                                    @if ($album->cover_image_url)
-                                        <img class="aspect-square w-full rounded object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->name }}">
-                                    @else
-                                        <div class="flex aspect-square items-center justify-center rounded bg-zinc-950 text-xs text-zinc-600">No artwork</div>
-                                    @endif
-                                    <span class="mt-2 block text-sm font-medium">{{ $album->name }}</span>
-                                    <span class="mt-1 block text-xs text-zinc-400">{{ $album->primary_artist_name ?? 'Unknown artist' }} · {{ $album->total_tracks ?? 0 }} tracks</span>
-                                    @if (in_array($album->id, $draftAlbumIds, true))
-                                        <span class="mt-2 block text-xs text-amber-300">Already in latest draft</span>
-                                    @endif
-                                </label>
-                            @endforeach
-                        </div>
-                        <button class="mt-4 rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-amber-300" type="submit">Create playlist draft</button>
-                    </form>
-                    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        @foreach ($spotifySavedAlbums as $album)
-                            <article class="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
-                                @if ($album->cover_image_url)
-                                    <img class="aspect-square w-full object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->name }}">
-                                @else
-                                    <div class="flex aspect-square items-center justify-center bg-zinc-900 text-sm text-zinc-600">No artwork</div>
-                                @endif
-                                <div class="space-y-2 p-4">
-                                    <h3 class="font-medium">{{ $album->name }}</h3>
-                                    <p class="text-sm text-zinc-400">{{ $album->primary_artist_name ?? 'Unknown artist' }}</p>
-                                    <p class="text-xs text-zinc-500">{{ $album->total_tracks ?? 0 }} tracks · {{ $album->release_date ?: 'Release date unknown' }}</p>
-                                    @if ($album->spotify_url)
-                                        <a class="inline-block text-sm text-[#e56cb0] hover:text-[#f08cc4]" href="{{ $album->spotify_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
-                                    @endif
-                                    @if ($album->completion_override === null)
-                                        <div class="flex flex-wrap gap-2 pt-2">
-                                            <form method="POST" action="{{ route('albums.completion.complete', $album) }}">
-                                                @csrf
-                                                <button class="text-xs text-emerald-400 hover:text-emerald-300" type="submit">Mark heard</button>
-                                            </form>
-                                            <form method="POST" action="{{ route('albums.completion.incomplete', $album) }}">
-                                                @csrf
-                                                <button class="text-xs text-amber-400 hover:text-amber-300" type="submit">Mark incomplete</button>
-                                            </form>
-                                        </div>
-                                    @else
-                                        <p class="pt-2 text-xs text-zinc-500">Manual: {{ $album->completion_override ? 'heard' : 'incomplete' }}</p>
-                                        <form method="POST" action="{{ route('albums.completion.clear', $album) }}">
-                                            @csrf
-                                            <button class="text-xs text-zinc-400 hover:text-zinc-200" type="submit">Clear override</button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </article>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="mt-6 text-sm text-zinc-500">No saved Spotify albums have been imported yet.</p>
-                @endif
-            </section>
-
-            <section class="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-medium">Recent imports</h2>
-                        <p class="mt-1 text-sm text-zinc-400">Every run is retained so retries remain visible and auditable.</p>
-                    </div>
+        <aside class="border border-[#2e382f] bg-[#00e676] p-6 text-white sm:p-8">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ffd1]">Actions</p>
+            <h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Keep the archive current</h2>
+            <div class="mt-8 divide-y divide-white/20 border-y border-white/20">
+                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('imports.index') }}"><span>Import Last.fm and Spotify</span><span aria-hidden="true">→</span></a>
+                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('library.index') }}"><span>Review your library</span><span aria-hidden="true">→</span></a>
+                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('recommendations.index') }}"><span>Review playlist drafts</span><span aria-hidden="true">→</span></a>
+            </div>
+            @if ($latestRecommendation)
+                <div class="mt-8 border-t border-white/20 pt-5 text-sm text-[#d7ffe2]">
+                    <p class="font-semibold text-white">Latest recommendation draft</p>
+                    <p class="mt-1">{{ $latestRecommendation->albumRecommendations->count() }} albums · {{ $latestRecommendation->status }}</p>
+                    <a class="mt-3 inline-block font-semibold text-white underline" href="{{ route('recommendations.review.page', $latestRecommendation) }}">Review {{ $latestRecommendation->albumRecommendations->first()?->spotifySavedAlbum?->name ?? 'draft' }}</a>
                 </div>
-                <div class="mt-6 overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="border-b border-zinc-800 text-zinc-400">
-                            <tr>
-                                <th class="px-3 py-3 font-normal">Started</th>
-                                <th class="px-3 py-3 font-normal">Range</th>
-                                <th class="px-3 py-3 font-normal">Mode</th>
-                                <th class="px-3 py-3 font-normal">Status</th>
-                                <th class="px-3 py-3 font-normal">Results</th>
-                                <th class="px-3 py-3 font-normal"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($recentImports as $import)
-                                <tr class="border-b border-zinc-800/70">
-                                    <td class="px-3 py-3 text-zinc-300">{{ $import->created_at?->format('Y-m-d H:i') }}</td>
-                                    <td class="px-3 py-3 text-zinc-400">{{ $import->from_at->toDateString() }} – {{ $import->to_at->toDateString() }}</td>
-                                    <td class="px-3 py-3 text-zinc-400">{{ $import->requested_limit ? 'Bounded' : 'Full' }}</td>
-                                    <td class="px-3 py-3 capitalize">{{ $import->status }}</td>
-                                    <td class="px-3 py-3 text-zinc-400">{{ number_format($import->imported_count) }} imported / {{ number_format($import->skipped_count) }} skipped</td>
-                                    <td class="px-3 py-3 text-right">
-                                        @if ($import->status === 'failed')
-                                            <form method="POST" action="{{ route('imports.lastfm.retry', $import) }}">
-                                                @csrf
-                                                <button class="text-emerald-400 hover:text-emerald-300" type="submit">Retry</button>
-                                            </form>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr><td class="px-3 py-6 text-zinc-500" colspan="6">No import history yet.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </main>
-    </body>
-</html>
+            @endif
+        </aside>
+    </section>
+
+    <section class="grid gap-6 lg:grid-cols-2">
+        <div class="min-w-0 border border-[#2e382f] bg-[#111612] p-6 sm:p-8">
+            <div class="flex items-end justify-between gap-4 border-b border-[#2e382f] pb-4">
+                <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Last.fm</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Top artists</h2></div>
+                <span class="text-xs text-[#9aa39d]">Most scrobbled</span>
+            </div>
+            <div class="divide-y divide-[#1a211c]">
+                @forelse ($topArtists as $position => $artist)
+                    <div class="flex items-center justify-between gap-4 py-4"><div class="flex min-w-0 items-center gap-4"><span class="text-xs font-semibold tabular-nums text-[#00e676]">{{ str_pad((string) ($position + 1), 2, '0', STR_PAD_LEFT) }}</span><div class="min-w-0"><h3 class="truncate font-semibold">{{ $artist['name'] }}</h3><p class="mt-1 text-xs text-[#9aa39d]">Last heard {{ $artist['last_listened_at'] }}</p></div></div><span class="whitespace-nowrap text-sm tabular-nums text-[#9aa39d]">{{ number_format($artist['scrobbles']) }} plays</span></div>
+                @empty
+                    <p class="py-6 text-sm text-[#9aa39d]">No Last.fm scrobbles have been imported yet.</p>
+                @endforelse
+            </div>
+        </div>
+        <div class="min-w-0 border border-[#2e382f] bg-[#111612] p-6 sm:p-8">
+            <div class="flex items-end justify-between gap-4 border-b border-[#2e382f] pb-4">
+                <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Last.fm</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Top albums</h2></div>
+                <span class="text-xs text-[#9aa39d]">Most played</span>
+            </div>
+            <div class="divide-y divide-[#1a211c]">
+                @forelse ($topAlbums as $position => $album)
+                    <div class="flex items-center justify-between gap-4 py-4"><div class="flex min-w-0 items-center gap-4"><span class="text-xs font-semibold tabular-nums text-[#00e676]">{{ str_pad((string) ($position + 1), 2, '0', STR_PAD_LEFT) }}</span><div class="min-w-0"><h3 class="truncate font-semibold">{{ $album['name'] }}</h3><p class="mt-1 truncate text-sm text-[#9aa39d]">{{ $album['artist'] }}</p><p class="mt-1 text-xs text-[#9aa39d]">Last heard {{ $album['last_listened_at'] }}</p></div></div><span class="whitespace-nowrap text-sm tabular-nums text-[#9aa39d]">{{ number_format($album['scrobbles']) }} plays</span></div>
+                @empty
+                    <p class="py-6 text-sm text-[#9aa39d]">No albums are available from the imported scrobbles yet.</p>
+                @endforelse
+            </div>
+        </div>
+    </section>
+
+    <section class="border border-[#2e382f] bg-[#111612] p-6 sm:p-8">
+        <div class="flex flex-col gap-4 border-b border-[#2e382f] pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Spotify library</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Imported Spotify albums</h2><p class="mt-2 text-sm text-[#9aa39d]">Search the working library or open it for the complete album view.</p></div>
+            <a class="text-sm font-semibold text-[#00e676] hover:underline" href="{{ route('library.index') }}">Open library →</a>
+        </div>
+        @if ($spotifySavedAlbumCount > 0)
+            <form class="mt-6 flex flex-col gap-3 sm:flex-row" method="GET" action="{{ route('dashboard') }}">
+                <label class="sr-only" for="overview-album-search">Search imported albums</label>
+                <input id="overview-album-search" class="min-w-0 flex-1 border border-[#9b9ca4] bg-[#0b0c0a] px-4 py-3 text-sm placeholder:text-[#7b7c83] focus:border-[#00e676] focus:outline-none focus:ring-2 focus:ring-[#b7ffd1]" type="search" name="album_search" value="{{ $albumSearch }}" placeholder="Search album or artist">
+                <button class="border border-[#00e676] px-5 py-3 text-sm font-semibold text-[#00e676] hover:bg-[#00e676] hover:text-white" type="submit">Search</button>
+            </form>
+        @endif
+        @if ($spotifySavedAlbums->isNotEmpty())
+            <div class="mt-6 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                @foreach ($spotifySavedAlbums as $album)
+                    <article class="min-w-0 border border-[#2e382f] bg-[#0b0c0a] p-4">
+                        <div class="flex items-start justify-between gap-3"><div class="min-w-0"><h3 class="truncate font-semibold">{{ $album->name }}</h3><p class="mt-1 truncate text-sm text-[#9aa39d]">{{ $album->primary_artist_name ?? 'Unknown artist' }}</p></div>@if ($album->spotify_url)<a class="shrink-0 text-xs font-semibold text-[#00e676] hover:underline" href="{{ $album->spotify_url }}" target="_blank" rel="noreferrer">Spotify</a>@endif</div>
+                        <p class="mt-4 text-xs tabular-nums text-[#9aa39d]">{{ $album->total_tracks ?? 0 }} tracks · {{ $album->release_date ?: 'Release date unknown' }}</p>
+                    </article>
+                @endforeach
+            </div>
+        @else
+            <p class="mt-6 border border-dashed border-[#2e382f] p-6 text-sm text-[#9aa39d]">No saved Spotify albums have been imported yet.</p>
+        @endif
+    </section>
+@endsection

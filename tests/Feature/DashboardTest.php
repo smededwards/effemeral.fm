@@ -56,7 +56,7 @@ class DashboardTest extends TestCase
         $response = $this->withServerVariables([
             'HTTP_X_FORWARDED_PROTO' => 'https',
             'HTTP_X_FORWARDED_HOST' => 'app.effemeral.local',
-        ])->get(route('dashboard'));
+        ])->get(route('imports.index'));
 
         $response->assertSee('action="https://app.effemeral.local/imports/lastfm"', false);
     }
