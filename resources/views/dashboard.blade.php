@@ -26,7 +26,7 @@
         <div class="p-5">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Latest import</p>
             <p class="mt-4 text-2xl font-semibold capitalize">{{ $latestImport?->status ?? 'Not started' }}</p>
-            <p class="mt-1 text-sm text-[#9aa39d]">{{ $latestImport?->created_at?->format('Y.m.d H:i') ?? 'Import Last.fm to begin' }}</p>
+            <p class="mt-1 text-sm text-[#9aa39d]">{{ ($latestImport?->completed_at ?? $latestImport?->started_at ?? $latestImport?->created_at)?->format('Y.m.d H:i') ?? 'Import Last.fm to begin' }}</p>
         </div>
     </section>
 
