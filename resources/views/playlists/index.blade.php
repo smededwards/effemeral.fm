@@ -7,7 +7,7 @@
             <h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Spotify playlist organisation</h1>
             <p class="mt-4 max-w-2xl text-base leading-7 text-[#9aa39d]">Browse imported playlists, audit album coverage, and choose a safe destination for approved album drafts.</p>
         </div>
-        <form method="POST" action="{{ route('imports.spotify.playlists') }}">
+        <form method="POST" action="{{ route('imports.spotify.playlists', [], false) }}">
             @csrf
             <button class="bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#061108] hover:bg-[#b7ffd1]" type="submit">Import all playlists</button>
         </form>
@@ -49,7 +49,7 @@
                             <h3 class="truncate font-semibold">{{ $playlist->name }}</h3>
                             <p class="mt-1 truncate text-sm text-[#c9b99c]">{{ $playlist->last_import_error }}</p>
                         </div>
-                        <form method="POST" action="{{ route('imports.spotify.playlists.retry', $playlist) }}">
+                        <form method="POST" action="{{ route('imports.spotify.playlists.retry', $playlist, false) }}">
                             @csrf
                             <button class="shrink-0 border border-[#c6ff4a] px-4 py-2 text-sm font-semibold text-[#c6ff4a] hover:bg-[#272313]" type="submit">Retry playlist</button>
                         </form>
@@ -84,7 +84,7 @@
                         <p class="mt-1 text-xs text-[#7d8a80]">Last synced {{ $playlist->last_synced_at?->format('Y.m.d H:i') ?? 'not yet' }}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-4 text-sm">
-                        <a class="font-semibold text-[#00e676] hover:underline" href="{{ route('recommendations.audit', ['playlist' => $playlist->id]) }}">Audit coverage</a>
+                        <a class="font-semibold text-[#00e676] hover:underline" href="{{ route('recommendations.audit', ['playlist' => $playlist->id], false) }}">Audit coverage</a>
                         @if ($playlist->spotify_url)
                             <a class="font-semibold text-[#00e676] hover:underline" href="{{ $playlist->spotify_url }}" target="_blank" rel="noreferrer">Open Spotify</a>
                         @endif

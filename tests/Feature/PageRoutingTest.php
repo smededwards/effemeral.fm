@@ -14,7 +14,7 @@ class PageRoutingTest extends TestCase
         $this->get(route('imports.index'))
             ->assertOk()
             ->assertSee('Queue full import')
-            ->assertSee(route('imports.lastfm'), false);
+            ->assertSee(route('imports.lastfm', [], false), false);
 
         $this->get(route('library.index'))
             ->assertOk()
@@ -29,6 +29,6 @@ class PageRoutingTest extends TestCase
         $this->get(route('recommendations.index'))
             ->assertOk()
             ->assertSee('Recommendations')
-            ->assertSee(route('recommendations.generate'), false);
+            ->assertSee(route('recommendations.generate', [], false), false);
     }
 }
