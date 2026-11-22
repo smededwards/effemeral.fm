@@ -95,7 +95,7 @@ class DashboardTest extends TestCase
 
         $response = $this->get(route('recommendations.index'));
 
-        $response->assertSee('1 / 3 tracks heard');
+        $response->assertSee('1 of 3 tracks');
         $response->assertSee('An Album');
     }
 
@@ -152,7 +152,7 @@ class DashboardTest extends TestCase
         ]);
 
         $this->get(route('recommendations.index'))
-            ->assertSee('1 / 2 tracks heard')
+            ->assertSee('1 of 2 tracks')
             ->assertSee('Canonical Album');
 
         $this->post(route('recommendations.generate'))
@@ -248,7 +248,7 @@ class DashboardTest extends TestCase
         $this->assertSame(1, AlbumRecommendation::query()->count());
 
         $this->get(route('recommendations.index'))
-            ->assertSee('Latest recommendation draft')
+            ->assertSee('Latest Draft')
             ->assertSee('Recommendation Album');
     }
 
@@ -306,7 +306,7 @@ class DashboardTest extends TestCase
             'primary_artist_name' => 'Other Artist',
         ]);
 
-        $this->get(route('dashboard', ['album_search' => 'Matching']))
+        $this->get(route('library.index', ['library_search' => 'Matching']))
             ->assertSee('Matching Album')
             ->assertDontSee('Other Album');
     }
