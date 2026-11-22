@@ -4,6 +4,7 @@ use App\Http\Controllers\AlbumPlaylistController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ListeningArchiveController;
+use App\Http\Controllers\MusicPageController;
 use App\Http\Controllers\RecommendationPlaylistController;
 use App\Http\Controllers\SpotifyAuthController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,9 @@ Route::middleware('private')->group(function (): void {
     Route::get('/listening', [ListeningArchiveController::class, 'index'])->name('listening.index');
     Route::get('/recommendations', [DashboardController::class, 'recommendations'])->name('recommendations.index');
     Route::get('/catalogue', [DashboardController::class, 'catalogue'])->name('catalogue.index');
+    Route::get('/artists/{artist}', [MusicPageController::class, 'artist'])->name('artists.show');
+    Route::get('/albums/{album}', [MusicPageController::class, 'album'])->name('albums.show');
+    Route::get('/spotify-playlists/{spotifyPlaylist}', [MusicPageController::class, 'spotifyPlaylist'])->name('spotify-playlists.show');
     Route::post('/catalogue/discover', [DashboardController::class, 'discoverRecommendations'])->name('catalogue.discover');
     Route::post('/catalogue/discography', [DashboardController::class, 'discographyRecommendations'])->name('catalogue.discography');
     Route::post('/imports/lastfm', [ImportController::class, 'lastFm'])->name('imports.lastfm');

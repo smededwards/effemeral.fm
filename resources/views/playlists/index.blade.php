@@ -127,6 +127,7 @@
                         <p class="mt-1 text-xs text-ef-muted">Last synced {{ $playlist->last_synced_at?->format('Y.m.d H:i') ?? 'not yet' }}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-4 text-sm">
+                        <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ route('spotify-playlists.show', $playlist, false) }}">View Playlist</a>
                         <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ route('recommendations.audit', ['playlist' => $playlist->id], false) }}">Audit Coverage</a>
                         @if ($playlist->spotify_url)
                             <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ $playlist->spotify_url }}" target="_blank" rel="noreferrer">Open Spotify</a>
