@@ -177,3 +177,12 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Every pull request must include a non-empty description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
 - Use Conventional Commits and labels limited to Conventional Commit types.
 - Before handoff, run the narrowest relevant tests plus Pint and PHPStan. Report any skipped verification and remaining risks.
+- Before opening a pull request, run the Ponytail review against the complete proposed change, fix its actionable findings, and include the review outcome in the handoff. The user reviews and merges the PR.
+
+## Development principles
+
+- Apply DRY to meaningful duplication, KISS to keep each solution easy to understand, and YAGNI to avoid speculative features, abstractions, and configuration.
+- Use SOLID as design guidance: give classes focused responsibilities, depend on useful boundaries, and keep interfaces small. Do not introduce interfaces or layers without a real second use or a testability need.
+- Keep separate concerns in the layer responsible for them; compose small collaborators when behavior needs combining. Prefer composition over inheritance unless an existing framework or domain hierarchy makes inheritance the clearest fit.
+- Fail fast at trust boundaries and use guard clauses for invalid, unavailable, or already-completed states. Preserve user-facing error handling where recovery is useful, and never hide failures that could cause data loss.
+- Treat these principles as practical design checks, not a requirement to restructure working code without a concrete benefit. Prefer incremental refactors with narrow scope and clear behavior.
