@@ -26,7 +26,7 @@ class DashboardTest extends TestCase
         $this->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Browse catalogue')
-            ->assertSee('href="'.route('catalogue.index').'"', false);
+            ->assertSee('href="'.route('catalogue.index', [], false).'"', false);
     }
 
     public function test_imported_spotify_albums_are_shown_on_the_dashboard(): void
@@ -58,7 +58,7 @@ class DashboardTest extends TestCase
             'HTTP_X_FORWARDED_HOST' => 'app.effemeral.local',
         ])->get(route('imports.index'));
 
-        $response->assertSee('action="https://app.effemeral.local/imports/lastfm"', false);
+        $response->assertSee('action="'.route('imports.lastfm', [], false).'"', false);
     }
 
     public function test_incomplete_saved_albums_show_lastfm_completion_progress(): void

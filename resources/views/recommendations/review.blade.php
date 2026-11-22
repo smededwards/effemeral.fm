@@ -8,7 +8,7 @@
                     <p class="mt-3 max-w-2xl text-zinc-400">Check the exact albums and Spotify tracks before syncing this draft.</p>
                     <p class="mt-2 text-sm text-emerald-300">Source: {{ str($recommendationRun->source)->replace('_', ' ')->title() }}</p>
                 </div>
-                <a class="text-sm text-[#00e676] hover:text-[#b7ffd1]" href="{{ route('dashboard') }}">Back to dashboard</a>
+                <a class="text-sm text-[#00e676] hover:text-[#b7ffd1]" href="{{ route('dashboard', [], false) }}">Back to dashboard</a>
             </header>
 
             @if (session('success'))
@@ -78,7 +78,7 @@
                     <a class="mt-5 inline-block bg-[#00e676] px-4 py-2 text-sm font-semibold text-[#061108] hover:bg-[#b7ffd1]" href="{{ $recommendationRun->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify playlist</a>
                 @endif
                 @if ($recommendationRun->status !== 'synced')
-                    <form class="mt-6 grid gap-5 border-t border-[#355b3d] pt-6" method="POST" action="{{ route('recommendations.sync', $recommendationRun) }}">
+                    <form class="mt-6 grid gap-5 border-t border-[#355b3d] pt-6" method="POST" action="{{ route('recommendations.sync', $recommendationRun, false) }}">
                         @csrf
                         <div class="grid gap-4 sm:grid-cols-2">
                             <label class="text-sm text-[#d7ffe2]">

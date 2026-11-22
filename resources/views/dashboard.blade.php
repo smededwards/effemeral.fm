@@ -7,7 +7,7 @@
             <h1 class="mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Your listening archive</h1>
             <p class="mt-5 max-w-2xl text-lg leading-8 text-[#9aa39d]">Last.fm is your listening record. Spotify is the working library. Effemeral brings them together so unfinished albums become deliberate next listens.</p>
         </div>
-        <a class="inline-flex w-fit items-center border border-[#00e676] bg-[#00e676] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#00994d]" href="{{ route('catalogue.index') }}">Browse catalogue <span class="ml-4" aria-hidden="true">→</span></a>
+        <a class="inline-flex w-fit items-center border border-[#00e676] bg-[#00e676] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#00994d]" href="{{ route('catalogue.index', [], false) }}">Browse catalogue <span class="ml-4" aria-hidden="true">→</span></a>
     </header>
 
     <section class="grid border-y border-[#2e382f] bg-[#111612] sm:grid-cols-2 lg:grid-cols-4" aria-label="Archive summary">
@@ -38,7 +38,7 @@
                     <h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Albums to complete</h2>
                     <p class="mt-2 text-sm text-[#9aa39d]">Saved albums with tracks not yet heard in Last.fm.</p>
                 </div>
-                <a class="text-sm font-semibold text-[#00e676] hover:underline" href="{{ route('recommendations.index') }}">Open drafts →</a>
+                <a class="text-sm font-semibold text-[#00e676] hover:underline" href="{{ route('recommendations.index', [], false) }}">Open drafts →</a>
             </div>
             @if ($incompleteAlbums->isNotEmpty())
                 <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -67,15 +67,15 @@
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#b7ffd1]">Actions</p>
             <h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Keep the archive current</h2>
             <div class="mt-8 divide-y divide-white/20 border-y border-white/20">
-                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('imports.index') }}"><span>Import Last.fm and Spotify</span><span aria-hidden="true">→</span></a>
-                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('library.index') }}"><span>Review your library</span><span aria-hidden="true">→</span></a>
-                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('recommendations.index') }}"><span>Review playlist drafts</span><span aria-hidden="true">→</span></a>
+                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('imports.index', [], false) }}"><span>Import Last.fm and Spotify</span><span aria-hidden="true">→</span></a>
+                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('library.index', [], false) }}"><span>Review your library</span><span aria-hidden="true">→</span></a>
+                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('recommendations.index', [], false) }}"><span>Review playlist drafts</span><span aria-hidden="true">→</span></a>
             </div>
             @if ($latestRecommendation)
                 <div class="mt-8 border-t border-white/20 pt-5 text-sm text-[#d7ffe2]">
                     <p class="font-semibold text-white">Latest recommendation draft</p>
                     <p class="mt-1">{{ $latestRecommendation->albumRecommendations->count() }} albums · {{ $latestRecommendation->status }}</p>
-                    <a class="mt-3 inline-block font-semibold text-white underline" href="{{ route('recommendations.review.page', $latestRecommendation) }}">Review {{ $latestRecommendation->albumRecommendations->first()?->spotifySavedAlbum?->name ?? 'draft' }}</a>
+                    <a class="mt-3 inline-block font-semibold text-white underline" href="{{ route('recommendations.review.page', $latestRecommendation, false) }}">Review {{ $latestRecommendation->albumRecommendations->first()?->spotifySavedAlbum?->name ?? 'draft' }}</a>
                 </div>
             @endif
         </aside>
@@ -113,10 +113,10 @@
     <section class="border border-[#2e382f] bg-[#111612] p-6 sm:p-8">
         <div class="flex flex-col gap-4 border-b border-[#2e382f] pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Spotify library</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Imported Spotify albums</h2><p class="mt-2 text-sm text-[#9aa39d]">Search the working library or open it for the complete album view.</p></div>
-            <a class="text-sm font-semibold text-[#00e676] hover:underline" href="{{ route('library.index') }}">Open library →</a>
+            <a class="text-sm font-semibold text-[#00e676] hover:underline" href="{{ route('library.index', [], false) }}">Open library →</a>
         </div>
         @if ($spotifySavedAlbumCount > 0)
-            <form class="mt-6 flex flex-col gap-3 sm:flex-row" method="GET" action="{{ route('dashboard') }}">
+            <form class="mt-6 flex flex-col gap-3 sm:flex-row" method="GET" action="{{ route('dashboard', [], false) }}">
                 <label class="sr-only" for="overview-album-search">Search imported albums</label>
                 <input id="overview-album-search" class="min-w-0 flex-1 border border-[#9b9ca4] bg-[#0b0c0a] px-4 py-3 text-sm placeholder:text-[#7b7c83] focus:border-[#00e676] focus:outline-none focus:ring-2 focus:ring-[#b7ffd1]" type="search" name="album_search" value="{{ $albumSearch }}" placeholder="Search album or artist">
                 <button class="border border-[#00e676] px-5 py-3 text-sm font-semibold text-[#00e676] hover:bg-[#00e676] hover:text-white" type="submit">Search</button>

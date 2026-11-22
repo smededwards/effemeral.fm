@@ -4,14 +4,22 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ $title ?? 'Effemeral' }}</title>
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @php
+            $vite = app(\Illuminate\Foundation\Vite::class);
+            $stylesheet = parse_url($vite->asset('resources/css/app.css'), PHP_URL_PATH);
+            $script = parse_url($vite->asset('resources/js/app.js'), PHP_URL_PATH);
+        @endphp
+        <link rel="preload" as="style" href="{{ $stylesheet }}" />
+        <link rel="modulepreload" as="script" href="{{ $script }}" />
+        <link rel="stylesheet" href="{{ $stylesheet }}" />
+        <script type="module" src="{{ $script }}"></script>
     </head>
     <body class="min-h-screen bg-[#0b0c0a] text-[#f3f5f3] antialiased">
         <div class="min-h-screen border-t-4 border-[#00e676]">
             <main class="mx-auto max-w-7xl px-5 py-6 sm:px-8 lg:px-12 lg:py-10">
                 <header class="border-b border-[#2e382f] pb-5">
                     <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                        <a class="flex items-center gap-3" href="{{ route('dashboard') }}">
+                        <a class="flex items-center gap-3" href="{{ route('dashboard', [], false) }}">
                             <span class="flex h-10 w-10 items-center justify-center bg-[#00e676] text-sm font-bold tracking-tight text-white">EF</span>
                             <span>
                                 <span class="block text-sm font-semibold tracking-[0.22em] text-[#00e676]">EFFEMERAL</span>
@@ -30,7 +38,7 @@
                                 ['route' => 'catalogue.index', 'label' => 'Catalogue'],
                                 ['route' => 'recommendations.index', 'label' => 'Drafts'],
                             ] as $item)
-                                <a class="border-b-2 px-3 py-3 text-sm font-medium transition {{ request()->routeIs($item['route']) ? 'border-[#00e676] bg-[#00e676] text-white' : 'border-transparent text-[#9aa39d] hover:border-[#00e676] hover:text-[#00e676]' }}" href="{{ route($item['route']) }}" @if (request()->routeIs($item['route'])) aria-current="page" @endif>{{ $item['label'] }}</a>
+                                <a class="border-b-2 px-3 py-3 text-sm font-medium transition {{ request()->routeIs($item['route']) ? 'border-[#00e676] bg-[#00e676] text-white' : 'border-transparent text-[#9aa39d] hover:border-[#00e676] hover:text-[#00e676]' }}" href="{{ route($item['route'], [], false) }}" @if (request()->routeIs($item['route'])) aria-current="page" @endif>{{ $item['label'] }}</a>
                             @endforeach
                         </div>
                     </nav>
