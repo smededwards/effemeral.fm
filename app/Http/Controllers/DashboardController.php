@@ -17,6 +17,7 @@ use App\Models\SpotifyConnection;
 use App\Models\SpotifyImportRun;
 use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
+use App\Models\SpotifyPlaylistItem;
 use App\Models\SpotifySavedAlbum;
 use App\Models\Track;
 use App\Services\Catalog\GenreWriter;
@@ -318,11 +319,76 @@ class DashboardController extends Controller
 
     public function playlists(): View
     {
+        $search = trim((string) request('playlist_search'));
+        $playlists = SpotifyPlaylist::query()
+            ->with(['items.album'])
+            ->withCount([
+                'items',
+                'items as album_items_count' => fn ($query) => $query->whereNotNull('album_id'),
+            ])
+            ->when($search !== '', fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
+            ->orderBy('name')
+            ->paginate(25)
+            ->withQueryString();
+
+        $playlists->getCollection()->transform(function (SpotifyPlaylist $playlist): SpotifyPlaylist {
+            foreach ($this->playlistOverviewData($playlist) as $key => $value) {
+                $playlist->setAttribute($key, $value);
+            }
+
+            return $playlist;
+        });
+
         return view('playlists.index', [
-            'playlists' => SpotifyPlaylist::query()->withCount('items')->latest('name')->get(),
+            'playlists' => $playlists,
+            'playlistSearch' => $search,
             'latestPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
             'failedPlaylists' => SpotifyPlaylist::query()->whereNotNull('last_import_error')->latest('last_import_attempted_at')->get(),
         ]);
+    }
+
+    /** @return array{import_status: string, album_status: string, complete_album_count: int} */
+    private function playlistOverviewData(SpotifyPlaylist $playlist): array
+    {
+        /** @var \Illuminate\Database\Eloquent\Collection<int, SpotifyPlaylistItem> $items */
+        $items = $playlist->items;
+        $albumGroups = $items
+            ->filter(fn (SpotifyPlaylistItem $item): bool => $item->album !== null)
+            ->groupBy('album_id');
+        $completeAlbumCount = $albumGroups->filter(function (Collection $items): bool {
+            $firstItem = $items->first();
+
+            if (! $firstItem instanceof SpotifyPlaylistItem) {
+                return false;
+            }
+
+            /** @var Album|null $album */
+            $album = $firstItem->album;
+
+            if ($album === null || $album->total_tracks === null) {
+                return false;
+            }
+
+            return $items
+                ->map(fn (SpotifyPlaylistItem $item): ?string => $item->spotify_track_id ?? ($item->track_id === null ? null : (string) $item->track_id))
+                ->filter()
+                ->unique()
+                ->count() >= $album->total_tracks;
+        })->count();
+
+        return [
+            'import_status' => $playlist->last_import_error !== null
+                ? 'failed'
+                : ($playlist->last_synced_at === null
+                    ? 'pending'
+                    : ($playlist->items_count === 0
+                        ? 'empty'
+                        : ((int) $playlist->getAttribute('items_count') < $playlist->tracks_total ? 'partial' : 'imported'))),
+            'album_status' => $completeAlbumCount > 0
+                ? 'complete'
+                : ((int) $playlist->getAttribute('album_items_count') > 0 ? 'partial' : 'none'),
+            'complete_album_count' => $completeAlbumCount,
+        ];
     }
 
     public function recommendations(): View
