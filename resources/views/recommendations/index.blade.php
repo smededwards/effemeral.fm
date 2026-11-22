@@ -1,9 +1,56 @@
-@extends('layouts.app', ['title' => 'Drafts · Effemeral'])
+@extends('layouts.app', ['title' => 'To Complete · Effemeral'])
 
 @section('content')
-    <header class="flex flex-col gap-4 border-b border-[#2e382f] pb-8 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#00e676]">Recommendations / 04</p><h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Albums worth a listen</h1><p class="mt-4 max-w-2xl text-base leading-7 text-[#9aa39d]">Generate album-level playlist drafts from unfinished listening, then review the order before Spotify changes.</p></div><a class="text-sm font-semibold text-[#00e676] hover:underline" href="{{ route('recommendations.audit', [], false) }}">Audit playlists →</a></header>
+    <header class="flex flex-col gap-4 border-b border-ef-line pb-8 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong">Listening Library</p>
+            <h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">To Complete</h1>
+            <p class="mt-4 max-w-2xl text-base leading-7 text-ef-muted">Albums from your Spotify library, matched against Last.fm listening history. Review a draft before syncing it to Spotify.</p>
+        </div>
+        <a class="text-sm font-semibold text-ef-accent-strong hover:underline" href="{{ route('recommendations.audit', [], false) }}">Audit Playlists →</a>
+    </header>
 
-    <section class="border border-[#2e382f] bg-[#111612] p-6 sm:p-8"><div class="flex flex-col gap-4 border-b border-[#2e382f] pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#00e676]">Next listens</p><h2 class="mt-2 text-2xl font-semibold">Albums to complete</h2><p class="mt-2 text-sm text-[#9aa39d]">{{ number_format($incompleteAlbums->count()) }} incomplete albums currently shown.</p></div><form method="POST" action="{{ route('recommendations.generate', [], false) }}">@csrf<button class="bg-[#00e676] px-4 py-3 text-sm font-semibold text-[#061108] hover:bg-[#b7ffd1]" type="submit">Generate draft</button></form></div><div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">@forelse ($incompleteAlbums as $album)<article class="overflow-hidden border border-[#2e382f] bg-[#0b0c0a]">@if ($album['cover_image_url'])<img class="aspect-square w-full object-cover" src="{{ $album['cover_image_url'] }}" alt="Cover art for {{ $album['name'] }}">@else<div class="flex aspect-square items-center justify-center bg-[#1a211c] text-xs uppercase tracking-[0.12em] text-[#9aa39d]">No artwork</div>@endif<div class="p-4"><h3 class="truncate font-semibold">{{ $album['name'] }}</h3><p class="mt-1 truncate text-sm text-[#9aa39d]">{{ $album['artist'] }}</p><div class="mt-4 flex justify-between text-xs tabular-nums text-[#9aa39d]"><span>{{ $album['heard'] }} / {{ $album['total'] }} tracks heard</span><span>{{ $album['percentage'] }}%</span></div><div class="mt-2 h-1 bg-[#334038]" role="progressbar" aria-label="{{ $album['name'] }} completion" aria-valuenow="{{ $album['percentage'] }}" aria-valuemin="0" aria-valuemax="100"><div class="h-full bg-[#00e676]" style="width: {{ $album['percentage'] }}%"></div></div></div></article>@empty<p class="col-span-full border border-dashed border-[#2e382f] p-6 text-sm text-[#9aa39d]">No incomplete albums are available yet.</p>@endforelse</div></section>
+    <section class="border border-ef-line bg-ef-surface p-6 sm:p-8">
+        <div class="flex flex-col gap-4 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Next Listens</p>
+                <h2 class="mt-2 text-2xl font-semibold">Incomplete Albums</h2>
+                <p class="mt-2 text-sm text-ef-muted">{{ number_format($incompleteAlbums->count()) }} albums ready to continue.</p>
+            </div>
+            <form method="POST" action="{{ route('recommendations.generate', [], false) }}">
+                @csrf
+                <button class="bg-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Generate Draft</button>
+            </form>
+        </div>
 
-    <section class="border border-[#2e382f] bg-[#0b0c0a] p-6 sm:p-8"><div class="flex flex-col gap-3 border-b border-[#2e382f] pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9aa39d]">Latest work</p><h2 class="mt-2 text-2xl font-semibold">Latest draft</h2></div>@if ($latestRecommendation)<span class="text-sm capitalize text-[#9aa39d]">{{ $latestRecommendation->status }}</span>@endif</div>@if ($latestRecommendation)<div class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><p class="text-sm text-[#d7ffe2]">{{ $latestRecommendation->albumRecommendations->count() }} albums ready for review.</p><div class="flex flex-wrap gap-4"><a class="font-semibold text-[#00e676] hover:underline" href="{{ route('recommendations.review.page', $latestRecommendation, false) }}">Review draft →</a><a class="font-semibold text-[#00e676] hover:underline" href="{{ route('recommendations.audit', ['run' => $latestRecommendation->id], false) }}">Audit coverage →</a></div></div>@else<p class="mt-6 text-sm text-[#9aa39d]">No recommendation draft has been generated yet.</p>@endif</section>
+        <ol class="mt-2 divide-y divide-ef-line" aria-label="Incomplete albums">
+            @forelse ($incompleteAlbums as $album)
+                <li class="flex min-w-0 items-center gap-4 py-4 sm:gap-5">
+                    <span class="w-8 shrink-0 text-center text-sm font-semibold tabular-nums text-ef-accent-strong" aria-hidden="true">{{ str_pad((string) ($loop->iteration), 2, '0', STR_PAD_LEFT) }}</span>
+                    @if ($album['cover_image_url'])
+                        <img class="h-16 w-16 shrink-0 object-cover sm:h-18 sm:w-18" src="{{ $album['cover_image_url'] }}" alt="Cover art for {{ $album['name'] }}">
+                    @else
+                        <div class="flex h-16 w-16 shrink-0 items-center justify-center bg-ef-surface-raised text-xs text-ef-muted sm:h-18 sm:w-18">No Art</div>
+                    @endif
+                    <div class="min-w-0 flex-1">
+                        <h3 class="truncate font-semibold">{{ $album['name'] }}</h3>
+                        <p class="mt-1 truncate text-sm text-ef-muted">{{ $album['artist'] }}</p>
+                        <div class="mt-3 flex items-center gap-3">
+                            <div class="h-1.5 min-w-0 flex-1 bg-ef-track" role="progressbar" aria-label="{{ $album['name'] }} completion" aria-valuenow="{{ $album['percentage'] }}" aria-valuemin="0" aria-valuemax="100">
+                                <div class="h-full bg-ef-accent" style="width: {{ $album['percentage'] }}%"></div>
+                            </div>
+                            <span class="shrink-0 text-xs font-medium tabular-nums text-ef-text">{{ $album['heard'] }} of {{ $album['total'] }} tracks · {{ $album['percentage'] }}%</span>
+                        </div>
+                    </div>
+                    @if ($album['spotify_url'])
+                        <a class="hidden shrink-0 text-sm font-semibold text-ef-accent-strong hover:underline sm:inline" href="{{ $album['spotify_url'] }}" target="_blank" rel="noreferrer">Open in Spotify</a>
+                    @endif
+                </li>
+            @empty
+                <li class="mt-4 border border-dashed border-ef-line p-6 text-sm text-ef-muted">No incomplete albums are available yet.</li>
+            @endforelse
+        </ol>
+    </section>
+
+    <section class="border border-ef-line bg-ef-canvas p-6 sm:p-8"><div class="flex flex-col gap-3 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Latest work</p><h2 class="mt-2 text-2xl font-semibold">Latest Draft</h2></div>@if ($latestRecommendation)<span class="text-sm  text-ef-muted">{{ ucfirst($latestRecommendation->status) }}</span>@endif</div>@if ($latestRecommendation)<div class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><p class="text-sm text-ef-accent-soft">{{ $latestRecommendation->albumRecommendations->count() }} albums ready for review.</p><div class="flex flex-wrap gap-4"><a class="font-semibold text-ef-accent-strong hover:underline" href="{{ route('recommendations.review.page', $latestRecommendation, false) }}">Review Draft →</a><a class="font-semibold text-ef-accent-strong hover:underline" href="{{ route('recommendations.audit', ['run' => $latestRecommendation->id], false) }}">Audit Coverage →</a></div></div>@else<p class="mt-6 text-sm text-ef-muted">No recommendation draft has been generated yet.</p>@endif</section>
 @endsection
