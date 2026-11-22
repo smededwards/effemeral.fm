@@ -147,6 +147,45 @@ class AlbumPlaylistController extends Controller
         return back()->with('success', 'Album added to playlist.');
     }
 
+    public function addAlbums(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'album_ids' => ['required', 'array', 'min:1', 'max:50'],
+            'album_ids.*' => ['required', 'integer', 'distinct', 'exists:albums,id'],
+            'destination' => ['required', 'in:existing,new'],
+            'playlist_id' => ['required_if:destination,existing', 'nullable', 'integer', 'exists:album_playlists,id'],
+            'playlist_name' => ['required_if:destination,new', 'nullable', 'string', 'max:100'],
+        ]);
+
+        $playlist = null;
+        if ($validated['destination'] === 'existing') {
+            $playlist = AlbumPlaylist::query()->findOrFail($validated['playlist_id']);
+
+            if ($response = $this->syncInProgress($playlist)) {
+                return $response;
+            }
+        }
+
+        [$playlist, $addedCount] = DB::transaction(function () use ($playlist, $validated): array {
+            $playlist ??= AlbumPlaylist::query()->create(['name' => trim($validated['playlist_name'])]);
+            $existingIds = $playlist->albums()->whereKey($validated['album_ids'])->pluck('albums.id')->all();
+            $newIds = array_values(array_diff($validated['album_ids'], $existingIds));
+            $position = (int) ($playlist->albums()->max('album_playlist_items.position') ?? 0);
+
+            foreach ($newIds as $albumId) {
+                $playlist->albums()->attach($albumId, ['position' => ++$position]);
+            }
+
+            return [$playlist, count($newIds)];
+        });
+
+        if ($addedCount > 0) {
+            $this->markSyncPending($playlist);
+        }
+
+        return to_route('album-playlists.show', $playlist)->with('success', $addedCount.' album'.($addedCount === 1 ? '' : 's').' added to playlist.');
+    }
+
     public function removeAlbum(AlbumPlaylist $albumPlaylist, Album $album): RedirectResponse
     {
         if ($response = $this->syncInProgress($albumPlaylist)) {

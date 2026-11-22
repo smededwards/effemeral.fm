@@ -15,6 +15,119 @@
                 </div>
             </form>
 
+            <section class="rounded-xl border border-ef-line bg-ef-surface p-6" aria-labelledby="catalogue-filters-heading">
+                <h2 id="catalogue-filters-heading" class="text-xl font-semibold">Find albums to add</h2>
+                <p class="mt-2 text-sm text-ef-muted">Filters search only albums already in your canonical catalogue. Completed albums are hidden by default.</p>
+                <form class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" method="GET" action="{{ route('catalogue.index', [], false) }}">
+                    @if ($search !== '')<input type="hidden" name="q" value="{{ $search }}">@endif
+                    <input type="hidden" name="filter" value="1">
+                    <label class="text-sm text-ef-muted">Genre
+                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="genre">
+                            <option value="">All genres</option>
+                            @foreach ($catalogueGenres as $genre)
+                                <option value="{{ $genre->id }}" @selected((string) ($filters['genre'] ?? '') === (string) $genre->id)>{{ $genre->name }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label class="text-sm text-ef-muted">Artist
+                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="artist_id">
+                            <option value="">All artists</option>
+                            @foreach ($catalogueArtists as $artist)
+                                <option value="{{ $artist->id }}" @selected((string) ($filters['artist_id'] ?? '') === (string) $artist->id)>{{ $artist->name }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label class="text-sm text-ef-muted">Country or region
+                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="region">
+                            <option value="">All regions</option>
+                            @foreach ($catalogueRegions as $region)
+                                <option value="{{ $region }}" @selected(($filters['region'] ?? '') === $region)>{{ $region }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label class="text-sm text-ef-muted">Release year from
+                        <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="number" name="year_from" min="1900" max="2100" value="{{ $filters['year_from'] ?? '' }}">
+                    </label>
+                    <label class="text-sm text-ef-muted">Release year to
+                        <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="number" name="year_to" min="1900" max="2100" value="{{ $filters['year_to'] ?? '' }}">
+                    </label>
+                    <label class="text-sm text-ef-muted">Listening completion
+                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="completion">
+                            <option value="">Incomplete or partial</option>
+                            <option value="incomplete" @selected(($filters['completion'] ?? '') === 'incomplete')>Not heard</option>
+                            <option value="partial" @selected(($filters['completion'] ?? '') === 'partial')>Partially heard</option>
+                            <option value="complete" @selected(($filters['completion'] ?? '') === 'complete')>Completed (include manually)</option>
+                        </select>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-ef-muted">
+                        <input type="checkbox" name="include_completed" value="1" @checked(request()->boolean('include_completed'))>
+                        <span>Include completed alongside other results</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-ef-muted">
+                        <input type="checkbox" name="include_non_albums" value="1" @checked(! empty($filters['include_non_albums']))>
+                        <span>Include singles and other non-album releases</span>
+                    </label>
+                    <div class="sm:col-span-2 lg:col-span-3">
+                        <button class="rounded-md bg-ef-accent px-4 py-2 font-medium text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Apply filters</button>
+                    </div>
+                </form>
+            </section>
+
+            @if ($filteredAlbums instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                <section class="rounded-xl border border-ef-line bg-ef-surface p-6" aria-labelledby="filtered-albums-heading">
+                    <div class="flex flex-wrap items-end justify-between gap-3 border-b border-ef-line pb-4">
+                        <div>
+                            <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Canonical catalogue</p>
+                            <h2 id="filtered-albums-heading" class="mt-2 text-2xl font-semibold">Matching albums</h2>
+                        </div>
+                        <span class="text-sm text-ef-muted">{{ number_format($filteredAlbums->total()) }} matches</span>
+                    </div>
+                    @if ($filteredAlbums->isNotEmpty())
+                        <form class="mt-5" method="POST" action="{{ route('album-playlists.albums.bulk-store', [], false) }}">
+                            @csrf
+                            <div class="mb-5 grid gap-3 rounded-lg border border-ef-line p-4 sm:grid-cols-3">
+                                <label class="text-sm text-ef-muted">Destination
+                                    <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="destination">
+                                        <option value="existing" @selected($albumPlaylists->isNotEmpty())>Add to an existing Effemeral playlist</option>
+                                        <option value="new" @selected($albumPlaylists->isEmpty())>Create a new Effemeral playlist</option>
+                                    </select>
+                                </label>
+                                <label class="text-sm text-ef-muted">Existing playlist
+                                    <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="playlist_id">
+                                        <option value="">Choose playlist</option>
+                                        @foreach ($albumPlaylists as $playlist)
+                                            <option value="{{ $playlist->id }}">{{ $playlist->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
+                                <label class="text-sm text-ef-muted">New playlist name
+                                    <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="text" name="playlist_name" maxlength="100" placeholder="e.g. Fossil Gardens">
+                                </label>
+                            </div>
+                            <p class="mb-3 text-sm text-ef-muted">Select up to 50 albums on this page. Adding them updates the Effemeral draft; Spotify is changed only after you review and confirm a sync.</p>
+                            <div class="space-y-3">
+                                @foreach ($filteredAlbums as $album)
+                                    <div class="flex gap-4 rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent">
+                                        <input class="mt-1" id="catalogue-album-{{ $album->id }}" type="checkbox" name="album_ids[]" value="{{ $album->id }}">
+                                        <label class="min-w-0 flex-1 cursor-pointer" for="catalogue-album-{{ $album->id }}">
+                                            <span class="block font-semibold">{{ $album->title }}</span>
+                                            <span class="mt-1 block text-sm text-ef-muted">{{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }} · {{ $album->release_date ?: 'Release year unknown' }}</span>
+                                            <span class="mt-1 block text-sm text-ef-muted">{{ $album->artists->flatMap->acceptedGenres->pluck('name')->unique()->implode(', ') ?: 'No genres recorded' }} · {{ $album->completion_summary }}</span>
+                                            <span class="mt-1 block text-xs font-semibold text-ef-accent-strong uppercase">{{ $album->completion_status }}</span>
+                                        </label>
+                                        <a class="self-center text-sm font-semibold text-ef-accent-strong hover:underline" href="{{ route('albums.show', $album, false) }}">View album</a>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <button class="mt-5 rounded-md bg-ef-accent px-4 py-2 font-medium text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Add selected albums</button>
+                            <div class="mt-5">{{ $filteredAlbums->links() }}</div>
+                        </form>
+                    @else
+                        <p class="mt-5 text-sm text-ef-muted">No catalogue albums match these filters. Adjust the filters or import more catalogue data.</p>
+                    @endif
+                </section>
+            @endif
+
             @if ($selectedArtist)
                 <section class="rounded-xl border border-ef-accent-line bg-ef-accent-wash/30 p-6">
                     <p class="text-xs tracking-[0.2em] text-ef-accent-strong uppercase">Selected artist</p>

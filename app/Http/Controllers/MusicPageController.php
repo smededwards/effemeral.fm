@@ -6,10 +6,20 @@ use App\Models\Album;
 use App\Models\Artist;
 use App\Models\Genre;
 use App\Models\SpotifyPlaylist;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class MusicPageController extends Controller
 {
+    public function updateArtistRegion(Request $request, Artist $artist): RedirectResponse
+    {
+        $validated = $request->validate(['region' => ['nullable', 'string', 'max:100']]);
+        $artist->update(['region' => trim((string) ($validated['region'] ?? '')) ?: null]);
+
+        return back()->with('success', 'Artist region updated.');
+    }
+
     public function genre(Genre $genre): View
     {
         return view('genres.show', [
