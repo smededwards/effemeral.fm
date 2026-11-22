@@ -1,10 +1,10 @@
-@extends('layouts.app', ['title' => 'Spotify playlists · Effemeral'])
+@extends('layouts.app', ['title' => 'Spotify Playlists · Effemeral'])
 
 @section('content')
     <header class="flex flex-col gap-5 border-b border-ef-line pb-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong">Playlists</p>
-            <h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Spotify playlist organisation</h1>
+            <h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Spotify Playlist Organisation</h1>
             <p class="mt-4 max-w-2xl text-base leading-7 text-[#9aa39d]">Browse imported playlists, audit album coverage, and choose a safe destination for approved album drafts.</p>
         </div>
         <form method="POST" action="{{ route('imports.spotify.playlists', [], false) }}">
@@ -38,7 +38,7 @@
             <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Import warnings</p>
-                    <h2 id="playlist-failures" class="mt-2 text-2xl font-semibold">Playlists needing a retry</h2>
+                    <h2 id="playlist-failures" class="mt-2 text-2xl font-semibold">Playlists Needing a Retry</h2>
                 </div>
                 <span class="text-sm text-ef-muted">{{ $failedPlaylists->count() }} recorded</span>
             </div>
@@ -63,7 +63,7 @@
         <div class="flex flex-col gap-2 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Imported Spotify data</p>
-                <h2 id="playlist-list" class="mt-2 text-2xl font-semibold">All playlists</h2>
+                <h2 id="playlist-list" class="mt-2 text-2xl font-semibold">All Playlists</h2>
             </div>
             <span class="text-sm text-ef-muted">{{ number_format($playlists->total()) }} playlists</span>
         </div>
@@ -96,7 +96,7 @@
                         <p class="mt-1 text-xs text-ef-muted">Last synced {{ $playlist->last_synced_at?->format('Y.m.d H:i') ?? 'not yet' }}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-4 text-sm">
-                        <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ route('recommendations.audit', ['playlist' => $playlist->id], false) }}">Audit coverage</a>
+                        <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ route('recommendations.audit', ['playlist' => $playlist->id], false) }}">Audit Coverage</a>
                         @if ($playlist->spotify_url)
                             <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ $playlist->spotify_url }}" target="_blank" rel="noreferrer">Open Spotify</a>
                         @endif

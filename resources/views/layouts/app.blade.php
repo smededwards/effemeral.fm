@@ -19,7 +19,7 @@
     </head>
     <body class="min-h-screen bg-ef-canvas text-ef-text antialiased">
         <div class="min-h-screen border-t-4 border-ef-accent">
-            <a class="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:not-sr-only focus:bg-ef-accent focus:px-4 focus:py-3 focus:text-ef-accent-ink" href="#main-content">Skip to main content</a>
+            <a class="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:not-sr-only focus:bg-ef-accent focus:px-4 focus:py-3 focus:text-ef-accent-ink" href="#main-content">Skip to Main Content</a>
             <header class="mx-auto max-w-7xl px-5 pt-6 sm:px-8 lg:px-12 lg:pt-10">
                 <div class="border-b border-ef-line pb-5">
                     <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -32,7 +32,7 @@
                         </a>
                         <p class="text-xs tabular-nums text-ef-muted">{{ now()->format('Y.m.d') }}</p>
                     </div>
-                    <nav class="mt-6 -mb-5" aria-label="Primary navigation">
+                    <nav class="mt-6 -mb-5" aria-label="Primary Navigation">
                         <div class="flex flex-wrap gap-1">
                             @foreach ([
                                 ['route' => 'dashboard', 'label' => 'Overview'],

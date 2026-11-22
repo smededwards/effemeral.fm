@@ -1,13 +1,13 @@
-@extends('layouts.app', ['title' => 'Audit playlist coverage · Effemeral'])
+@extends('layouts.app', ['title' => 'Audit Playlist Coverage · Effemeral'])
 
 @section('content')
             <header class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <p class="text-sm tracking-[0.3em] text-ef-accent-strong">Effemeral</p>
-                    <h1 class="mt-3 text-4xl font-semibold">Playlist coverage audit</h1>
+                    <h1 class="mt-3 text-4xl font-semibold">Playlist Coverage Audit</h1>
                     <p class="mt-3 max-w-2xl text-ef-muted">Compare a recommendation draft with every imported Spotify playlist or one selected destination.</p>
                 </div>
-                <a class="text-sm text-ef-accent-strong hover:text-ef-accent-soft" href="{{ route('dashboard', [], false) }}">Back to dashboard</a>
+                <a class="text-sm text-ef-accent-strong hover:text-ef-accent-soft" href="{{ route('dashboard', [], false) }}">Back to Dashboard</a>
             </header>
 
             <form class="rounded-xl border border-ef-line bg-ef-surface p-6" method="GET" action="{{ route('recommendations.audit', [], false) }}">
@@ -48,7 +48,7 @@
                 </section>
 
                 <section class="rounded-xl border border-ef-line bg-ef-surface p-6">
-                    <h2 class="text-xl font-medium">Album coverage</h2>
+                    <h2 class="text-xl font-medium">Album Coverage</h2>
                     <div class="mt-6 space-y-3">
                         @forelse ($auditAlbums as $item)
                             @php($recommendation = $item['recommendation'])

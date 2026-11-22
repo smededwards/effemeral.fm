@@ -1,14 +1,14 @@
-@extends('layouts.app', ['title' => 'Review playlist draft · Effemeral'])
+@extends('layouts.app', ['title' => 'Review Playlist Draft · Effemeral'])
 
 @section('content')
             <header class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <p class="text-sm tracking-[0.3em] text-ef-accent-strong">Effemeral</p>
-                    <h1 class="mt-3 text-4xl font-semibold">Review playlist draft</h1>
+                    <h1 class="mt-3 text-4xl font-semibold">Review Playlist Draft</h1>
                     <p class="mt-3 max-w-2xl text-ef-muted">Check the exact albums and Spotify tracks before syncing this draft.</p>
                     <p class="mt-2 text-sm text-ef-accent-strong">Source: {{ ucfirst(str_replace('_', ' ', $recommendationRun->source)) }}</p>
                 </div>
-                <a class="text-sm text-ef-accent-strong hover:text-ef-accent-soft" href="{{ route('dashboard', [], false) }}">Back to dashboard</a>
+                <a class="text-sm text-ef-accent-strong hover:text-ef-accent-soft" href="{{ route('dashboard', [], false) }}">Back to Dashboard</a>
             </header>
 
             @if (session('success'))
@@ -37,7 +37,7 @@
             <section class="rounded-xl border border-ef-line bg-ef-surface p-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <h2 class="text-xl font-medium">Album order</h2>
+                        <h2 class="text-xl font-medium">Album Order</h2>
                         <p class="mt-1 text-sm text-ef-muted">Included albums will be synced in this order.</p>
                     </div>
                     <span class="text-sm text-ef-muted">{{ ucfirst($recommendationRun->status) }}</span>
@@ -75,7 +75,7 @@
                     <p class="text-sm text-ef-accent-soft">Syncing will append {{ $includedTracks }} reviewed tracks to Spotify. Existing tracks are preserved.</p>
                 </div>
                 @if ($recommendationRun->spotify_playlist_url)
-                    <a class="mt-5 inline-block bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-soft" href="{{ $recommendationRun->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify playlist</a>
+                    <a class="mt-5 inline-block bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-soft" href="{{ $recommendationRun->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify Playlist</a>
                 @endif
                 @if ($recommendationRun->status !== 'synced')
                     <form class="mt-6 grid gap-5 border-t border-ef-accent-line pt-6" method="POST" action="{{ route('recommendations.sync', $recommendationRun, false) }}">

@@ -5,16 +5,16 @@
 
 :root {
     color-scheme: dark;
-    --ef-canvas: #000000;
-    --ef-surface: #0c110d;
-    --ef-surface-raised: #141a16;
+    --ef-canvas: #0c110d;
+    --ef-surface: #141a16;
+    --ef-surface-raised: #1c241f;
     --ef-line: #34443b;
-    --ef-text: #fdf6fe;
+    --ef-text: #ffffff;
     --ef-muted: #c8d4c8;
     --ef-accent: #008d63;
     --ef-accent-hover: #00a978;
-    --ef-accent-strong: #af9c64;
-    --ef-accent-soft: #fdf6fe;
+    --ef-accent-strong: #00a978;
+    --ef-accent-soft: #ffffff;
     --ef-accent-ink: #0c110d;
     --ef-accent-line: #53644f;
     --ef-accent-wash: #14271f;
