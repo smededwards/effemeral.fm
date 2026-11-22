@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Album;
+use App\Models\AlbumPlaylist;
 use App\Models\AlbumRecommendation;
 use App\Models\Artist;
 use App\Models\RecommendationRun;
@@ -21,18 +22,23 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_prioritises_albums_to_complete(): void
+    public function test_dashboard_prioritises_effemeral_playlists(): void
     {
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Fossil Gardens']);
+
         $this->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('See Albums to Complete')
-            ->assertSee('href="'.route('recommendations.index', [], false).'"', false)
-            ->assertSee('To Complete')
-            ->assertSee('Playlists')
-            ->assertSee('Catalogue');
+            ->assertSee('Album Playlists')
+            ->assertSee('Your Playlists')
+            ->assertSee('Fossil Gardens')
+            ->assertSee('0 albums · Draft')
+            ->assertSee(route('album-playlists.show', $playlist, false), false)
+            ->assertSee('Create Playlist')
+            ->assertSee('Discover Albums')
+            ->assertSee('Manage Imports');
     }
 
-    public function test_imported_spotify_albums_are_shown_on_the_dashboard(): void
+    public function test_imported_spotify_albums_are_available_in_the_library(): void
     {
         SpotifySavedAlbum::query()->create([
             'spotify_album_id' => 'album-id',
@@ -45,10 +51,9 @@ class DashboardTest extends TestCase
             'saved_at' => now(),
         ]);
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('library.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('Imported Spotify Albums');
         $response->assertSee('A Saved Album');
         $response->assertSee('An Artist');
         $response->assertSee('https://open.spotify.com/album/album-id');
@@ -64,7 +69,7 @@ class DashboardTest extends TestCase
         $response->assertSee('action="'.route('imports.lastfm', [], false).'"', false);
     }
 
-    public function test_incomplete_saved_albums_show_lastfm_completion_progress(): void
+    public function test_incomplete_saved_albums_show_lastfm_completion_progress_on_recommendations_page(): void
     {
         SpotifySavedAlbum::query()->create([
             'spotify_album_id' => 'incomplete-album-id',
@@ -88,7 +93,7 @@ class DashboardTest extends TestCase
             'listened_at' => '2026-01-02 12:00:00',
         ]);
 
-        $response = $this->get(route('dashboard'));
+        $response = $this->get(route('recommendations.index'));
 
         $response->assertSee('1 / 3 tracks heard');
         $response->assertSee('An Album');
@@ -146,7 +151,7 @@ class DashboardTest extends TestCase
             'listened_at' => '2026-01-02 12:00:00',
         ]);
 
-        $this->get(route('dashboard'))
+        $this->get(route('recommendations.index'))
             ->assertSee('1 / 2 tracks heard')
             ->assertSee('Canonical Album');
 
@@ -178,12 +183,9 @@ class DashboardTest extends TestCase
 
         $response = $this->get(route('dashboard'));
 
-        $response->assertSee('Top Artists');
-        $response->assertSee('Top Albums');
-        $response->assertSee('An Artist');
-        $response->assertSee('An Album');
-        $response->assertSee('2 plays');
-        $response->assertSee('Last heard 2026-01-02');
+        $response->assertSee('Manage Imports');
+        $response->assertDontSee('Top Artists');
+        $response->assertDontSee('Top Albums');
     }
 
     public function test_album_completion_can_be_overridden_and_cleared(): void
@@ -245,7 +247,7 @@ class DashboardTest extends TestCase
         ]);
         $this->assertSame(1, AlbumRecommendation::query()->count());
 
-        $this->get(route('dashboard'))
+        $this->get(route('recommendations.index'))
             ->assertSee('Latest recommendation draft')
             ->assertSee('Recommendation Album');
     }
