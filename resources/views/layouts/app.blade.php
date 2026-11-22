@@ -36,7 +36,7 @@
                         <div class="flex flex-wrap gap-1">
                             @foreach ([
                                 ['route' => 'dashboard', 'label' => 'Overview'],
-                                ['route' => 'recommendations.index', 'label' => 'To complete'],
+                                ['route' => 'recommendations.index', 'label' => 'To Complete'],
                                 ['route' => 'playlists.index', 'label' => 'Playlists'],
                             ] as $item)
                                 <a class="border-b-2 px-3 py-3 text-sm font-medium transition {{ request()->routeIs($item['route']) ? 'border-ef-accent bg-ef-accent text-ef-accent-ink' : 'border-transparent text-ef-muted hover:border-ef-accent hover:text-ef-accent-strong' }}" href="{{ route($item['route'], [], false) }}" @if (request()->routeIs($item['route'])) aria-current="page" @endif>{{ $item['label'] }}</a>
