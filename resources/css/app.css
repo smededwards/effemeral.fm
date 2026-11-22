@@ -5,20 +5,20 @@
 
 :root {
     color-scheme: dark;
-    --ef-canvas: #10150f;
-    --ef-surface: #171d15;
-    --ef-surface-raised: #20281c;
-    --ef-line: #394431;
-    --ef-text: #eeebdd;
-    --ef-muted: #b6b9ac;
-    --ef-accent: #82966b;
-    --ef-accent-hover: #9aab84;
-    --ef-accent-strong: #b9c99f;
-    --ef-accent-soft: #d6dfc6;
-    --ef-accent-ink: #151b12;
-    --ef-accent-line: #526244;
-    --ef-accent-wash: #202a1b;
-    --ef-track: #303a2b;
+    --ef-canvas: #090b09;
+    --ef-surface: #121612;
+    --ef-surface-raised: #1a211b;
+    --ef-line: #39443b;
+    --ef-text: #f5f7f4;
+    --ef-muted: #aab4ac;
+    --ef-accent: #168a45;
+    --ef-accent-hover: #20a957;
+    --ef-accent-strong: #53d782;
+    --ef-accent-soft: #dff7e7;
+    --ef-accent-ink: #06110a;
+    --ef-accent-line: #28643f;
+    --ef-accent-wash: #0f2518;
+    --ef-track: #29352c;
     --ef-color-scheme: dark;
     color-scheme: var(--ef-color-scheme);
 }
