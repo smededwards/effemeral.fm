@@ -59,6 +59,11 @@ class DashboardController extends Controller
                 ->orderBy('title')
                 ->limit(25)
                 ->get();
+        } else {
+            $artists = Artist::query()
+                ->withCount('albums')
+                ->orderBy('name')
+                ->paginate(24);
         }
 
         return view('catalogue.index', [

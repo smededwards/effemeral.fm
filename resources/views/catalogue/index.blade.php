@@ -125,6 +125,27 @@
                     </section>
                 </div>
             @else
-                <p class="rounded-xl border border-dashed border-ef-line p-8 text-center text-sm text-ef-muted">Search the catalogue to choose an artist or album.</p>
+                <section class="rounded-xl border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="catalogue-artists">
+                    <div class="flex flex-wrap items-end justify-between gap-3 border-b border-ef-line pb-5">
+                        <div>
+                            <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Your Catalogue</p>
+                            <h2 id="catalogue-artists" class="mt-2 text-2xl font-semibold">Artists</h2>
+                        </div>
+                        <span class="text-sm text-ef-muted">{{ number_format($artists->total()) }} {{ $artists->total() === 1 ? 'artist' : 'artists' }}</span>
+                    </div>
+                    @if ($artists->isNotEmpty())
+                        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            @foreach ($artists as $artist)
+                                <a class="border border-ef-line bg-ef-canvas p-5 transition hover:border-ef-accent" href="{{ route('artists.show', $artist, false) }}">
+                                    <h3 class="font-semibold">{{ $artist->name }}</h3>
+                                    <p class="mt-2 text-sm text-ef-muted">{{ $artist->albums_count }} {{ $artist->albums_count === 1 ? 'album' : 'albums' }}</p>
+                                </a>
+                            @endforeach
+                        </div>
+                        <div class="mt-5">{{ $artists->links() }}</div>
+                    @else
+                        <p class="mt-5 text-sm text-ef-muted">No artists have been added to the catalogue yet.</p>
+                    @endif
+                </section>
             @endif
 @endsection
