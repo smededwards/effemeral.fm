@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ $title ?? 'Effemeral' }}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&display=swap" rel="stylesheet">
         @php
             $vite = app(\Illuminate\Foundation\Vite::class);
             $stylesheet = parse_url($vite->asset('resources/css/app.css'), PHP_URL_PATH);
@@ -14,19 +17,19 @@
         <link rel="stylesheet" href="{{ $stylesheet }}" />
         <script type="module" src="{{ $script }}"></script>
     </head>
-    <body class="min-h-screen bg-[#0b0c0a] text-[#f3f5f3] antialiased">
-        <div class="min-h-screen border-t-4 border-[#00e676]">
+    <body class="min-h-screen bg-ef-canvas text-ef-text antialiased">
+        <div class="min-h-screen border-t-4 border-ef-accent">
             <main class="mx-auto max-w-7xl px-5 py-6 sm:px-8 lg:px-12 lg:py-10">
-                <header class="border-b border-[#2e382f] pb-5">
+                <header class="border-b border-ef-line pb-5">
                     <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                         <a class="flex items-center gap-3" href="{{ route('dashboard', [], false) }}">
-                            <span class="flex h-10 w-10 items-center justify-center bg-[#00e676] text-sm font-bold tracking-tight text-white">EF</span>
+                            <span class="flex h-10 w-10 items-center justify-center bg-ef-accent text-sm font-bold tracking-tight text-ef-accent-ink">EF</span>
                             <span>
-                                <span class="block text-sm font-semibold tracking-[0.22em] text-[#00e676]">EFFEMERAL</span>
-                                <span class="mt-1 block text-xs text-[#9aa39d]">Listening archive</span>
+                                <span class="block text-sm font-semibold tracking-[0.22em] text-ef-accent-strong">EFFEMERAL</span>
+                                <span class="mt-1 block text-xs text-ef-muted">Listening archive</span>
                             </span>
                         </a>
-                        <p class="text-xs tabular-nums text-[#9aa39d]">{{ now()->format('Y.m.d') }}</p>
+                        <p class="text-xs tabular-nums text-ef-muted">{{ now()->format('Y.m.d') }}</p>
                     </div>
                     <nav class="mt-6 -mb-5" aria-label="Primary navigation">
                         <div class="flex flex-wrap gap-1">
@@ -35,30 +38,30 @@
                                 ['route' => 'recommendations.index', 'label' => 'To complete'],
                                 ['route' => 'playlists.index', 'label' => 'Playlists'],
                             ] as $item)
-                                <a class="border-b-2 px-3 py-3 text-sm font-medium transition {{ request()->routeIs($item['route']) ? 'border-[#00e676] bg-[#00e676] text-white' : 'border-transparent text-[#9aa39d] hover:border-[#00e676] hover:text-[#00e676]' }}" href="{{ route($item['route'], [], false) }}" @if (request()->routeIs($item['route'])) aria-current="page" @endif>{{ $item['label'] }}</a>
+                                <a class="border-b-2 px-3 py-3 text-sm font-medium transition {{ request()->routeIs($item['route']) ? 'border-ef-accent bg-ef-accent text-ef-accent-ink' : 'border-transparent text-ef-muted hover:border-ef-accent hover:text-ef-accent-strong' }}" href="{{ route($item['route'], [], false) }}" @if (request()->routeIs($item['route'])) aria-current="page" @endif>{{ $item['label'] }}</a>
                             @endforeach
                         </div>
-                        <div class="flex flex-wrap gap-4 border-t border-[#2e382f] pt-3">
-                            <span class="text-xs uppercase tracking-[0.16em] text-[#7d8a80]">Data</span>
+                        <div class="flex flex-wrap gap-4 border-t border-ef-line pt-3">
+                            <span class="text-xs uppercase tracking-[0.16em] text-ef-muted">Data</span>
                             @foreach ([
                                 ['route' => 'imports.index', 'label' => 'Imports'],
                                 ['route' => 'library.index', 'label' => 'Library'],
                                 ['route' => 'catalogue.index', 'label' => 'Catalogue'],
                             ] as $item)
-                                <a class="text-xs font-medium text-[#9aa39d] transition hover:text-[#00e676]" href="{{ route($item['route'], [], false) }}">{{ $item['label'] }}</a>
+                                <a class="text-xs font-medium text-ef-muted transition hover:text-ef-accent-strong" href="{{ route($item['route'], [], false) }}">{{ $item['label'] }}</a>
                             @endforeach
                         </div>
                     </nav>
                 </header>
 
                 @if (session('success'))
-                    <div class="mt-6 border-l-4 border-[#00e676] bg-[#111612] px-4 py-3 text-sm text-[#b7ffd1]" role="status">{{ session('success') }}</div>
+                    <div class="mt-6 border-l-4 border-ef-accent bg-ef-surface px-4 py-3 text-sm text-ef-accent-soft" role="status">{{ session('success') }}</div>
                 @endif
                 @if (session('error'))
-                    <div class="mt-6 border-l-4 border-[#b42318] bg-[#111612] px-4 py-3 text-sm text-[#8d1c14]" role="alert">{{ session('error') }}</div>
+                    <div class="mt-6 border-l-4 border-red-800 bg-ef-surface px-4 py-3 text-sm text-red-200" role="alert">{{ session('error') }}</div>
                 @endif
                 @if ($errors->any())
-                    <div class="mt-6 border-l-4 border-[#b42318] bg-[#111612] px-4 py-3 text-sm text-[#8d1c14]" role="alert">
+                    <div class="mt-6 border-l-4 border-red-800 bg-ef-surface px-4 py-3 text-sm text-red-200" role="alert">
                         <ul class="list-disc space-y-1 pl-5">
                             @foreach ($errors->all() as $error)
                                 <li>{{ $error }}</li>

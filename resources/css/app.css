@@ -3,13 +3,66 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-@theme {
-    --font-sans: ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+:root {
+    color-scheme: dark;
+    --ef-canvas: #10150f;
+    --ef-surface: #171d15;
+    --ef-surface-raised: #20281c;
+    --ef-line: #394431;
+    --ef-text: #eeebdd;
+    --ef-muted: #b6b9ac;
+    --ef-accent: #82966b;
+    --ef-accent-hover: #9aab84;
+    --ef-accent-strong: #b9c99f;
+    --ef-accent-soft: #d6dfc6;
+    --ef-accent-ink: #151b12;
+    --ef-accent-line: #526244;
+    --ef-accent-wash: #202a1b;
+    --ef-track: #303a2b;
+    --ef-color-scheme: dark;
+    color-scheme: var(--ef-color-scheme);
+}
+
+@theme inline {
+    --font-sans: 'Noto Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-serif: 'Noto Serif', ui-serif, Georgia, serif;
+    --color-ef-canvas: var(--ef-canvas);
+    --color-ef-surface: var(--ef-surface);
+    --color-ef-surface-raised: var(--ef-surface-raised);
+    --color-ef-line: var(--ef-line);
+    --color-ef-text: var(--ef-text);
+    --color-ef-muted: var(--ef-muted);
+    --color-ef-accent: var(--ef-accent);
+    --color-ef-accent-hover: var(--ef-accent-hover);
+    --color-ef-accent-strong: var(--ef-accent-strong);
+    --color-ef-accent-soft: var(--ef-accent-soft);
+    --color-ef-accent-ink: var(--ef-accent-ink);
+    --color-ef-accent-line: var(--ef-accent-line);
+    --color-ef-accent-wash: var(--ef-accent-wash);
+    --color-ef-track: var(--ef-track);
 }
 
 @layer base {
+    body {
+        font-family: var(--font-sans);
+    }
+
+    h1,
+    h2,
+    h3 {
+        font-family: var(--font-serif);
+    }
+
     :focus-visible {
-        outline: 2px solid #00e676;
+        outline: 2px solid var(--ef-accent-strong);
         outline-offset: 3px;
+    }
+}
+
+@layer components {
+    article,
+    section[class*='border'],
+    form[class*='border'] {
+        border-radius: 1rem;
     }
 }
