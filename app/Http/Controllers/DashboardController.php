@@ -18,13 +18,11 @@ use App\Models\SpotifyPlaylistItem;
 use App\Models\SpotifySavedAlbum;
 use App\Models\Track;
 use App\Services\Catalog\GenreWriter;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use stdClass;
 
 class DashboardController extends Controller
 {
@@ -380,7 +378,16 @@ class DashboardController extends Controller
 
     public function index(): View
     {
-        return view('dashboard', $this->dashboardData());
+        $albumPlaylists = AlbumPlaylist::query()
+            ->withCount('albums')
+            ->orderBy('name')
+            ->get();
+
+        return view('dashboard', [
+            'albumPlaylists' => $albumPlaylists,
+            'playlistCount' => $albumPlaylists->count(),
+            'playlistAlbumCount' => $albumPlaylists->sum('albums_count'),
+        ]);
     }
 
     public function imports(): View
@@ -533,76 +540,6 @@ class DashboardController extends Controller
                 ->with('albumRecommendations.album', 'albumRecommendations.spotifySavedAlbum')
                 ->latest()
                 ->first(),
-        ];
-    }
-
-    /** @return array<string, mixed> */
-    private function dashboardData(): array
-    {
-        $incompleteAlbums = $this->incompleteAlbums();
-        $latestRecommendation = RecommendationRun::query()
-            ->with('albumRecommendations.album', 'albumRecommendations.spotifySavedAlbum')
-            ->latest()
-            ->first();
-        $albumSearch = trim((string) request('album_search'));
-        $spotifySavedAlbumQuery = SpotifySavedAlbum::query()->latest('saved_at');
-
-        if ($albumSearch !== '') {
-            $spotifySavedAlbumQuery->where(function ($query) use ($albumSearch): void {
-                $query->where('name', 'like', '%'.$albumSearch.'%')
-                    ->orWhere('primary_artist_name', 'like', '%'.$albumSearch.'%');
-            });
-        }
-
-        $spotifySavedAlbums = $spotifySavedAlbumQuery->limit(12)->get();
-        $artists = Scrobble::query()
-            ->select('artist_name')
-            ->selectRaw('COUNT(*) as scrobble_count')
-            ->selectRaw('MAX(listened_at) as latest_listened_at')
-            ->groupBy('artist_name')
-            ->orderByDesc('scrobble_count')
-            ->limit(10)
-            ->toBase()
-            ->get()
-            ->map(fn (stdClass $artist): array => [
-                'name' => (string) $artist->artist_name,
-                'scrobbles' => (int) $artist->scrobble_count,
-                'last_listened_at' => CarbonImmutable::parse((string) $artist->latest_listened_at)->toDateString(),
-            ]);
-
-        $albums = Scrobble::query()
-            ->select('artist_name', 'album_name')
-            ->selectRaw('COUNT(*) as scrobble_count')
-            ->selectRaw('MAX(listened_at) as latest_listened_at')
-            ->whereNotNull('album_name')
-            ->where('album_name', '<>', '')
-            ->groupBy('artist_name', 'album_name')
-            ->orderByDesc('scrobble_count')
-            ->limit(10)
-            ->toBase()
-            ->get()
-            ->map(fn (stdClass $album): array => [
-                'artist' => (string) $album->artist_name,
-                'name' => (string) $album->album_name,
-                'scrobbles' => (int) $album->scrobble_count,
-                'last_listened_at' => CarbonImmutable::parse((string) $album->latest_listened_at)->toDateString(),
-            ]);
-
-        return [
-            'latestImport' => LastFmImportRun::query()->latest()->first(),
-            'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
-            'latestSpotifyImport' => SpotifyImportRun::query()->latest()->first(),
-            'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
-            'spotifySavedAlbums' => $spotifySavedAlbums,
-            'spotifySavedAlbumCount' => SpotifySavedAlbum::query()->count(),
-            'albumSearch' => $albumSearch,
-            'incompleteAlbums' => $incompleteAlbums,
-            'topArtists' => $artists,
-            'topAlbums' => $albums,
-            'latestRecommendation' => $latestRecommendation,
-            'scrobbleCount' => Scrobble::query()->count(),
-            'defaultFrom' => now()->subDays(90)->toDateString(),
-            'defaultTo' => now()->toDateString(),
         ];
     }
 
