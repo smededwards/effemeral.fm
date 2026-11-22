@@ -21,12 +21,15 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_links_to_the_catalogue(): void
+    public function test_dashboard_prioritises_albums_to_complete(): void
     {
         $this->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Browse catalogue')
-            ->assertSee('href="'.route('catalogue.index', [], false).'"', false);
+            ->assertSee('See albums to complete')
+            ->assertSee('href="'.route('recommendations.index', [], false).'"', false)
+            ->assertSee('To complete')
+            ->assertSee('Playlists')
+            ->assertSee('Data');
     }
 
     public function test_imported_spotify_albums_are_shown_on_the_dashboard(): void
@@ -87,7 +90,6 @@ class DashboardTest extends TestCase
 
         $response = $this->get(route('dashboard'));
 
-        $response->assertSee('Albums to complete');
         $response->assertSee('1 / 3 tracks heard');
         $response->assertSee('An Album');
     }
