@@ -25,17 +25,17 @@
     <body class="min-h-screen bg-ef-canvas text-ef-text antialiased">
         <div class="min-h-screen border-t-4 border-ef-accent">
             <a class="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:not-sr-only focus:bg-ef-accent focus:px-4 focus:py-3 focus:text-ef-accent-ink" href="#main-content">Skip to Main Content</a>
-            <header class="mx-auto max-w-7xl px-5 pt-6 sm:px-8 lg:px-12 lg:pt-10">
-                <div class="border-b border-ef-line pb-4">
-                    <a class="flex items-center gap-3" href="{{ route('dashboard', [], false) }}">
-                        <span class="inline-flex h-11 w-11 items-center justify-center font-serif text-4xl leading-none text-ef-accent-strong" aria-hidden="true">♪</span>
+            <header class="mx-auto max-w-7xl px-5 pt-5 sm:px-8 lg:px-12 lg:pt-8">
+                <div class="flex flex-col gap-5 border-b border-ef-line pb-5 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+                    <a class="flex w-fit shrink-0 items-center gap-3" href="{{ route('dashboard', [], false) }}">
+                        <span class="inline-flex h-12 w-12 items-center justify-center border border-ef-accent-line bg-ef-surface font-serif text-4xl leading-none text-ef-accent-strong" aria-hidden="true">♪</span>
                         <span>
-                            <span class="block text-sm font-semibold tracking-[0.08em] text-ef-accent-strong">Effemeral</span>
-                            <span class="mt-1 block text-xs text-ef-muted">Listening archive</span>
+                            <span class="block text-base font-semibold tracking-[0.08em] text-ef-accent-strong">Effemeral</span>
+                            <span class="mt-1 block text-sm text-ef-muted">Listening archive</span>
                         </span>
                     </a>
-                    <nav class="mt-5" aria-label="Main Navigation">
-                        <div class="flex flex-wrap gap-1">
+                    <nav class="w-full lg:w-auto" aria-label="Main Navigation">
+                        <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end lg:gap-1">
                             @foreach ([
                                 ['route' => 'dashboard', 'active' => ['dashboard'], 'label' => 'Overview'],
                                 ['route' => 'playlists.index', 'active' => ['playlists.*', 'album-playlists.*', 'spotify-playlists.*'], 'label' => 'Playlists'],
@@ -46,9 +46,11 @@
                                 ['route' => 'imports.index', 'active' => ['imports.*'], 'label' => 'Imports'],
                             ] as $item)
                                 @php($isActive = request()->routeIs(...$item['active']))
-                                <a class="inline-flex min-h-11 items-center border-b-2 px-3 py-2 text-sm font-medium transition {{ $isActive ? 'border-ef-accent bg-ef-accent text-ef-accent-ink' : 'border-transparent text-ef-muted hover:border-ef-accent hover:text-ef-accent-strong' }}" href="{{ route($item['route'], [], false) }}" @if ($isActive) aria-current="page" @endif>{{ $item['label'] }}</a>
+                                <li>
+                                    <a class="flex min-h-11 items-center border-l-2 px-4 py-2 text-sm font-semibold transition-colors lg:justify-center lg:border-l-0 lg:border-b-2 lg:px-3 {{ $isActive ? 'border-ef-accent bg-ef-accent text-ef-accent-ink lg:bg-ef-accent-wash lg:text-ef-text' : 'border-ef-line bg-ef-surface text-ef-muted hover:border-ef-accent hover:text-ef-text lg:border-transparent lg:bg-transparent lg:hover:bg-ef-surface' }}" href="{{ route($item['route'], [], false) }}" @if ($isActive) aria-current="page" @endif>{{ $item['label'] }}</a>
+                                </li>
                             @endforeach
-                        </div>
+                        </ul>
                     </nav>
                 </div>
             </header>
