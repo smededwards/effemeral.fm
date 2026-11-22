@@ -45,6 +45,7 @@
                         <div class="flex flex-wrap items-center gap-2 border-t border-ef-line pt-2">
                             <span class="inline-flex min-h-11 items-center px-2 text-xs tracking-[0.16em] text-ef-muted">Data</span>
                             @foreach ([
+                                ['route' => 'listening.index', 'label' => 'Listening'],
                                 ['route' => 'imports.index', 'label' => 'Imports'],
                                 ['route' => 'library.index', 'label' => 'Library'],
                                 ['route' => 'catalogue.index', 'label' => 'Catalogue'],
