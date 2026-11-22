@@ -15,7 +15,7 @@
         @if ($artist->acceptedGenres->isNotEmpty())
             <ul class="mt-4 flex flex-wrap gap-2">
                 @foreach ($artist->acceptedGenres->sortBy('name') as $genre)
-                    <li class="border border-ef-accent-line bg-ef-canvas px-3 py-2 text-sm text-ef-accent-soft">{{ $genre->name }}</li>
+                    <li><a class="inline-block border border-ef-accent-line bg-ef-canvas px-3 py-2 text-sm text-ef-accent-soft hover:border-ef-accent hover:text-ef-text" href="{{ route('genres.show', $genre, false) }}">{{ $genre->name }}</a></li>
                 @endforeach
             </ul>
         @else
