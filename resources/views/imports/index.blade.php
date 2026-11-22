@@ -19,7 +19,15 @@
         <div class="bg-ef-surface p-6 sm:p-8">
             <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Source 02</p><h2 class="mt-3 text-2xl font-semibold">Spotify Library</h2><p class="mt-2 text-sm leading-6 text-ef-muted">Connect once, then refresh saved albums, liked songs, and playlists whenever you choose.</p>
             <p class="mt-8 border-y border-ef-line py-4 text-sm text-ef-accent-soft">{{ $spotifyConnection ? 'Connected to Spotify.' : 'Spotify is not connected.' }}</p>
-            @if ($spotifyConnection)<form class="mt-6" method="POST" action="{{ route('auth.spotify.disconnect', [], false) }}">@csrf<button class="border border-ef-line px-4 py-3 text-sm font-semibold text-ef-text hover:border-ef-accent" type="submit">Disconnect Spotify</button></form>@else<a class="mt-6 inline-block bg-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-soft" href="{{ route('auth.spotify', [], false) }}">Connect Spotify</a>@endif
+            @if ($spotifyConnection)
+                <p class="mt-4 text-xs leading-5 text-ef-muted">Reconnect Spotify after this update to approve playlist editing permissions.</p>
+                <div class="mt-4 flex flex-wrap items-center gap-4">
+                    <a class="inline-block bg-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-soft" href="{{ route('auth.spotify', [], false) }}">Reconnect Spotify</a>
+                    <form method="POST" action="{{ route('auth.spotify.disconnect', [], false) }}">@csrf<button class="border border-ef-line px-4 py-3 text-sm font-semibold text-ef-text hover:border-ef-accent" type="submit">Disconnect Spotify</button></form>
+                </div>
+            @else
+                <a class="mt-6 inline-block bg-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-soft" href="{{ route('auth.spotify', [], false) }}">Connect Spotify</a>
+            @endif
         </div>
     </section>
 
