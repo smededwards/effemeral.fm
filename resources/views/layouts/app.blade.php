@@ -26,36 +26,27 @@
         <div class="min-h-screen border-t-4 border-ef-accent">
             <a class="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:not-sr-only focus:bg-ef-accent focus:px-4 focus:py-3 focus:text-ef-accent-ink" href="#main-content">Skip to Main Content</a>
             <header class="mx-auto max-w-7xl px-5 pt-6 sm:px-8 lg:px-12 lg:pt-10">
-                <div class="border-b border-ef-line pb-5">
-                    <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                        <a class="flex items-center gap-3" href="{{ route('dashboard', [], false) }}">
-                            <span class="inline-flex h-11 w-11 items-center justify-center font-serif text-4xl leading-none text-ef-accent-strong" aria-hidden="true">♪</span>
-                            <span>
-                                <span class="block text-sm font-semibold tracking-[0.08em] text-ef-accent-strong">Effemeral</span>
-                                <span class="mt-1 block text-xs text-ef-muted">Listening archive</span>
-                            </span>
-                        </a>
-                        <p class="text-xs tabular-nums text-ef-muted">{{ now()->format('Y.m.d') }}</p>
-                    </div>
-                    <nav class="mt-6 -mb-5" aria-label="Primary Navigation">
+                <div class="border-b border-ef-line pb-4">
+                    <a class="flex items-center gap-3" href="{{ route('dashboard', [], false) }}">
+                        <span class="inline-flex h-11 w-11 items-center justify-center font-serif text-4xl leading-none text-ef-accent-strong" aria-hidden="true">♪</span>
+                        <span>
+                            <span class="block text-sm font-semibold tracking-[0.08em] text-ef-accent-strong">Effemeral</span>
+                            <span class="mt-1 block text-xs text-ef-muted">Listening archive</span>
+                        </span>
+                    </a>
+                    <nav class="mt-5" aria-label="Main Navigation">
                         <div class="flex flex-wrap gap-1">
                             @foreach ([
-                                ['route' => 'dashboard', 'label' => 'Overview'],
-                                ['route' => 'recommendations.index', 'label' => 'To Complete'],
-                                ['route' => 'playlists.index', 'label' => 'Playlists'],
+                                ['route' => 'dashboard', 'active' => ['dashboard'], 'label' => 'Overview'],
+                                ['route' => 'playlists.index', 'active' => ['playlists.*', 'album-playlists.*', 'spotify-playlists.*'], 'label' => 'Playlists'],
+                                ['route' => 'catalogue.index', 'active' => ['catalogue.*', 'artists.show', 'albums.show'], 'label' => 'Catalogue'],
+                                ['route' => 'recommendations.index', 'active' => ['recommendations.*'], 'label' => 'To Complete'],
+                                ['route' => 'library.index', 'active' => ['library.*'], 'label' => 'Library'],
+                                ['route' => 'listening.index', 'active' => ['listening.*'], 'label' => 'Listening'],
+                                ['route' => 'imports.index', 'active' => ['imports.*'], 'label' => 'Imports'],
                             ] as $item)
-                                <a class="border-b-2 px-3 py-3 text-sm font-medium transition {{ request()->routeIs($item['route']) ? 'border-ef-accent bg-ef-accent text-ef-accent-ink' : 'border-transparent text-ef-muted hover:border-ef-accent hover:text-ef-accent-strong' }}" href="{{ route($item['route'], [], false) }}" @if (request()->routeIs($item['route'])) aria-current="page" @endif>{{ $item['label'] }}</a>
-                            @endforeach
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2 border-t border-ef-line pt-2">
-                            <span class="inline-flex min-h-11 items-center px-2 text-xs tracking-[0.16em] text-ef-muted">Data</span>
-                            @foreach ([
-                                ['route' => 'listening.index', 'label' => 'Listening'],
-                                ['route' => 'imports.index', 'label' => 'Imports'],
-                                ['route' => 'library.index', 'label' => 'Library'],
-                                ['route' => 'catalogue.index', 'label' => 'Catalogue'],
-                            ] as $item)
-                                <a class="inline-flex min-h-11 items-center px-2 text-xs font-medium text-ef-muted transition hover:text-ef-accent-strong" href="{{ route($item['route'], [], false) }}" @if (request()->routeIs($item['route'])) aria-current="page" @endif>{{ $item['label'] }}</a>
+                                @php($isActive = request()->routeIs(...$item['active']))
+                                <a class="inline-flex min-h-11 items-center border-b-2 px-3 py-2 text-sm font-medium transition {{ $isActive ? 'border-ef-accent bg-ef-accent text-ef-accent-ink' : 'border-transparent text-ef-muted hover:border-ef-accent hover:text-ef-accent-strong' }}" href="{{ route($item['route'], [], false) }}" @if ($isActive) aria-current="page" @endif>{{ $item['label'] }}</a>
                             @endforeach
                         </div>
                     </nav>
