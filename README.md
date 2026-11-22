@@ -1,19 +1,22 @@
 # Effemeral
 
-Effemeral is a private, single-user Laravel application for turning listening history into album-level discovery and playlist drafts.
+Effemeral is a private, single-user Laravel application for discovering full albums and curating them into playlists.
 
-The prototype is intentionally album-first and manual-first:
+The primary workflow is album-first and manual-first:
 
 - Last.fm is the authoritative source for listening history and completion evidence.
-- Spotify provides saved albums, liked songs, playlists, catalogue metadata, and the eventual playlist export.
+- Browse albums by genre, artist, country or region, release year, and listening completion.
+- Build and manage named album playlists in Effemeral, then review their order and contents.
+- Spotify supplies supporting catalogue data and receives reviewed playlists on explicit sync.
 - Effemeral stores a canonical catalogue of artists, albums, and tracks, with source identifiers and Spotify collection membership.
 - Recommendations remain drafts until they are reviewed, reordered, and explicitly synced.
 - Selected-album similarity and artist discography playlist drafts are now available through the shared review workflow.
-- Discogs metadata, richer playlist-content analysis, deployment hardening, and multi-user support remain follow-up slices.
+- Imports support discovery and completion; they are not the main destination of the app.
+- Discogs metadata, bidirectional playlist sync, richer playlist-content analysis, deployment hardening, and multi-user support remain later work.
 
-## Current import foundation
+## Supporting data foundation
 
-The current import layer supports:
+The current data layer supports:
 
 - Last.fm scrobbles linked to canonical artists, albums, and tracks.
 - Full Last.fm history can be queued from the account's earliest available scrobble.
@@ -23,7 +26,7 @@ The current import layer supports:
 - Idempotent retries and cross-source matching using provider IDs first, then normalized identity.
 - Existing compatibility storage for the current dashboard while the canonical model becomes the source for future features.
 
-The model is deliberately additive. Existing imported data is not removed by the catalogue migrations.
+The model is deliberately additive. Existing imported data is not removed by the catalogue migrations. Imports are manual and retryable so the user can refresh supporting data when needed.
 
 ## Local development
 
@@ -60,25 +63,19 @@ Run the standard checks from the application container:
 - Every pull request needs a description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
 - Keep manual review and override paths for recommendations and completion decisions.
 
-## Roadmap direction
+## Current priorities
 
-The target prototype supports two related album-first workflows:
+The selected-album discovery slice already supports similar-album suggestions and artist discography drafts. The next milestone focuses on making playlist curation a complete, everyday workflow:
 
-1. Select an album or artist from the canonical catalogue.
-2. Suggest similar albums using normalized genre, artist relationships, release year, and Last.fm completion evidence.
-3. Generate an album-level discography draft for a selected artist.
-4. Review, reorder, include, exclude, and manually override the draft.
-5. Sync the approved draft to a private Spotify playlist.
+1. Make Effemeral playlists persistent and first-class: create, name, reopen, and manage multiple album-level drafts.
+2. Add albums from a filterable catalogue using genre, artist, country or region, release year, and completion status.
+3. Review album inclusion and order, save changes, and show which Spotify playlist each Effemeral playlist syncs with.
+4. Create a new Spotify playlist or update a chosen destination only after explicit review; show sync outcomes and errors.
+5. Make the searchable imported Spotify playlist overview available as supporting context and audit access.
+6. Keep imports and status details on the Imports page and secondary on the overview.
 
-The implementation order is:
+The existing [imported Spotify playlist overview](https://github.com/smededwards/effemeral.fm/issues/68) is in review as a supporting slice of this milestone.
 
-1. Complete the canonical catalogue and import foundation.
-2. Import and normalize Spotify artist genres and Last.fm tags, with manual corrections.
-3. Add catalogue search and selected album/artist context.
-4. Add same-genre, same-year album suggestions that exclude completed albums by default.
-5. Add artist discography discovery and album-level playlist drafts.
-6. Keep the existing review, audit, and Spotify sync flow as the shared delivery path.
-7. Add Discogs as the preferred metadata and genre authority when ready.
-8. Add deeper playlist-content analysis while preserving the complete Last.fm history and Spotify liked-song imports.
+Bidirectional editing between Spotify and Effemeral is deferred until this reviewed Effemeral-to-Spotify workflow has been validated. Discogs remains a later catalogue enrichment source; current discovery operates on records already present in the canonical catalogue.
 
-The current `main` branch contains the complete `v0.2.0` Baroness feature set. Baroness remains open until the full Last.fm import and real-data prototype validation are complete. Candlemass is the active `v0.3.0` planning milestone for playlist organisation; its first task is [the playlist organisation overview](https://github.com/smededwards/effemeral.fm/issues/68).
+The active `v0.3.0` Candlemass milestone is being realigned around this playlist-first workflow. GitHub tasks must include acceptance criteria before they are marked ready.
