@@ -3,7 +3,7 @@
 @section('content')
     <header class="flex flex-col gap-6 border-b border-ef-line pb-10 lg:flex-row lg:items-end lg:justify-between">
         <div class="max-w-3xl">
-            <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong">Overview / 01</p>
+            <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong uppercase">Overview / 01</p>
             <h1 class="mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Your Listening Archive</h1>
             <p class="mt-5 max-w-2xl text-lg leading-8 text-ef-muted">Last.fm is your listening record. Spotify is the working library. Effemeral brings them together so unfinished albums become deliberate next listens.</p>
         </div>
@@ -34,7 +34,7 @@
         <div class="min-w-0 border border-ef-line bg-ef-surface p-6 sm:p-8">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Next listening</p>
+                    <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Next listening</p>
                     <h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Albums to Complete</h2>
                     <p class="mt-2 text-sm text-ef-muted">Saved albums with tracks not yet heard in Last.fm.</p>
                 </div>
@@ -64,7 +64,7 @@
         </div>
 
         <aside class="border border-ef-line bg-ef-surface-raised p-6 text-ef-text sm:p-8">
-            <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Actions</p>
+            <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Actions</p>
             <h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Keep the Archive Current</h2>
             <div class="mt-8 divide-y divide-ef-line border-y border-ef-line">
                 <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-ef-accent-strong" href="{{ route('imports.index', [], false) }}"><span>Import Last.fm and Spotify</span><span aria-hidden="true">→</span></a>

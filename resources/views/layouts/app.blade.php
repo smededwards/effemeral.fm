@@ -4,6 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ $title ?? 'Effemeral' }}</title>
+        <link rel="icon" href="/favicon.ico" sizes="any">
+        <link rel="icon" href="/effemeral-mark.svg" type="image/svg+xml">
+        <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="manifest" href="/site.webmanifest">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,7 +29,7 @@
                 <div class="border-b border-ef-line pb-5">
                     <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                         <a class="flex items-center gap-3" href="{{ route('dashboard', [], false) }}">
-                            <span class="flex h-10 w-10 items-center justify-center bg-ef-accent text-sm font-bold tracking-tight text-ef-accent-ink">EF</span>
+                            <img class="h-11 w-11" src="/effemeral-mark.svg" alt="" width="44" height="44">
                             <span>
                                 <span class="block text-sm font-semibold tracking-[0.08em] text-ef-accent-strong">Effemeral</span>
                                 <span class="mt-1 block text-xs text-ef-muted">Listening archive</span>

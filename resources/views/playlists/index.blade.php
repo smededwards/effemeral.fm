@@ -3,7 +3,7 @@
 @section('content')
     <header class="flex flex-col gap-5 border-b border-ef-line pb-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong">Playlists</p>
+            <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong uppercase">Playlists</p>
             <h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Spotify Playlist Organisation</h1>
             <p class="mt-4 max-w-2xl text-base leading-7 text-[#9aa39d]">Browse imported playlists, audit album coverage, and choose a safe destination for approved album drafts.</p>
         </div>
@@ -17,7 +17,7 @@
         <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="playlist-import-status">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Latest import</p>
+                    <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Latest import</p>
                     <h2 id="playlist-import-status" class="mt-2 text-2xl font-semibold">{{ ucfirst(str_replace('_', ' ', $latestPlaylistImport->status)) }}</h2>
                     <p class="mt-2 text-sm text-ef-muted">{{ number_format($latestPlaylistImport->imported_count) }} new · {{ number_format($latestPlaylistImport->updated_count) }} updated · {{ number_format($latestPlaylistImport->fetched_count) }} tracks</p>
                 </div>
@@ -37,7 +37,7 @@
         <section class="border border-ef-accent-line bg-ef-surface p-6 sm:p-8" aria-labelledby="playlist-failures">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Import warnings</p>
+                    <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Import warnings</p>
                     <h2 id="playlist-failures" class="mt-2 text-2xl font-semibold">Playlists Needing a Retry</h2>
                 </div>
                 <span class="text-sm text-ef-muted">{{ $failedPlaylists->count() }} recorded</span>
@@ -62,7 +62,7 @@
     <section class="border border-ef-line bg-ef-canvas p-6 sm:p-8" aria-labelledby="playlist-list">
         <div class="flex flex-col gap-2 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Imported Spotify data</p>
+                <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Imported Spotify data</p>
                 <h2 id="playlist-list" class="mt-2 text-2xl font-semibold">All Playlists</h2>
             </div>
             <span class="text-sm text-ef-muted">{{ number_format($playlists->total()) }} playlists</span>
