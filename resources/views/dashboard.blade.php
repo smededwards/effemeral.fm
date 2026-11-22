@@ -7,7 +7,7 @@
             <h1 class="mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Your listening archive</h1>
             <p class="mt-5 max-w-2xl text-lg leading-8 text-[#9aa39d]">Last.fm is your listening record. Spotify is the working library. Effemeral brings them together so unfinished albums become deliberate next listens.</p>
         </div>
-        <a class="inline-flex w-fit items-center border border-[#00e676] bg-[#00e676] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#00994d]" href="{{ route('catalogue.index', [], false) }}">Browse catalogue <span class="ml-4" aria-hidden="true">→</span></a>
+        <a class="inline-flex w-fit items-center border border-[#00e676] bg-[#00e676] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#00994d]" href="{{ route('recommendations.index', [], false) }}">See albums to complete <span class="ml-4" aria-hidden="true">→</span></a>
     </header>
 
     <section class="grid border-y border-[#2e382f] bg-[#111612] sm:grid-cols-2 lg:grid-cols-4" aria-label="Archive summary">
@@ -68,8 +68,8 @@
             <h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Keep the archive current</h2>
             <div class="mt-8 divide-y divide-white/20 border-y border-white/20">
                 <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('imports.index', [], false) }}"><span>Import Last.fm and Spotify</span><span aria-hidden="true">→</span></a>
-                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('library.index', [], false) }}"><span>Review your library</span><span aria-hidden="true">→</span></a>
-                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('recommendations.index', [], false) }}"><span>Review playlist drafts</span><span aria-hidden="true">→</span></a>
+                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('recommendations.index', [], false) }}"><span>Review albums to complete</span><span aria-hidden="true">→</span></a>
+                <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-[#b7ffd1]" href="{{ route('playlists.index', [], false) }}"><span>Organise Spotify playlists</span><span aria-hidden="true">→</span></a>
             </div>
             @if ($latestRecommendation)
                 <div class="mt-8 border-t border-white/20 pt-5 text-sm text-[#d7ffe2]">

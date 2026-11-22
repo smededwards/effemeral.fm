@@ -32,13 +32,20 @@
                         <div class="flex flex-wrap gap-1">
                             @foreach ([
                                 ['route' => 'dashboard', 'label' => 'Overview'],
-                                ['route' => 'imports.index', 'label' => 'Imports'],
-                                ['route' => 'library.index', 'label' => 'Library'],
+                                ['route' => 'recommendations.index', 'label' => 'To complete'],
                                 ['route' => 'playlists.index', 'label' => 'Playlists'],
-                                ['route' => 'catalogue.index', 'label' => 'Catalogue'],
-                                ['route' => 'recommendations.index', 'label' => 'Drafts'],
                             ] as $item)
                                 <a class="border-b-2 px-3 py-3 text-sm font-medium transition {{ request()->routeIs($item['route']) ? 'border-[#00e676] bg-[#00e676] text-white' : 'border-transparent text-[#9aa39d] hover:border-[#00e676] hover:text-[#00e676]' }}" href="{{ route($item['route'], [], false) }}" @if (request()->routeIs($item['route'])) aria-current="page" @endif>{{ $item['label'] }}</a>
+                            @endforeach
+                        </div>
+                        <div class="flex flex-wrap gap-4 border-t border-[#2e382f] pt-3">
+                            <span class="text-xs uppercase tracking-[0.16em] text-[#7d8a80]">Data</span>
+                            @foreach ([
+                                ['route' => 'imports.index', 'label' => 'Imports'],
+                                ['route' => 'library.index', 'label' => 'Library'],
+                                ['route' => 'catalogue.index', 'label' => 'Catalogue'],
+                            ] as $item)
+                                <a class="text-xs font-medium text-[#9aa39d] transition hover:text-[#00e676]" href="{{ route($item['route'], [], false) }}">{{ $item['label'] }}</a>
                             @endforeach
                         </div>
                     </nav>
