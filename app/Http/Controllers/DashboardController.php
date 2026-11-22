@@ -8,6 +8,7 @@ use App\Jobs\ImportSpotifyLikedTracks;
 use App\Jobs\ImportSpotifyPlaylists;
 use App\Jobs\ImportSpotifySavedAlbums;
 use App\Models\Album;
+use App\Models\AlbumPlaylist;
 use App\Models\AlbumRecommendation;
 use App\Models\Artist;
 use App\Models\LastFmImportRun;
@@ -340,6 +341,7 @@ class DashboardController extends Controller
         });
 
         return view('playlists.index', [
+            'albumPlaylists' => AlbumPlaylist::query()->withCount('albums')->orderBy('name')->get(),
             'playlists' => $playlists,
             'playlistSearch' => $search,
             'latestPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),

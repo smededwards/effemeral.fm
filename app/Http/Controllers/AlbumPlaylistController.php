@@ -1,0 +1,113 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Album;
+use App\Models\AlbumPlaylist;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
+
+class AlbumPlaylistController extends Controller
+{
+    public function show(Request $request, AlbumPlaylist $albumPlaylist): View
+    {
+        $search = trim((string) $request->query('q', ''));
+        $albumQuery = Album::query()
+            ->with('artists')
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where('title', 'like', '%'.$search.'%')
+                    ->orWhereHas('artists', fn ($artistQuery) => $artistQuery->where('name', 'like', '%'.$search.'%'));
+            })
+            ->whereDoesntHave('playlists', fn ($query) => $query->whereKey($albumPlaylist->id))
+            ->orderBy('title');
+
+        return view('playlists.show', [
+            'albumPlaylist' => $albumPlaylist->load('albums.artists'),
+            'search' => $search,
+            'albums' => $search === '' ? collect() : $albumQuery->paginate(15)->withQueryString(),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['name' => ['required', 'string', 'max:100']]);
+        $playlist = AlbumPlaylist::query()->create(['name' => trim($validated['name'])]);
+
+        return to_route('album-playlists.show', $playlist)->with('success', 'Album playlist created.');
+    }
+
+    public function update(Request $request, AlbumPlaylist $albumPlaylist): RedirectResponse
+    {
+        $validated = $request->validate(['name' => ['required', 'string', 'max:100']]);
+        $albumPlaylist->update(['name' => trim($validated['name'])]);
+
+        return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Playlist name updated.');
+    }
+
+    public function addAlbum(Request $request, AlbumPlaylist $albumPlaylist): RedirectResponse
+    {
+        $validated = $request->validate(['album_id' => ['required', 'integer', 'exists:albums,id']]);
+
+        if ($albumPlaylist->albums()->whereKey($validated['album_id'])->exists()) {
+            return back()->with('error', 'That album is already in this playlist.');
+        }
+
+        $albumPlaylist->albums()->attach($validated['album_id'], [
+            'position' => (int) ($albumPlaylist->albums()->max('album_playlist_items.position') ?? 0) + 1,
+        ]);
+
+        return back()->with('success', 'Album added to playlist.');
+    }
+
+    public function removeAlbum(AlbumPlaylist $albumPlaylist, Album $album): RedirectResponse
+    {
+        abort_unless($albumPlaylist->albums()->whereKey($album->id)->exists(), 404);
+
+        DB::transaction(function () use ($albumPlaylist, $album): void {
+            $albumPlaylist->albums()->detach($album->id);
+            $this->saveOrder($albumPlaylist);
+        });
+
+        return back()->with('success', 'Album removed from playlist.');
+    }
+
+    public function moveAlbum(Request $request, AlbumPlaylist $albumPlaylist, Album $album): RedirectResponse
+    {
+        $validated = $request->validate(['direction' => ['required', 'in:up,down']]);
+        /** @var Collection<int, Album> $albums */
+        $albums = $albumPlaylist->albums()->get();
+        $currentIndex = $albums->search(fn (Album $item): bool => $item->id === $album->id);
+
+        abort_if($currentIndex === false, 404);
+
+        $targetIndex = $currentIndex + ($validated['direction'] === 'up' ? -1 : 1);
+
+        if ($targetIndex < 0 || $targetIndex >= $albums->count()) {
+            return back();
+        }
+
+        $albums->splice($currentIndex, 1);
+        $albums->splice($targetIndex, 0, [$album]);
+
+        DB::transaction(function () use ($albumPlaylist, $albums): void {
+            foreach ($albums->values() as $index => $orderedAlbum) {
+                $albumPlaylist->albums()->updateExistingPivot($orderedAlbum->id, ['position' => $index + 1]);
+            }
+        });
+
+        return back()->with('success', 'Album order updated.');
+    }
+
+    private function saveOrder(AlbumPlaylist $albumPlaylist): void
+    {
+        /** @var Collection<int, Album> $albums */
+        $albums = $albumPlaylist->albums()->get();
+
+        foreach ($albums->values() as $index => $album) {
+            $albumPlaylist->albums()->updateExistingPivot($album->id, ['position' => $index + 1]);
+        }
+    }
+}

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AlbumPlaylistController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ListeningArchiveController;
 use App\Http\Controllers\SpotifyAuthController;
@@ -10,6 +11,12 @@ Route::middleware('private')->group(function (): void {
     Route::get('/imports', [DashboardController::class, 'imports'])->name('imports.index');
     Route::get('/library', [DashboardController::class, 'library'])->name('library.index');
     Route::get('/playlists', [DashboardController::class, 'playlists'])->name('playlists.index');
+    Route::post('/playlists', [AlbumPlaylistController::class, 'store'])->name('album-playlists.store');
+    Route::get('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'show'])->name('album-playlists.show');
+    Route::patch('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'update'])->name('album-playlists.update');
+    Route::post('/playlists/{albumPlaylist}/albums', [AlbumPlaylistController::class, 'addAlbum'])->name('album-playlists.albums.store');
+    Route::delete('/playlists/{albumPlaylist}/albums/{album}', [AlbumPlaylistController::class, 'removeAlbum'])->name('album-playlists.albums.destroy');
+    Route::post('/playlists/{albumPlaylist}/albums/{album}/move', [AlbumPlaylistController::class, 'moveAlbum'])->name('album-playlists.albums.move');
     Route::get('/listening', [ListeningArchiveController::class, 'index'])->name('listening.index');
     Route::get('/recommendations', [DashboardController::class, 'recommendations'])->name('recommendations.index');
     Route::get('/catalogue', [DashboardController::class, 'catalogue'])->name('catalogue.index');

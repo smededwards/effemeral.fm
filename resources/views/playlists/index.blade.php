@@ -13,6 +13,37 @@
         </form>
     </header>
 
+    <section class="border border-ef-accent-line bg-ef-surface p-6 sm:p-8" aria-labelledby="effemeral-playlists">
+        <div class="flex flex-col gap-4 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Your playlists</p>
+                <h2 id="effemeral-playlists" class="mt-2 text-2xl font-semibold">Effemeral Album Playlists</h2>
+                <p class="mt-2 text-sm text-ef-muted">Build persistent album lists. Changes here stay in Effemeral until you choose to sync later.</p>
+            </div>
+            <form class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row" method="POST" action="{{ route('album-playlists.store', [], false) }}">
+                @csrf
+                <label class="sr-only" for="new-album-playlist-name">New playlist name</label>
+                <input id="new-album-playlist-name" class="min-w-0 border border-ef-line bg-ef-canvas px-4 py-3 text-sm text-ef-text" type="text" name="name" maxlength="100" placeholder="e.g. New albums" required>
+                <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Create Playlist</button>
+            </form>
+        </div>
+        @if ($albumPlaylists->isNotEmpty())
+            <ul class="mt-4 divide-y divide-ef-line">
+                @foreach ($albumPlaylists as $albumPlaylist)
+                    <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h3 class="font-semibold">{{ $albumPlaylist->name }}</h3>
+                            <p class="mt-1 text-sm text-ef-muted">{{ $albumPlaylist->albums_count }} {{ $albumPlaylist->albums_count === 1 ? 'album' : 'albums' }} · {{ $albumPlaylist->spotify_playlist_id ? 'Spotify linked' : 'Draft' }}</p>
+                        </div>
+                        <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ route('album-playlists.show', $albumPlaylist, false) }}">Manage Playlist →</a>
+                    </li>
+                @endforeach
+            </ul>
+        @else
+            <p class="mt-5 text-sm text-ef-muted">No Effemeral playlists yet. Create one to start arranging full albums.</p>
+        @endif
+    </section>
+
     @if ($latestPlaylistImport)
         <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="playlist-import-status">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
