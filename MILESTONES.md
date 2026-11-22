@@ -10,7 +10,7 @@ version.
 | --- | --- | --- |
 | `v0.1.0` | Agalloch | Complete |
 | `v0.2.0` | Baroness | Import and prototype validation pending |
-| `v0.3.0` | Candlemass | Active planning · [playlist organisation overview](https://github.com/smededwards/effemeral.fm/issues/68) |
+| `v0.3.0` | Candlemass | Active · playlist-first curation workflow, beginning with [the playlist organisation overview](https://github.com/smededwards/effemeral.fm/issues/68) |
 | `v0.4.0` | Darkthrone | Planned |
 | `v0.5.0` | Earth | Planned |
 | `v0.6.0` | Funeral | Planned |
