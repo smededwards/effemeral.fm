@@ -65,8 +65,16 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#00e676]">Imported Spotify data</p>
                 <h2 id="playlist-list" class="mt-2 text-2xl font-semibold">All playlists</h2>
             </div>
-            <span class="text-sm text-[#9aa39d]">{{ number_format($playlists->count()) }} playlists</span>
+            <span class="text-sm text-[#9aa39d]">{{ number_format($playlists->total()) }} playlists</span>
         </div>
+        <form class="mt-6 flex flex-col gap-3 sm:flex-row" method="GET" action="{{ route('playlists.index', [], false) }}">
+            <label class="sr-only" for="playlist-search">Search playlists</label>
+            <input id="playlist-search" class="min-w-0 flex-1 border border-[#445148] bg-[#111612] px-4 py-3 text-sm text-[#f3f5f3] placeholder:text-[#7d8a80] focus:border-[#00e676] focus:outline-none focus:ring-2 focus:ring-[#145c2c]" type="search" name="playlist_search" value="{{ $playlistSearch }}" placeholder="Search imported playlists">
+            <button class="bg-[#00e676] px-5 py-3 text-sm font-semibold text-[#061108] hover:bg-[#b7ffd1]" type="submit">Search</button>
+            @if ($playlistSearch !== '')
+                <a class="border border-[#445148] px-5 py-3 text-center text-sm font-semibold text-[#d7ffe2] hover:border-[#00e676]" href="{{ route('playlists.index', [], false) }}">Clear</a>
+            @endif
+        </form>
         <div class="mt-6 divide-y divide-[#2e382f]">
             @forelse ($playlists as $playlist)
                 <article class="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -80,7 +88,11 @@
                                 <span class="border border-[#445148] px-2 py-1 text-xs text-[#9aa39d]">Collaborative</span>
                             @endif
                         </div>
-                        <p class="mt-2 text-sm text-[#9aa39d]">{{ number_format($playlist->items_count) }} imported tracks · {{ number_format($playlist->tracks_total) }} Spotify tracks</p>
+                        <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#9aa39d]">
+                            <span>{{ number_format($playlist->items_count) }} imported tracks · {{ number_format($playlist->tracks_total) }} Spotify tracks</span>
+                            <span class="border px-2 py-1 text-xs {{ $playlist->import_status === 'failed' ? 'border-[#b42318] text-[#ff8b80]' : ($playlist->import_status === 'partial' ? 'border-[#c6ff4a] text-[#c6ff4a]' : 'border-[#445148] text-[#9aa39d]') }}">{{ ucfirst($playlist->import_status) }}</span>
+                            <span class="border px-2 py-1 text-xs {{ $playlist->album_status === 'complete' ? 'border-[#00e676] text-[#00e676]' : ($playlist->album_status === 'partial' ? 'border-[#c6ff4a] text-[#c6ff4a]' : 'border-[#445148] text-[#9aa39d]') }}">{{ $playlist->album_status === 'none' ? 'No album detected' : ($playlist->complete_album_count.' complete album'.($playlist->complete_album_count === 1 ? '' : 's')) }}</span>
+                        </div>
                         <p class="mt-1 text-xs text-[#7d8a80]">Last synced {{ $playlist->last_synced_at?->format('Y.m.d H:i') ?? 'not yet' }}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-4 text-sm">
@@ -94,5 +106,8 @@
                 <p class="py-6 text-sm text-[#9aa39d]">No Spotify playlists have been imported yet.</p>
             @endforelse
         </div>
+        @if ($playlists->hasPages())
+            <div class="mt-6 border-t border-[#2e382f] pt-5">{{ $playlists->links() }}</div>
+        @endif
     </section>
 @endsection
