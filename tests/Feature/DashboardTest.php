@@ -29,7 +29,7 @@ class DashboardTest extends TestCase
             ->assertSee('href="'.route('recommendations.index', [], false).'"', false)
             ->assertSee('To Complete')
             ->assertSee('Playlists')
-            ->assertSee('Data');
+            ->assertSee('Catalogue');
     }
 
     public function test_imported_spotify_albums_are_shown_on_the_dashboard(): void
