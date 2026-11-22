@@ -2,13 +2,13 @@
 
 @section('content')
     <header class="flex flex-col gap-4 border-b border-ef-line pb-8 sm:flex-row sm:items-end sm:justify-between">
-        <div><p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong">Imports / 02</p><h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Keep the Sources Current</h1><p class="mt-4 max-w-2xl text-base leading-7 text-ef-muted">Last.fm supplies listening evidence. Spotify supplies the working library and playlist context.</p></div>
+        <div><p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong uppercase">Imports / 02</p><h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Keep the Sources Current</h1><p class="mt-4 max-w-2xl text-base leading-7 text-ef-muted">Last.fm supplies listening evidence. Spotify supplies the working library and playlist context.</p></div>
         <span class="text-xs tracking-[0.16em] text-ef-muted">Manual sync</span>
     </header>
 
     <section class="grid gap-px border border-ef-line bg-ef-line lg:grid-cols-2">
         <div class="bg-ef-canvas p-6 sm:p-8">
-            <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Source 01</p><h2 class="mt-3 text-2xl font-semibold">Last.fm History</h2><p class="mt-2 text-sm leading-6 text-ef-muted">Import a bounded range while testing, or queue your complete Last.fm history.</p>
+            <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Source 01</p><h2 class="mt-3 text-2xl font-semibold">Last.fm History</h2><p class="mt-2 text-sm leading-6 text-ef-muted">Import a bounded range while testing, or queue your complete Last.fm history.</p>
             <form class="mt-8 space-y-5" method="POST" action="{{ route('imports.lastfm', [], false) }}">
                 @csrf
                 <div class="grid gap-4 sm:grid-cols-2"><label class="block text-sm text-ef-accent-soft">From<input class="mt-2 block w-full border border-ef-line bg-ef-surface px-3 py-3 text-ef-text" type="date" name="from" value="{{ old('from', $defaultFrom) }}" required></label><label class="block text-sm text-ef-accent-soft">To<input class="mt-2 block w-full border border-ef-line bg-ef-surface px-3 py-3 text-ef-text" type="date" name="to" value="{{ old('to', $defaultTo) }}" required></label></div>
@@ -17,7 +17,7 @@
             </form>
         </div>
         <div class="bg-ef-surface p-6 sm:p-8">
-            <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Source 02</p><h2 class="mt-3 text-2xl font-semibold">Spotify Library</h2><p class="mt-2 text-sm leading-6 text-ef-muted">Connect once, then refresh saved albums, liked songs, and playlists whenever you choose.</p>
+            <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Source 02</p><h2 class="mt-3 text-2xl font-semibold">Spotify Library</h2><p class="mt-2 text-sm leading-6 text-ef-muted">Connect once, then refresh saved albums, liked songs, and playlists whenever you choose.</p>
             <p class="mt-8 border-y border-ef-line py-4 text-sm text-ef-accent-soft">{{ $spotifyConnection ? 'Connected to Spotify.' : 'Spotify is not connected.' }}</p>
             @if ($spotifyConnection)<form class="mt-6" method="POST" action="{{ route('auth.spotify.disconnect', [], false) }}">@csrf<button class="border border-ef-line px-4 py-3 text-sm font-semibold text-ef-text hover:border-ef-accent" type="submit">Disconnect Spotify</button></form>@else<a class="mt-6 inline-block bg-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-soft" href="{{ route('auth.spotify', [], false) }}">Connect Spotify</a>@endif
         </div>

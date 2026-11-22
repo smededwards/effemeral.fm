@@ -35,5 +35,16 @@ class PageRoutingTest extends TestCase
             ->assertOk()
             ->assertSee('To Complete')
             ->assertSee(route('recommendations.generate', [], false), false);
+
+        $this->get(route('catalogue.index'))
+            ->assertOk()
+            ->assertSee('text-ef-accent-strong uppercase', false)
+            ->assertSee('Catalogue / 05');
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('aria-hidden="true">♪</span>', false)
+            ->assertSee('<link rel="manifest" href="/site.webmanifest">', false)
+            ->assertSee('href="/favicon-32x32.png"', false);
     }
 }

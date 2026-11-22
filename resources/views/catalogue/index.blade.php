@@ -2,7 +2,7 @@
 
 @section('content')
         <header>
-                <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong">Catalogue / 05</p>
+                <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong uppercase">Catalogue / 05</p>
                 <h1 class="mt-3 text-4xl font-semibold">Catalogue</h1>
                 <p class="mt-3 max-w-2xl text-ef-muted">Choose a canonical artist or album to use as the starting point for discovery.</p>
             </header>
@@ -17,7 +17,7 @@
 
             @if ($selectedArtist)
                 <section class="rounded-xl border border-ef-accent-line bg-ef-accent-wash/30 p-6">
-                    <p class="text-xs tracking-[0.2em] text-ef-accent-strong">Selected artist</p>
+                    <p class="text-xs tracking-[0.2em] text-ef-accent-strong uppercase">Selected artist</p>
                     <h2 class="mt-2 text-2xl font-semibold">{{ $selectedArtist->name }}</h2>
                     <p class="mt-2 text-sm text-ef-muted">{{ $selectedArtist->albums->count() }} canonical albums</p>
                     @if ($selectedArtist->albums->isNotEmpty())
@@ -60,7 +60,7 @@
 
             @if ($selectedAlbum)
                 <section class="rounded-xl border border-ef-accent-line bg-ef-accent-wash/30 p-6">
-                    <p class="text-xs tracking-[0.2em] text-ef-accent-strong">Selected album</p>
+                    <p class="text-xs tracking-[0.2em] text-ef-accent-strong uppercase">Selected album</p>
                     <h2 class="mt-2 text-2xl font-semibold">{{ $selectedAlbum->title }}</h2>
                     <p class="mt-2 text-ef-muted">{{ $selectedAlbum->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
                     <p class="mt-2 text-sm text-ef-muted">{{ $selectedAlbum->tracks->count() }} canonical tracks{{ $selectedAlbum->release_date ? ' · '.$selectedAlbum->release_date : '' }}</p>

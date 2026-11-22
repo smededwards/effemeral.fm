@@ -3,7 +3,7 @@
 @section('content')
     <header class="flex flex-col gap-4 border-b border-ef-line pb-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong">Listening Library</p>
+            <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong uppercase">Listening Library</p>
             <h1 class="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">To Complete</h1>
             <p class="mt-4 max-w-2xl text-base leading-7 text-ef-muted">Albums from your Spotify library, matched against Last.fm listening history. Review a draft before syncing it to Spotify.</p>
         </div>
@@ -13,7 +13,7 @@
     <section class="border border-ef-line bg-ef-surface p-6 sm:p-8">
         <div class="flex flex-col gap-4 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Next Listens</p>
+                <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Next Listens</p>
                 <h2 class="mt-2 text-2xl font-semibold">Incomplete Albums</h2>
                 <p class="mt-2 text-sm text-ef-muted">{{ number_format($incompleteAlbums->count()) }} albums ready to continue.</p>
             </div>
