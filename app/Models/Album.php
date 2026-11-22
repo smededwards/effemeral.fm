@@ -28,4 +28,11 @@ class Album extends Model
     {
         return $this->hasMany(SpotifyAlbumCollection::class);
     }
+
+    public function playlists(): BelongsToMany
+    {
+        return $this->belongsToMany(AlbumPlaylist::class, 'album_playlist_items')
+            ->withPivot('position')
+            ->withTimestamps();
+    }
 }
