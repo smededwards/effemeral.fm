@@ -25,9 +25,9 @@ class DashboardTest extends TestCase
     {
         $this->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('See albums to complete')
+            ->assertSee('See Albums to Complete')
             ->assertSee('href="'.route('recommendations.index', [], false).'"', false)
-            ->assertSee('To complete')
+            ->assertSee('To Complete')
             ->assertSee('Playlists')
             ->assertSee('Data');
     }
@@ -48,7 +48,7 @@ class DashboardTest extends TestCase
         $response = $this->get(route('dashboard'));
 
         $response->assertStatus(200);
-        $response->assertSee('Imported Spotify albums');
+        $response->assertSee('Imported Spotify Albums');
         $response->assertSee('A Saved Album');
         $response->assertSee('An Artist');
         $response->assertSee('https://open.spotify.com/album/album-id');
@@ -178,8 +178,8 @@ class DashboardTest extends TestCase
 
         $response = $this->get(route('dashboard'));
 
-        $response->assertSee('Top artists');
-        $response->assertSee('Top albums');
+        $response->assertSee('Top Artists');
+        $response->assertSee('Top Albums');
         $response->assertSee('An Artist');
         $response->assertSee('An Album');
         $response->assertSee('2 plays');
@@ -347,7 +347,7 @@ class DashboardTest extends TestCase
 
         $this->get(route('recommendations.review.page', $run))
             ->assertOk()
-            ->assertSee('Source: Spotify Saved Albums')
+            ->assertSee('Source: Spotify saved albums')
             ->assertSee('1', false)
             ->assertSee('2 Spotify tracks available')
             ->assertSee('Included Review Album')
