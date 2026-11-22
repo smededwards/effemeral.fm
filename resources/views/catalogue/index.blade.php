@@ -23,9 +23,9 @@
                     @if ($selectedArtist->albums->isNotEmpty())
                         <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             @foreach ($selectedArtist->albums as $album)
-                                <a class="rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent" href="{{ route('catalogue.index', ['album' => $album->id], false) }}">
+                                <a class="rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent" href="{{ route('albums.show', $album, false) }}">
                                     <h3 class="font-medium">{{ $album->title }}</h3>
-                                    <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks->count() }} tracks</p>
+                                    <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks_count }} tracks</p>
                                 </a>
                             @endforeach
                         </div>
@@ -62,7 +62,14 @@
                 <section class="rounded-xl border border-ef-accent-line bg-ef-accent-wash/30 p-6">
                     <p class="text-xs tracking-[0.2em] text-ef-accent-strong uppercase">Selected album</p>
                     <h2 class="mt-2 text-2xl font-semibold">{{ $selectedAlbum->title }}</h2>
-                    <p class="mt-2 text-ef-muted">{{ $selectedAlbum->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
+                    <p class="mt-2 flex flex-wrap gap-x-2 text-ef-muted">
+                        @forelse ($selectedAlbum->artists as $artist)
+                            @if (! $loop->first)<span aria-hidden="true">·</span>@endif
+                            <a class="hover:text-ef-accent-strong" href="{{ route('artists.show', $artist, false) }}">{{ $artist->name }}</a>
+                        @empty
+                            <span>Unknown artist</span>
+                        @endforelse
+                    </p>
                     <p class="mt-2 text-sm text-ef-muted">{{ $selectedAlbum->tracks->count() }} canonical tracks{{ $selectedAlbum->release_date ? ' · '.$selectedAlbum->release_date : '' }}</p>
                     <p class="mt-5 text-sm text-ef-muted">This album is ready to become the context for genre, year, and completion-aware discovery.</p>
                     <form class="mt-6 border-t border-ef-accent-line pt-6" method="POST" action="{{ route('catalogue.discover', [], false) }}">
@@ -89,9 +96,9 @@
                         @if ($artists->isNotEmpty())
                             <div class="mt-5 space-y-3">
                                 @foreach ($artists as $artist)
-                                    <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent" href="{{ route('catalogue.index', ['q' => $search, 'artist' => $artist->id], false) }}">
+                                    <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent" href="{{ route('artists.show', $artist, false) }}">
                                         <h3 class="font-medium">{{ $artist->name }}</h3>
-                                        <p class="mt-1 text-sm text-ef-muted">{{ $artist->albums()->count() }} canonical albums</p>
+                                        <p class="mt-1 text-sm text-ef-muted">{{ $artist->albums_count }} canonical albums</p>
                                     </a>
                                 @endforeach
                             </div>
@@ -105,10 +112,10 @@
                         @if ($albums->isNotEmpty())
                             <div class="mt-5 space-y-3">
                                 @foreach ($albums as $album)
-                                    <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent" href="{{ route('catalogue.index', ['q' => $search, 'album' => $album->id], false) }}">
+                                    <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent" href="{{ route('albums.show', $album, false) }}">
                                         <h3 class="font-medium">{{ $album->title }}</h3>
                                         <p class="mt-1 text-sm text-ef-muted">{{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
-                                        <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks()->count() }} canonical tracks</p>
+                                        <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks_count }} canonical tracks</p>
                                     </a>
                                 @endforeach
                             </div>

@@ -37,6 +37,7 @@ class DashboardController extends Controller
 
         if ($search !== '') {
             $artists = Artist::query()
+                ->withCount('albums')
                 ->where(function ($query) use ($search): void {
                     $query->where('name', 'like', '%'.$search.'%')
                         ->orWhere('normalised_name', 'like', '%'.$this->normalise($search).'%');
@@ -46,6 +47,7 @@ class DashboardController extends Controller
                 ->get();
             $albums = Album::query()
                 ->with('artists')
+                ->withCount('tracks')
                 ->where(function ($query) use ($search): void {
                     $query->where('title', 'like', '%'.$search.'%')
                         ->orWhere('normalised_title', 'like', '%'.$this->normalise($search).'%')
@@ -64,7 +66,7 @@ class DashboardController extends Controller
             'artists' => $artists,
             'albums' => $albums,
             'selectedArtist' => $artistId > 0
-                ? Artist::query()->with(['albums' => fn ($query) => $query->orderBy('title'), 'acceptedGenres'])->find($artistId)
+                ? Artist::query()->with(['albums' => fn ($query) => $query->withCount('tracks')->orderBy('title'), 'acceptedGenres'])->find($artistId)
                 : null,
             'selectedAlbum' => $albumId > 0
                 ? Album::query()->with('artists.acceptedGenres', 'tracks')->find($albumId)
@@ -419,10 +421,25 @@ class DashboardController extends Controller
             });
         }
 
+        $spotifySavedAlbums = $savedAlbums->limit(24)->get();
+        $canonicalAlbums = Album::query()
+            ->whereIn('spotify_id', $spotifySavedAlbums->pluck('spotify_album_id'))
+            ->get(['id', 'spotify_id'])
+            ->keyBy('spotify_id');
+        $canonicalArtists = Artist::query()
+            ->whereIn('spotify_id', $spotifySavedAlbums->pluck('primary_artist_id')->filter())
+            ->get(['id', 'spotify_id'])
+            ->keyBy('spotify_id');
+
+        foreach ($spotifySavedAlbums as $savedAlbum) {
+            $savedAlbum->setAttribute('canonical_album_id', $canonicalAlbums->get($savedAlbum->spotify_album_id)?->id);
+            $savedAlbum->setAttribute('canonical_artist_id', $canonicalArtists->get($savedAlbum->primary_artist_id)?->id);
+        }
+
         return [
             'librarySearch' => $librarySearch,
             'spotifyPlaylists' => SpotifyPlaylist::query()->with('items.album')->latest('last_synced_at')->limit(24)->get(),
-            'spotifySavedAlbums' => $savedAlbums->limit(24)->get(),
+            'spotifySavedAlbums' => $spotifySavedAlbums,
             'spotifySavedAlbumCount' => SpotifySavedAlbum::query()->count(),
         ];
     }
