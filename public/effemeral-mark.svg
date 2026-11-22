@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title id="title">Effemeral quaver E</title>
-  <rect width="64" height="64" rx="14" fill="#0C110D"/>
-  <path d="M38 13c9-2 16 2 16 8 0 5-5 8-12 10" fill="none" stroke="#008D63" stroke-linecap="round" stroke-width="6"/>
-  <path d="M39 14v29" fill="none" stroke="#008D63" stroke-linecap="round" stroke-width="6"/>
-  <ellipse cx="27" cy="46" rx="15" ry="9.5" transform="rotate(-28 27 46)" fill="#008D63"/>
-  <path d="M32 41H22v10h10M22 46h8" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/>
-</svg>

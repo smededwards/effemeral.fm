@@ -38,7 +38,7 @@ class PageRoutingTest extends TestCase
 
         $this->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('src="/effemeral-mark.svg" alt="" width="44" height="44"', false)
+            ->assertSee('aria-hidden="true">♪</span>', false)
             ->assertSee('<link rel="manifest" href="/site.webmanifest">', false)
             ->assertSee('href="/favicon-32x32.png"', false);
     }
