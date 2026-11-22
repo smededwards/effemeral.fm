@@ -6,6 +6,7 @@ use App\Models\Album;
 use App\Models\AlbumPlaylist;
 use App\Models\AlbumRecommendation;
 use App\Models\Artist;
+use App\Models\Genre;
 use App\Models\LastFmImportRun;
 use App\Models\RecommendationRun;
 use App\Models\Scrobble;
@@ -66,10 +67,84 @@ class DashboardController extends Controller
                 ->paginate(24);
         }
 
+        $filters = $request->validate([
+            'genre' => ['nullable', 'integer', 'exists:genres,id'],
+            'artist_id' => ['nullable', 'integer', 'exists:artists,id'],
+            'region' => ['nullable', 'string', 'max:100'],
+            'year_from' => ['nullable', 'integer', 'between:1900,2100'],
+            'year_to' => ['nullable', 'integer', 'between:1900,2100'],
+            'completion' => ['nullable', 'in:incomplete,partial,complete'],
+            'include_non_albums' => ['nullable', 'boolean'],
+        ]);
+        $filteredAlbums = null;
+
+        if ($request->hasAny(['filter', 'genre', 'artist_id', 'region', 'year_from', 'year_to', 'completion', 'include_completed', 'include_non_albums'])) {
+            $catalogueQuery = Album::query()
+                ->withCount('tracks')
+                ->selectSub(Scrobble::query()->selectRaw('COUNT(DISTINCT track_id)')
+                    ->whereColumn('scrobbles.album_id', 'albums.id')
+                    ->where('source', 'lastfm')->whereNotNull('track_id'), 'heard_tracks')
+                ->selectSub(SpotifySavedAlbum::query()->select('completion_override')
+                    ->whereColumn('spotify_saved_albums.spotify_album_id', 'albums.spotify_id')->limit(1), 'completion_override');
+
+            if (! empty($filters['genre'])) {
+                $catalogueQuery->whereHas('artists.acceptedGenres', fn ($query) => $query->whereKey($filters['genre']));
+            }
+            if (! empty($filters['artist_id'])) {
+                $catalogueQuery->whereHas('artists', fn ($query) => $query->whereKey($filters['artist_id']));
+            }
+            if (! empty($filters['region'])) {
+                $region = $this->normalise($filters['region']);
+                $catalogueQuery->whereHas('artists', fn ($query) => $query->whereRaw('LOWER(region) = ?', [$region]));
+            }
+            if (! empty($filters['year_from'])) {
+                $catalogueQuery->whereRaw('CAST(SUBSTRING(release_date, 1, 4) AS UNSIGNED) >= ?', [$filters['year_from']]);
+            }
+            if (! empty($filters['year_to'])) {
+                $catalogueQuery->whereRaw('CAST(SUBSTRING(release_date, 1, 4) AS UNSIGNED) <= ?', [$filters['year_to']]);
+            }
+            if (empty($filters['include_non_albums'])) {
+                $catalogueQuery->where(fn ($query) => $query->whereNull('album_type')->orWhere('album_type', 'album'));
+            }
+
+            $completionQuery = DB::query()
+                ->fromSub($catalogueQuery, 'catalogue_albums')
+                ->select('catalogue_albums.*')
+                ->selectRaw("CASE
+                    WHEN completion_override = 1 THEN 'complete'
+                    WHEN completion_override = 0 THEN 'incomplete'
+                    WHEN tracks_count > 0 AND (total_tracks IS NULL OR tracks_count = total_tracks) AND heard_tracks >= tracks_count THEN 'complete'
+                    WHEN heard_tracks > 0 THEN 'partial'
+                    ELSE 'incomplete'
+                END AS completion_status");
+            $albumQuery = Album::query()
+                ->fromSub($completionQuery, 'albums')
+                ->with(['artists.acceptedGenres', 'artists'])
+                ->when(isset($filters['completion']), fn ($query) => $query->where('completion_status', $filters['completion']))
+                ->when(! isset($filters['completion']) && ! $request->boolean('include_completed'), fn ($query) => $query->where('completion_status', '!=', 'complete'))
+                ->orderByRaw("CASE
+                    WHEN LOWER(title) LIKE '%anniversary%' THEN 3
+                    WHEN LOWER(title) LIKE '%deluxe%' OR LOWER(title) LIKE '%expanded%' OR LOWER(title) LIKE '%special edition%' OR LOWER(title) LIKE '%bonus track%' THEN 2
+                    WHEN LOWER(title) LIKE '%remaster%' THEN 1
+                    ELSE 0
+                END")
+                ->orderBy('title');
+            $filteredAlbums = $albumQuery->paginate(24)->withQueryString();
+            $filteredAlbums->getCollection()->each(function (Album $album): void {
+                $album->setAttribute('completion_summary', (int) $album->getAttribute('heard_tracks').' of '.($album->total_tracks ?? $album->tracks_count).' tracks heard');
+            });
+        }
+
         return view('catalogue.index', [
             'search' => $search,
             'artists' => $artists,
             'albums' => $albums,
+            'filteredAlbums' => $filteredAlbums,
+            'catalogueGenres' => Genre::query()->whereHas('artists')->orderBy('normalised_name')->get(),
+            'catalogueRegions' => Artist::query()->whereNotNull('region')->where('region', '!=', '')->distinct()->orderBy('region')->pluck('region'),
+            'catalogueArtists' => Artist::query()->orderBy('name')->get(['id', 'name']),
+            'albumPlaylists' => AlbumPlaylist::query()->orderBy('name')->get(['id', 'name']),
+            'filters' => $filters,
             'selectedArtist' => $artistId > 0
                 ? Artist::query()->with(['albums' => fn ($query) => $query->withCount('tracks')->orderBy('title'), 'acceptedGenres'])->find($artistId)
                 : null,

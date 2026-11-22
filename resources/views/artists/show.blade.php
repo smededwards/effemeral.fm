@@ -5,6 +5,14 @@
         <a class="text-sm font-semibold text-ef-accent-strong hover:underline" href="{{ route('catalogue.index', [], false) }}">← Catalogue</a>
         <p class="mt-5 text-xs font-semibold tracking-[0.2em] text-ef-accent-strong uppercase">Artist</p>
         <h1 class="mt-2 font-serif text-4xl font-semibold sm:text-5xl">{{ $artist->name }}</h1>
+        <p class="mt-3 text-sm text-ef-muted">{{ $artist->region ?: 'Country or region not set' }}</p>
+        <form class="mt-4 flex max-w-xl flex-col gap-3 sm:flex-row" method="POST" action="{{ route('artists.region.update', $artist, false) }}">
+            @csrf
+            @method('PATCH')
+            <label class="sr-only" for="artist-region">Country or region</label>
+            <input id="artist-region" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="text" name="region" maxlength="100" value="{{ $artist->region }}" placeholder="Set country or region">
+            <button class="shrink-0 rounded-md border border-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash" type="submit">Save region</button>
+        </form>
         @if ($artist->spotify_id)
             <a class="mt-4 inline-block text-sm font-semibold text-ef-accent-strong hover:underline" href="https://open.spotify.com/artist/{{ $artist->spotify_id }}" target="_blank" rel="noreferrer">Open in Spotify</a>
         @endif

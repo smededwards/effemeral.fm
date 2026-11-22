@@ -42,6 +42,8 @@ Route::middleware('private')->group(function (): void {
     Route::post('/albums/{album}/completion/incomplete', [DashboardController::class, 'markAlbumIncomplete'])->name('albums.completion.incomplete');
     Route::post('/albums/{album}/completion/clear', [DashboardController::class, 'clearAlbumCompletionOverride'])->name('albums.completion.clear');
     Route::post('/artists/{artist}/genres', [DashboardController::class, 'updateArtistGenres'])->name('artists.genres.update');
+    Route::patch('/artists/{artist}/region', [MusicPageController::class, 'updateArtistRegion'])->name('artists.region.update');
+    Route::post('/playlists/albums', [AlbumPlaylistController::class, 'addAlbums'])->name('album-playlists.albums.bulk-store');
     Route::post('/recommendations/generate', [DashboardController::class, 'generateRecommendations'])->name('recommendations.generate');
     Route::post('/recommendations/create', [DashboardController::class, 'createManualRecommendations'])->name('recommendations.create');
     Route::post('/recommendations/{recommendationRun}/albums', [DashboardController::class, 'addAlbumsToRecommendations'])->name('recommendations.albums.add');
