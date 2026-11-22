@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ListeningArchiveController;
+use App\Http\Controllers\RecommendationPlaylistController;
 use App\Http\Controllers\SpotifyAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,9 +32,9 @@ Route::middleware('private')->group(function (): void {
     Route::post('/recommendations/create', [DashboardController::class, 'createManualRecommendations'])->name('recommendations.create');
     Route::post('/recommendations/{recommendationRun}/albums', [DashboardController::class, 'addAlbumsToRecommendations'])->name('recommendations.albums.add');
     Route::post('/recommendations/{recommendationRun}/albums/{albumRecommendation}/remove', [DashboardController::class, 'removeAlbumFromRecommendations'])->name('recommendations.albums.remove');
-    Route::get('/recommendations/{recommendationRun}/review', [DashboardController::class, 'recommendationReview'])->name('recommendations.review.page');
-    Route::get('/recommendations/audit', [DashboardController::class, 'playlistAudit'])->name('recommendations.audit');
-    Route::post('/recommendations/{recommendationRun}/sync', [DashboardController::class, 'syncRecommendations'])->name('recommendations.sync');
+    Route::get('/recommendations/{recommendationRun}/review', [RecommendationPlaylistController::class, 'review'])->name('recommendations.review.page');
+    Route::get('/recommendations/audit', [RecommendationPlaylistController::class, 'audit'])->name('recommendations.audit');
+    Route::post('/recommendations/{recommendationRun}/sync', [RecommendationPlaylistController::class, 'sync'])->name('recommendations.sync');
     Route::post('/recommendations/{recommendationRun}/review', [DashboardController::class, 'reviewRecommendations'])->name('recommendations.review');
     Route::get('/auth/spotify', [SpotifyAuthController::class, 'redirect'])->name('auth.spotify');
     Route::get('/auth/spotify/callback', [SpotifyAuthController::class, 'callback'])->name('auth.spotify.callback');

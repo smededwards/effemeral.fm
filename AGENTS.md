@@ -186,3 +186,5 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Keep separate concerns in the layer responsible for them; compose small collaborators when behavior needs combining. Prefer composition over inheritance unless an existing framework or domain hierarchy makes inheritance the clearest fit.
 - Fail fast at trust boundaries and use guard clauses for invalid, unavailable, or already-completed states. Preserve user-facing error handling where recovery is useful, and never hide failures that could cause data loss.
 - Treat these principles as practical design checks, not a requirement to restructure working code without a concrete benefit. Prefer incremental refactors with narrow scope and clear behavior.
+- Write comparisons in natural order: put the variable or expression on the left and the literal on the right; avoid Yoda conditions (for example, `$value === null`).
+- Use a ternary when choosing between two concise expressions. Use `if` statements and guard clauses for side effects, multi-step branches, validation, or complex logic; avoid nested ternaries.

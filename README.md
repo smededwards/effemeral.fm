@@ -62,7 +62,7 @@ Run the standard checks from the application container:
 - Use Conventional Commits.
 - Every pull request needs a description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
 - Keep manual review and override paths for recommendations and completion decisions.
-- Apply DRY, KISS, and YAGNI; use SOLID, separation of concerns, composition over inheritance, fail-fast checks, and guard clauses as practical design guidance.
+- Apply DRY, KISS, and YAGNI; use SOLID, separation of concerns, composition over inheritance, fail-fast checks, and guard clauses as practical design guidance. Write comparisons in natural order (avoid Yoda conditions), and prefer ternaries for concise expression choices while keeping multi-step branches as `if` statements.
 - Run Ponytail on the complete proposed changes before opening a pull request, address actionable findings, and summarize the outcome in the PR handoff.
 
 ## Current priorities
