@@ -61,7 +61,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
                     'owner_id' => data_get($playlistData, 'owner.id'),
                     'public' => $playlistData['public'] ?? null,
                     'collaborative' => $playlistData['collaborative'] ?? false,
-                    'tracks_total' => data_get($playlistData, 'tracks.total', 0),
+                    'tracks_total' => data_get($playlistData, 'items.total', data_get($playlistData, 'tracks.total', 0)),
                     'snapshot_id' => $playlistData['snapshot_id'] ?? null,
                     'last_import_attempted_at' => now(),
                 ]);

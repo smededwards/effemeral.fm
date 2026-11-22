@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Album;
 use App\Models\AlbumPlaylist;
+use App\Models\SpotifyPlaylist;
+use App\Services\Spotify\AlbumPlaylistSyncService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +30,80 @@ class AlbumPlaylistController extends Controller
             'albumPlaylist' => $albumPlaylist->load('albums.artists'),
             'search' => $search,
             'albums' => $search === '' ? collect() : $albumQuery->paginate(15)->withQueryString(),
+            'spotifyPlaylists' => $albumPlaylist->spotify_playlist_id === null
+                ? SpotifyPlaylist::query()->orderBy('name')->get(['spotify_playlist_id', 'name', 'public', 'collaborative'])
+                : collect(),
+            'linkedSpotifyPlaylist' => $albumPlaylist->spotify_playlist_id === null
+                ? null
+                : SpotifyPlaylist::query()->where('spotify_playlist_id', $albumPlaylist->spotify_playlist_id)->first(),
         ]);
+    }
+
+    public function previewSpotifySync(Request $request, AlbumPlaylist $albumPlaylist, AlbumPlaylistSyncService $syncService): View|RedirectResponse
+    {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
+        $validated = $request->validate([
+            'destination' => ['required', 'in:new,existing,linked'],
+            'spotify_playlist_id' => ['required_if:destination,existing', 'nullable', 'string', 'exists:spotify_playlists,spotify_playlist_id'],
+        ]);
+        $destination = $albumPlaylist->spotify_playlist_id !== null ? 'linked' : $validated['destination'];
+        $selectedPlaylist = $destination === 'existing'
+            ? SpotifyPlaylist::query()->where('spotify_playlist_id', $validated['spotify_playlist_id'])->firstOrFail()
+            : null;
+
+        try {
+            $preview = $syncService->preview($albumPlaylist, $destination, $selectedPlaylist);
+        } catch (\Throwable $exception) {
+            return to_route('album-playlists.show', $albumPlaylist)->with('error', $exception->getMessage());
+        }
+
+        session()->put($this->syncPreviewSessionKey($albumPlaylist), array_intersect_key($preview, array_flip([
+            'destination',
+            'target_playlist_id',
+            'snapshot_id',
+            'remote_name',
+            'remove_uris',
+            'add_uris',
+            'desired_uris',
+            'managed_uris',
+            'local_hash',
+        ])));
+
+        return view('playlists.sync-review', [
+            'albumPlaylist' => $albumPlaylist,
+            'preview' => $preview,
+        ]);
+    }
+
+    public function syncSpotify(Request $request, AlbumPlaylist $albumPlaylist, AlbumPlaylistSyncService $syncService): RedirectResponse
+    {
+        $preview = session()->get($this->syncPreviewSessionKey($albumPlaylist));
+
+        if (! is_array($preview)) {
+            return to_route('album-playlists.show', $albumPlaylist)->with('error', 'Review the Spotify changes before confirming a sync.');
+        }
+
+        try {
+            $syncService->sync($albumPlaylist, $preview);
+        } catch (\Throwable $exception) {
+            $albumPlaylist->refresh();
+            if (! in_array($albumPlaylist->spotify_sync_status, ['syncing', 'failed'], true)) {
+                $albumPlaylist->update([
+                    'spotify_sync_status' => 'failed',
+                    'spotify_sync_error' => $exception->getMessage(),
+                ]);
+            }
+            session()->forget($this->syncPreviewSessionKey($albumPlaylist));
+
+            return to_route('album-playlists.show', $albumPlaylist)->with('error', $exception->getMessage());
+        }
+
+        session()->forget($this->syncPreviewSessionKey($albumPlaylist));
+
+        return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Effemeral playlist synced to Spotify.');
     }
 
     public function store(Request $request): RedirectResponse
@@ -41,14 +116,23 @@ class AlbumPlaylistController extends Controller
 
     public function update(Request $request, AlbumPlaylist $albumPlaylist): RedirectResponse
     {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
         $validated = $request->validate(['name' => ['required', 'string', 'max:100']]);
         $albumPlaylist->update(['name' => trim($validated['name'])]);
+        $this->markSyncPending($albumPlaylist);
 
         return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Playlist name updated.');
     }
 
     public function addAlbum(Request $request, AlbumPlaylist $albumPlaylist): RedirectResponse
     {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
         $validated = $request->validate(['album_id' => ['required', 'integer', 'exists:albums,id']]);
 
         if ($albumPlaylist->albums()->whereKey($validated['album_id'])->exists()) {
@@ -58,24 +142,34 @@ class AlbumPlaylistController extends Controller
         $albumPlaylist->albums()->attach($validated['album_id'], [
             'position' => (int) ($albumPlaylist->albums()->max('album_playlist_items.position') ?? 0) + 1,
         ]);
+        $this->markSyncPending($albumPlaylist);
 
         return back()->with('success', 'Album added to playlist.');
     }
 
     public function removeAlbum(AlbumPlaylist $albumPlaylist, Album $album): RedirectResponse
     {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
         abort_unless($albumPlaylist->albums()->whereKey($album->id)->exists(), 404);
 
         DB::transaction(function () use ($albumPlaylist, $album): void {
             $albumPlaylist->albums()->detach($album->id);
             $this->saveOrder($albumPlaylist);
         });
+        $this->markSyncPending($albumPlaylist);
 
         return back()->with('success', 'Album removed from playlist.');
     }
 
     public function moveAlbum(Request $request, AlbumPlaylist $albumPlaylist, Album $album): RedirectResponse
     {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
         $validated = $request->validate(['direction' => ['required', 'in:up,down']]);
         /** @var Collection<int, Album> $albums */
         $albums = $albumPlaylist->albums()->get();
@@ -97,6 +191,7 @@ class AlbumPlaylistController extends Controller
                 $albumPlaylist->albums()->updateExistingPivot($orderedAlbum->id, ['position' => $index + 1]);
             }
         });
+        $this->markSyncPending($albumPlaylist);
 
         return back()->with('success', 'Album order updated.');
     }
@@ -109,5 +204,25 @@ class AlbumPlaylistController extends Controller
         foreach ($albums->values() as $index => $album) {
             $albumPlaylist->albums()->updateExistingPivot($album->id, ['position' => $index + 1]);
         }
+    }
+
+    private function markSyncPending(AlbumPlaylist $albumPlaylist): void
+    {
+        $albumPlaylist->update([
+            'spotify_sync_status' => $albumPlaylist->spotify_playlist_id === null ? 'draft' : 'pending',
+            'spotify_sync_error' => null,
+        ]);
+    }
+
+    private function syncInProgress(AlbumPlaylist $albumPlaylist): ?RedirectResponse
+    {
+        return $albumPlaylist->spotify_sync_status === 'syncing'
+            ? back()->with('error', 'Wait for the Spotify sync to finish before changing this playlist.')
+            : null;
+    }
+
+    private function syncPreviewSessionKey(AlbumPlaylist $albumPlaylist): string
+    {
+        return 'album_playlist_sync_preview_'.$albumPlaylist->id;
     }
 }

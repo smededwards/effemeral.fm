@@ -33,7 +33,7 @@
                     <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h3 class="font-semibold">{{ $albumPlaylist->name }}</h3>
-                            <p class="mt-1 text-sm text-ef-muted">{{ $albumPlaylist->albums_count }} {{ $albumPlaylist->albums_count === 1 ? 'album' : 'albums' }} · {{ $albumPlaylist->spotify_playlist_id ? 'Spotify linked' : 'Draft' }}</p>
+                            <p class="mt-1 text-sm text-ef-muted">{{ $albumPlaylist->albums_count }} {{ $albumPlaylist->albums_count === 1 ? 'album' : 'albums' }} · {{ ucfirst(str_replace('_', ' ', $albumPlaylist->spotify_sync_status)) }}</p>
                         </div>
                         <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ route('album-playlists.show', $albumPlaylist, false) }}">Manage Playlist →</a>
                     </li>

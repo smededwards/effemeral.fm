@@ -91,11 +91,82 @@ class SpotifyClient
     /** @return list<array<string, mixed>> */
     public function playlistItems(string $playlistId): array
     {
-        return $this->paginate(
+        $items = $this->paginate(
             '/playlists/'.$playlistId.'/items',
             null,
-            fn (array $item): bool => is_array($item['track'] ?? null),
+            fn (array $item): bool => is_array($item['item'] ?? $item['track'] ?? null),
         );
+
+        return array_map(fn (array $item): array => is_array($item['item'] ?? null)
+            ? [...$item, 'track' => $item['item']]
+            : $item, $items);
+    }
+
+    /** @return array{id: string, name: string, snapshot_id: string|null, public: bool|null, external_urls: array<string, mixed>} */
+    public function playlistDetails(string $playlistId): array
+    {
+        $response = $this->get('/playlists/'.$playlistId, []);
+
+        if ($response->failed()) {
+            throw new RuntimeException('Spotify playlist details could not be read (HTTP '.$response->status().'). Reconnect Spotify if access was denied.');
+        }
+
+        $data = $response->json();
+        $id = data_get($data, 'id');
+        $name = data_get($data, 'name');
+        $snapshotId = data_get($data, 'snapshot_id');
+        $externalUrls = data_get($data, 'external_urls', []);
+
+        if (! is_string($id) || ! is_string($name) || ! is_string($snapshotId)) {
+            throw new RuntimeException('Spotify returned incomplete playlist details. Refresh the imported playlist and try again.');
+        }
+
+        return [
+            'id' => $id,
+            'name' => $name,
+            'snapshot_id' => $snapshotId,
+            'public' => is_bool(data_get($data, 'public')) ? data_get($data, 'public') : null,
+            'external_urls' => is_array($externalUrls) ? $externalUrls : [],
+        ];
+    }
+
+    public function updatePlaylistName(string $playlistId, string $name): void
+    {
+        $response = $this->put('/playlists/'.$playlistId, ['name' => $name]);
+
+        if ($response->failed()) {
+            throw new RuntimeException('Spotify playlist name could not be updated (HTTP '.$response->status().'). Reconnect Spotify if access was denied.');
+        }
+    }
+
+    /** @param list<string> $uris */
+    public function removePlaylistItems(string $playlistId, array $uris, ?string $snapshotId): ?string
+    {
+        foreach (array_chunk($uris, 100) as $chunk) {
+            $payload = ['items' => array_map(fn (string $uri): array => ['uri' => $uri], $chunk)];
+            if ($snapshotId !== null) {
+                $payload['snapshot_id'] = $snapshotId;
+            }
+
+            for ($attempt = 1; $attempt <= 3; $attempt++) {
+                $response = $this->request()->send('DELETE', '/playlists/'.$playlistId.'/items', ['json' => $payload]);
+
+                if ($response->status() !== 429 || $attempt === 3) {
+                    break;
+                }
+
+                $headers = array_change_key_case($response->headers());
+                sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
+            }
+
+            if ($response->failed()) {
+                throw new RuntimeException('Spotify playlist tracks could not be removed (HTTP '.$response->status().'). Recheck the preview and Spotify access before retrying.');
+            }
+
+            $snapshotId = $response->json('snapshot_id', $snapshotId);
+        }
+
+        return is_string($snapshotId) ? $snapshotId : null;
     }
 
     /**
@@ -112,8 +183,12 @@ class SpotifyClient
 
         $playlistId = $response->json('id');
 
-        if ($response->failed() || ! is_string($playlistId) || $playlistId === '') {
-            throw new RuntimeException('Spotify playlist creation failed.');
+        if ($response->failed()) {
+            throw new RuntimeException('Spotify playlist creation failed (HTTP '.$response->status().'). Reconnect Spotify if playlist permissions are missing.');
+        }
+
+        if (! is_string($playlistId) || $playlistId === '') {
+            throw new RuntimeException('Spotify did not return the new playlist ID. Check Spotify before retrying.');
         }
 
         $externalUrls = $response->json('external_urls');
@@ -131,7 +206,7 @@ class SpotifyClient
             $response = $this->post('/playlists/'.$playlistId.'/items', ['uris' => $chunk]);
 
             if ($response->failed()) {
-                throw new RuntimeException('Spotify playlist items could not be added.');
+                throw new RuntimeException('Spotify tracks could not be added (HTTP '.$response->status().'). Verify playlist access and reconnect Spotify if permissions changed.');
             }
         }
     }
@@ -213,6 +288,23 @@ class SpotifyClient
 
             $headers = array_change_key_case($response->headers());
 
+            sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
+        }
+
+        return $response;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function put(string $path, array $payload): Response
+    {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $response = $this->request()->put($path, $payload);
+
+            if ($response->status() !== 429 || $attempt === 3) {
+                return $response;
+            }
+
+            $headers = array_change_key_case($response->headers());
             sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
         }
 

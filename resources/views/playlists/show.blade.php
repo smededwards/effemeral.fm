@@ -6,7 +6,7 @@
             <a class="text-sm font-semibold text-ef-accent-strong hover:underline" href="{{ route('playlists.index', [], false) }}">← All Playlists</a>
             <p class="mt-5 text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Effemeral Playlist</p>
             <h1 class="mt-2 text-4xl font-semibold tracking-[-0.04em]">{{ $albumPlaylist->name }}</h1>
-            <p class="mt-3 text-sm text-ef-muted">{{ $albumPlaylist->albums->count() }} {{ $albumPlaylist->albums->count() === 1 ? 'album' : 'albums' }} · {{ $albumPlaylist->spotify_playlist_id ? 'Spotify linked' : 'Draft · Not synced' }}</p>
+            <p class="mt-3 text-sm text-ef-muted">{{ $albumPlaylist->albums->count() }} {{ $albumPlaylist->albums->count() === 1 ? 'album' : 'albums' }} · {{ ucfirst(str_replace('_', ' ', $albumPlaylist->spotify_sync_status)) }}</p>
         </div>
         @if ($albumPlaylist->spotify_playlist_url)
             <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ $albumPlaylist->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
@@ -19,6 +19,61 @@
     @if (session('error'))
         <p class="border border-red-800 bg-ef-surface p-4 text-sm text-red-300" role="alert">{{ session('error') }}</p>
     @endif
+
+    <section class="border border-ef-accent-line bg-ef-surface p-5 sm:p-6" aria-labelledby="spotify-sync">
+        <div class="flex flex-col gap-3 border-b border-ef-line pb-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Spotify</p>
+                <h2 id="spotify-sync" class="mt-2 text-2xl font-semibold">Review and Sync</h2>
+                <p class="mt-2 text-sm text-ef-muted">Effemeral manages only the tracks it adds. Spotify playlist tracks outside that set stay in place.</p>
+            </div>
+            @if ($albumPlaylist->spotify_synced_at)
+                <time class="text-xs tabular-nums text-ef-muted" datetime="{{ $albumPlaylist->spotify_synced_at->toIso8601String() }}">Last synced {{ $albumPlaylist->spotify_synced_at->format('Y.m.d H:i') }}</time>
+            @endif
+        </div>
+
+        @if ($albumPlaylist->spotify_sync_error)
+            <p class="mt-4 border-l-4 border-red-700 bg-ef-canvas px-4 py-3 text-sm text-red-300" role="alert">{{ $albumPlaylist->spotify_sync_error }}</p>
+        @endif
+
+        @if ($albumPlaylist->spotify_playlist_id)
+            <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-ef-muted">Linked to <span class="font-semibold text-ef-text">{{ $linkedSpotifyPlaylist?->name ?? 'Spotify playlist' }}</span>@if ($linkedSpotifyPlaylist?->public === true) · Public @elseif ($linkedSpotifyPlaylist?->public === false) · Private @endif</p>
+                <form method="POST" action="{{ route('album-playlists.spotify.preview', $albumPlaylist, false) }}">
+                    @csrf
+                    <input type="hidden" name="destination" value="linked">
+                    <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Review Spotify Changes</button>
+                </form>
+            </div>
+            @if ($albumPlaylist->spotify_playlist_url)
+                <a class="mt-3 inline-block text-sm font-semibold text-ef-accent-strong hover:underline" href="{{ $albumPlaylist->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
+            @endif
+        @else
+            <form class="mt-5 grid gap-4 sm:grid-cols-2" method="POST" action="{{ route('album-playlists.spotify.preview', $albumPlaylist, false) }}">
+                @csrf
+                <div>
+                    <label class="mb-2 block text-sm font-semibold" for="spotify-destination">Destination</label>
+                    <select class="w-full border border-ef-line bg-ef-canvas px-3 py-3 text-sm text-ef-text" id="spotify-destination" name="destination">
+                        <option value="new">Create a new private playlist</option>
+                        <option value="existing">Use an imported playlist</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-semibold" for="spotify-playlist-id">Existing Spotify playlist</label>
+                    <select class="w-full border border-ef-line bg-ef-canvas px-3 py-3 text-sm text-ef-text" id="spotify-playlist-id" name="spotify_playlist_id">
+                        <option value="">Choose a playlist</option>
+                        @foreach ($spotifyPlaylists as $spotifyPlaylist)
+                            <option value="{{ $spotifyPlaylist->spotify_playlist_id }}">{{ $spotifyPlaylist->name }}{{ $spotifyPlaylist->public ? ' · Public' : ' · Private' }}{{ $spotifyPlaylist->collaborative ? ' · Collaborative' : '' }}</option>
+                        @endforeach
+                    </select>
+                    <p class="mt-2 text-xs text-ef-muted">Type a playlist name after opening the list to jump to it.</p>
+                </div>
+                <div class="sm:col-span-2">
+                    <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Review Spotify Changes</button>
+                </div>
+            </form>
+        @endif
+    </section>
 
     <section class="border border-ef-line bg-ef-surface p-5 sm:p-6" aria-labelledby="rename-playlist">
         <h2 id="rename-playlist" class="text-lg font-semibold">Playlist Name</h2>
