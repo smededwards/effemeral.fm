@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ListeningArchiveController;
 use App\Http\Controllers\SpotifyAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -9,6 +10,7 @@ Route::middleware('private')->group(function (): void {
     Route::get('/imports', [DashboardController::class, 'imports'])->name('imports.index');
     Route::get('/library', [DashboardController::class, 'library'])->name('library.index');
     Route::get('/playlists', [DashboardController::class, 'playlists'])->name('playlists.index');
+    Route::get('/listening', [ListeningArchiveController::class, 'index'])->name('listening.index');
     Route::get('/recommendations', [DashboardController::class, 'recommendations'])->name('recommendations.index');
     Route::get('/catalogue', [DashboardController::class, 'catalogue'])->name('catalogue.index');
     Route::post('/catalogue/discover', [DashboardController::class, 'discoverRecommendations'])->name('catalogue.discover');
