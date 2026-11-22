@@ -3,10 +3,10 @@
 @section('content')
             <header class="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <p class="text-sm uppercase tracking-[0.3em] text-ef-accent-strong">Effemeral</p>
+                    <p class="text-sm tracking-[0.3em] text-ef-accent-strong">Effemeral</p>
                     <h1 class="mt-3 text-4xl font-semibold">Review playlist draft</h1>
                     <p class="mt-3 max-w-2xl text-ef-muted">Check the exact albums and Spotify tracks before syncing this draft.</p>
-                    <p class="mt-2 text-sm text-ef-accent-strong">Source: {{ str($recommendationRun->source)->replace('_', ' ')->title() }}</p>
+                    <p class="mt-2 text-sm text-ef-accent-strong">Source: {{ ucfirst(str_replace('_', ' ', $recommendationRun->source)) }}</p>
                 </div>
                 <a class="text-sm text-ef-accent-strong hover:text-ef-accent-soft" href="{{ route('dashboard', [], false) }}">Back to dashboard</a>
             </header>
@@ -40,7 +40,7 @@
                         <h2 class="text-xl font-medium">Album order</h2>
                         <p class="mt-1 text-sm text-ef-muted">Included albums will be synced in this order.</p>
                     </div>
-                    <span class="text-sm capitalize text-ef-muted">{{ $recommendationRun->status }}</span>
+                    <span class="text-sm text-ef-muted">{{ ucfirst($recommendationRun->status) }}</span>
                 </div>
 
                 <ol class="mt-6 space-y-3">

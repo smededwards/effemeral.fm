@@ -3,7 +3,7 @@
 @section('content')
     <header class="flex flex-col gap-6 border-b border-ef-line pb-10 lg:flex-row lg:items-end lg:justify-between">
         <div class="max-w-3xl">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-ef-accent-strong">Overview / 01</p>
+            <p class="text-xs font-semibold tracking-[0.24em] text-ef-accent-strong">Overview / 01</p>
             <h1 class="mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Your listening archive</h1>
             <p class="mt-5 max-w-2xl text-lg leading-8 text-ef-muted">Last.fm is your listening record. Spotify is the working library. Effemeral brings them together so unfinished albums become deliberate next listens.</p>
         </div>
@@ -12,20 +12,20 @@
 
     <section class="grid border-y border-ef-line bg-ef-surface sm:grid-cols-2 lg:grid-cols-4" aria-label="Archive summary">
         <div class="border-b border-ef-line p-5 sm:border-r lg:border-b-0">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-ef-muted">Scrobbles stored</p>
+            <p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Scrobbles stored</p>
             <p class="mt-4 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($scrobbleCount) }}</p>
         </div>
         <div class="border-b border-ef-line p-5 lg:border-r lg:border-b-0">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-ef-muted">Albums to complete</p>
+            <p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Albums to complete</p>
             <p class="mt-4 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($incompleteAlbums->count()) }}</p>
         </div>
         <div class="border-b border-ef-line p-5 sm:border-r sm:border-b-0">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-ef-muted">Spotify albums</p>
+            <p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Spotify albums</p>
             <p class="mt-4 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($spotifySavedAlbumCount) }}</p>
         </div>
         <div class="p-5">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-ef-muted">Latest import</p>
-            <p class="mt-4 text-2xl font-semibold capitalize">{{ $latestImport?->status ?? 'Not started' }}</p>
+            <p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Latest import</p>
+            <p class="mt-4 text-2xl font-semibold">{{ ucfirst(str_replace('_', ' ', $latestImport?->status ?? 'Not started')) }}</p>
             <p class="mt-1 text-sm text-ef-muted">{{ ($latestImport?->completed_at ?? $latestImport?->started_at ?? $latestImport?->created_at)?->format('Y.m.d H:i') ?? 'Import Last.fm to begin' }}</p>
         </div>
     </section>
@@ -34,7 +34,7 @@
         <div class="min-w-0 border border-ef-line bg-ef-surface p-6 sm:p-8">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-ef-accent-strong">Next listening</p>
+                    <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Next listening</p>
                     <h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Albums to complete</h2>
                     <p class="mt-2 text-sm text-ef-muted">Saved albums with tracks not yet heard in Last.fm.</p>
                 </div>
@@ -45,9 +45,9 @@
                     @foreach ($incompleteAlbums->take(6) as $album)
                         <article class="group overflow-hidden border border-ef-line bg-ef-canvas">
                             @if ($album['cover_image_url'])
-                                <img class="aspect-square w-full object-cover transition duration-300 group-hover:scale-[1.02]" src="{{ $album['cover_image_url'] }}" alt="Cover art for {{ $album['name'] }}">
+                            <img class="aspect-square w-full object-cover transition duration-300 motion-safe:group-hover:scale-[1.02]" src="{{ $album['cover_image_url'] }}" alt="Cover art for {{ $album['name'] }}">
                             @else
-                                <div class="flex aspect-square items-center justify-center bg-ef-surface-raised text-xs font-medium uppercase tracking-[0.12em] text-ef-muted">No artwork</div>
+                                <div class="flex aspect-square items-center justify-center bg-ef-surface-raised text-xs font-medium tracking-[0.12em] text-ef-muted">No artwork</div>
                             @endif
                             <div class="p-4">
                                 <h3 class="truncate font-semibold">{{ $album['name'] }}</h3>
@@ -64,7 +64,7 @@
         </div>
 
         <aside class="border border-ef-line bg-ef-surface-raised p-6 text-ef-text sm:p-8">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-ef-accent-strong">Actions</p>
+            <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong">Actions</p>
             <h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Keep the archive current</h2>
             <div class="mt-8 divide-y divide-ef-line border-y border-ef-line">
                 <a class="flex items-center justify-between py-4 text-sm font-semibold hover:text-ef-accent-strong" href="{{ route('imports.index', [], false) }}"><span>Import Last.fm and Spotify</span><span aria-hidden="true">→</span></a>
@@ -84,7 +84,7 @@
     <section class="grid gap-6 lg:grid-cols-2">
         <div class="min-w-0 border border-ef-line bg-ef-surface p-6 sm:p-8">
             <div class="flex items-end justify-between gap-4 border-b border-ef-line pb-4">
-                <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-ef-muted">Last.fm</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Top artists</h2></div>
+                <div><p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Last.fm</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Top artists</h2></div>
                 <span class="text-xs text-ef-muted">Most scrobbled</span>
             </div>
             <div class="divide-y divide-ef-surface-raised">
@@ -97,7 +97,7 @@
         </div>
         <div class="min-w-0 border border-ef-line bg-ef-surface p-6 sm:p-8">
             <div class="flex items-end justify-between gap-4 border-b border-ef-line pb-4">
-                <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-ef-muted">Last.fm</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Top albums</h2></div>
+                <div><p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Last.fm</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Top albums</h2></div>
                 <span class="text-xs text-ef-muted">Most played</span>
             </div>
             <div class="divide-y divide-ef-surface-raised">
@@ -112,7 +112,7 @@
 
     <section class="border border-ef-line bg-ef-surface p-6 sm:p-8">
         <div class="flex flex-col gap-4 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">
-            <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-ef-muted">Spotify library</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Imported Spotify albums</h2><p class="mt-2 text-sm text-ef-muted">Search the working library or open it for the complete album view.</p></div>
+            <div><p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Spotify library</p><h2 class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Imported Spotify albums</h2><p class="mt-2 text-sm text-ef-muted">Search the working library or open it for the complete album view.</p></div>
             <a class="text-sm font-semibold text-ef-accent-strong hover:underline" href="{{ route('library.index', [], false) }}">Open library →</a>
         </div>
         @if ($spotifySavedAlbumCount > 0)

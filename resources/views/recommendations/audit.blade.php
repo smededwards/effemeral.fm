@@ -3,7 +3,7 @@
 @section('content')
             <header class="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <p class="text-sm uppercase tracking-[0.3em] text-ef-accent-strong">Effemeral</p>
+                    <p class="text-sm tracking-[0.3em] text-ef-accent-strong">Effemeral</p>
                     <h1 class="mt-3 text-4xl font-semibold">Playlist coverage audit</h1>
                     <p class="mt-3 max-w-2xl text-ef-muted">Compare a recommendation draft with every imported Spotify playlist or one selected destination.</p>
                 </div>
@@ -19,12 +19,14 @@
                             <option value="{{ $run->id }}" @selected($selectedRun?->id === $run->id)>{{ $run->generated_at?->format('Y-m-d H:i') }} · {{ $run->source }} · {{ $run->status }}</option>
                         @endforeach
                     </select>
-                    <select class="min-w-0 flex-1 rounded-md border-ef-line bg-ef-canvas text-ef-text" id="playlist" name="playlist">
+                    <label class="block text-sm text-ef-muted" for="playlist">Playlist
+                        <select class="mt-2 min-w-0 w-full flex-1 rounded-md border-ef-line bg-ef-canvas text-ef-text" id="playlist" name="playlist">
                         <option value="">All imported playlists</option>
                         @foreach ($playlists as $playlist)
                             <option value="{{ $playlist->id }}" @selected($selectedPlaylist?->id === $playlist->id)>{{ $playlist->name }}</option>
                         @endforeach
-                    </select>
+                        </select>
+                    </label>
                     <button class="rounded-md bg-ef-accent px-4 py-2 text-sm font-medium text-ef-accent-ink hover:bg-ef-accent-soft" type="submit">Run audit</button>
                 </div>
             </form>

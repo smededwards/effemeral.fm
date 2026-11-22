@@ -5,9 +5,9 @@
 
 :root {
     color-scheme: dark;
-    --ef-canvas: #0c110d;
-    --ef-surface: #141a16;
-    --ef-surface-raised: #1c241f;
+    --ef-canvas: #000000;
+    --ef-surface: #0c110d;
+    --ef-surface-raised: #141a16;
     --ef-line: #34443b;
     --ef-text: #fdf6fe;
     --ef-muted: #c8d4c8;
@@ -56,6 +56,35 @@
     :focus-visible {
         outline: 2px solid var(--ef-accent-strong);
         outline-offset: 3px;
+    }
+}
+
+@keyframes effemeral-page-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .page-enter {
+        animation: effemeral-page-enter 220ms ease-out both;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
 }
 
