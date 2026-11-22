@@ -4,11 +4,30 @@ namespace App\Http\Controllers;
 
 use App\Models\Album;
 use App\Models\Artist;
+use App\Models\Genre;
 use App\Models\SpotifyPlaylist;
 use Illuminate\View\View;
 
 class MusicPageController extends Controller
 {
+    public function genre(Genre $genre): View
+    {
+        return view('genres.show', [
+            'genre' => $genre,
+            'artists' => Artist::query()
+                ->whereHas('acceptedGenres', fn ($query) => $query->whereKey($genre->id))
+                ->withCount('albums')
+                ->orderBy('name')
+                ->paginate(24, ['*'], 'artists_page'),
+            'albums' => Album::query()
+                ->whereHas('artists.acceptedGenres', fn ($query) => $query->whereKey($genre->id))
+                ->with('artists')
+                ->withCount('tracks')
+                ->orderBy('title')
+                ->paginate(24, ['*'], 'albums_page'),
+        ]);
+    }
+
     public function artist(Artist $artist): View
     {
         return view('artists.show', [
