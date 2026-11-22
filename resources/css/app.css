@@ -88,6 +88,31 @@
     }
 }
 
+nav[aria-label='Pagination Navigation'] a,
+nav[aria-label='Pagination Navigation'] span[aria-disabled='true'] > span,
+nav[aria-label='Pagination Navigation'] span[aria-current='page'] > span {
+    color: var(--ef-muted);
+    background-color: var(--ef-canvas);
+    border-color: var(--ef-line);
+}
+
+nav[aria-label='Pagination Navigation'] a:hover {
+    color: var(--ef-text);
+    background-color: var(--ef-surface-raised);
+    border-color: var(--ef-accent-line);
+}
+
+nav[aria-label='Pagination Navigation'] a:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--ef-muted);
+}
+
+nav[aria-label='Pagination Navigation'] span[aria-current='page'] > span {
+    color: var(--ef-accent-ink);
+    background-color: var(--ef-accent);
+    border-color: var(--ef-accent);
+}
+
 @layer components {
     article,
     section[class*='border'],
