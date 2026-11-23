@@ -7,17 +7,16 @@ use App\Models\AlbumPlaylist;
 use App\Models\AlbumRecommendation;
 use App\Models\Artist;
 use App\Models\Genre;
-use App\Models\LastFmImportRun;
 use App\Models\RecommendationRun;
 use App\Models\Scrobble;
-use App\Models\SpotifyConnection;
-use App\Models\SpotifyImportRun;
 use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
 use App\Models\SpotifySavedAlbum;
 use App\Models\Track;
 use App\Services\Catalog\CataloguePageService;
 use App\Services\Catalog\GenreWriter;
+use App\Services\Imports\ImportStatusPageService;
+use App\Services\Library\LibraryPageService;
 use App\Services\Playlists\SpotifyPlaylistOverviewService;
 use App\Services\Recommendations\AlbumCompletionService;
 use Illuminate\Http\RedirectResponse;
@@ -327,9 +326,9 @@ class DashboardController extends Controller
      *
      * @return View The imports page.
      */
-    public function imports(): View
+    public function imports(ImportStatusPageService $importStatusPageService): View
     {
-        return view('imports.index', $this->importsData());
+        return view('imports.index', $importStatusPageService->data());
     }
 
     /**
@@ -337,9 +336,9 @@ class DashboardController extends Controller
      *
      * @return View The library page.
      */
-    public function library(): View
+    public function library(Request $request, LibraryPageService $libraryPageService): View
     {
-        return view('library.index', $this->libraryData());
+        return view('library.index', $libraryPageService->data($request));
     }
 
     /**
@@ -386,61 +385,6 @@ class DashboardController extends Controller
     public function recommendations(AlbumCompletionService $completionService): View
     {
         return view('recommendations.index', $this->recommendationsData($completionService));
-    }
-
-    /**
-     * @return array<string, mixed> The import status data.
-     */
-    private function importsData(): array
-    {
-        return [
-            'latestImport' => LastFmImportRun::query()->latest()->first(),
-            'recentImports' => LastFmImportRun::query()->latest()->limit(10)->get(),
-            'latestSpotifyImport' => SpotifyImportRun::query()->latest()->first(),
-            'latestSpotifyPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
-            'spotifyConnection' => SpotifyConnection::query()->latest()->first(),
-            'scrobbleCount' => Scrobble::query()->count(),
-            'defaultFrom' => now()->subDays(90)->toDateString(),
-            'defaultTo' => now()->toDateString(),
-        ];
-    }
-
-    /**
-     * @return array<string, mixed> The library data.
-     */
-    private function libraryData(): array
-    {
-        $librarySearch = trim((string) request('library_search'));
-        $savedAlbums = SpotifySavedAlbum::query()->latest('saved_at');
-
-        if ($librarySearch !== '') {
-            $savedAlbums->where(function ($query) use ($librarySearch): void {
-                $query->where('name', 'like', '%'.$librarySearch.'%')
-                    ->orWhere('primary_artist_name', 'like', '%'.$librarySearch.'%');
-            });
-        }
-
-        $spotifySavedAlbums = $savedAlbums->limit(24)->get();
-        $canonicalAlbums = Album::query()
-            ->whereIn('spotify_id', $spotifySavedAlbums->pluck('spotify_album_id'))
-            ->get(['id', 'spotify_id'])
-            ->keyBy('spotify_id');
-        $canonicalArtists = Artist::query()
-            ->whereIn('spotify_id', $spotifySavedAlbums->pluck('primary_artist_id')->filter())
-            ->get(['id', 'spotify_id'])
-            ->keyBy('spotify_id');
-
-        foreach ($spotifySavedAlbums as $savedAlbum) {
-            $savedAlbum->setAttribute('canonical_album_id', $canonicalAlbums->get($savedAlbum->spotify_album_id)?->id);
-            $savedAlbum->setAttribute('canonical_artist_id', $canonicalArtists->get($savedAlbum->primary_artist_id)?->id);
-        }
-
-        return [
-            'librarySearch' => $librarySearch,
-            'spotifyPlaylists' => SpotifyPlaylist::query()->with('items.album')->latest('last_synced_at')->limit(24)->get(),
-            'spotifySavedAlbums' => $spotifySavedAlbums,
-            'spotifySavedAlbumCount' => SpotifySavedAlbum::query()->count(),
-        ];
     }
 
     /**
