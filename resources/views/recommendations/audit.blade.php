@@ -73,8 +73,9 @@
                             <span
                                 class="rounded-full px-3 py-1 text-xs {{ $item['status'] === 'complete' ? 'bg-ef-accent-wash text-ef-accent-strong' : ($item['status'] === 'partial' ? 'bg-amber-950 text-ef-accent-strong' : 'bg-red-950 text-red-300') }}">{{ ucfirst($item['status']) }}</span>
                         </div>
-                        <p class="mt-3 text-sm text-ef-muted">{{ $item['covered_tracks'] }} /
-                            {{ $item['expected_tracks'] }} tracks found in imported playlists</p>
+                        <p class="mt-3 text-sm text-ef-muted">
+                            {{ $item['covered_tracks'] . ' / ' . $item['expected_tracks'] . ' tracks found in imported playlists' }}
+                        </p>
                         @if ($item['playlists']->isNotEmpty())
                             <ul class="mt-3 flex flex-wrap gap-2">
                                 @foreach ($item['playlists'] as $playlist)

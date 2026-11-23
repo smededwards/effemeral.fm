@@ -6,8 +6,8 @@
             <p class="text-sm tracking-[0.3em] text-ef-accent-strong">Effemeral</p>
             <h1 class="mt-3 text-4xl font-semibold">Review Playlist Draft</h1>
             <p class="mt-3 max-w-2xl text-ef-muted">Check the exact albums and Spotify tracks before syncing this draft.</p>
-            <p class="mt-2 text-sm text-ef-accent-strong">Source:
-                {{ ucfirst(str_replace('_', ' ', $recommendationRun->source)) }}</p>
+            <p class="mt-2 text-sm text-ef-accent-strong">
+                {{ 'Source: ' . ucfirst(str_replace('_', ' ', $recommendationRun->source)) }}</p>
         </div>
         <a class="text-sm text-ef-accent-strong hover:text-ef-accent-soft" href="{{ route('dashboard', [], false) }}">Back to
             Dashboard</a>
@@ -84,8 +84,9 @@
 
     <section class="border border-ef-accent-line bg-ef-accent-wash p-6" aria-label="Sync draft to Spotify">
         <div>
-            <p class="text-sm text-ef-accent-soft">Syncing will append {{ $includedTracks }} reviewed tracks to Spotify.
-                Existing tracks are preserved.</p>
+            <p class="text-sm text-ef-accent-soft">
+                {{ 'Syncing will append ' . $includedTracks . ' reviewed tracks to Spotify. Existing tracks are preserved.' }}
+            </p>
         </div>
         @if ($recommendationRun->spotify_playlist_url)
             <a class="mt-5 inline-block bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"

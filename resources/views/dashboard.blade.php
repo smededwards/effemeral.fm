@@ -66,9 +66,8 @@
                     <li class="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
                         <div class="min-w-0">
                             <h3 class="truncate text-lg font-semibold">{{ $albumPlaylist->name }}</h3>
-                            <p class="mt-1 text-sm text-ef-muted">{{ $albumPlaylist->albums_count }}
-                                {{ $albumPlaylist->albums_count === 1 ? 'album' : 'albums' }} ·
-                                {{ ucfirst(str_replace('_', ' ', $albumPlaylist->spotify_sync_status)) }}{{ $albumPlaylist->spotify_synced_at ? ' · Synced ' . $albumPlaylist->spotify_synced_at->format('Y.m.d H:i') : '' }}
+                            <p class="mt-1 text-sm text-ef-muted">
+                                {{ $albumPlaylist->albums_count . ' ' . ($albumPlaylist->albums_count === 1 ? 'album' : 'albums') . ' · ' . ucfirst(str_replace('_', ' ', $albumPlaylist->spotify_sync_status)) . ($albumPlaylist->spotify_synced_at ? ' · Synced ' . $albumPlaylist->spotify_synced_at->format('Y.m.d H:i') : '') }}
                             </p>
                             @if ($albumPlaylist->spotify_sync_error)
                                 <p class="mt-2 text-sm text-red-300">Spotify sync needs attention:

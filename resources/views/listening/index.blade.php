@@ -56,12 +56,12 @@
                             @endif
                             <p class="mt-1 text-xs text-ef-muted">Last heard {{ $result['last_heard'] }}</p>
                         </div>
-                        <span class="shrink-0 text-sm tabular-nums text-ef-muted">{{ number_format($result['scrobbles']) }}
-                            {{ $result['scrobbles'] === 1 ? 'play' : 'plays' }}</span>
+                        <span
+                            class="shrink-0 text-sm tabular-nums text-ef-muted">{{ number_format($result['scrobbles']) . ' ' . ($result['scrobbles'] === 1 ? 'play' : 'plays') }}</span>
                     </li>
                 @empty
-                    <li class="mt-4 border border-dashed border-ef-line p-6 text-sm text-ef-muted">No Last.fm listening
-                        history is available for this range yet.</li>
+                    <li class="mt-4 border border-dashed border-ef-line p-6 text-sm text-ef-muted">
+                        {{ 'No Last.fm listening history is available for this range yet.' }}</li>
                 @endforelse
             </ol>
 

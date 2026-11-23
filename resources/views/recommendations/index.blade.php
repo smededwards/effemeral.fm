@@ -49,8 +49,8 @@
                                 aria-valuemin="0" aria-valuemax="100">
                                 <div class="h-full bg-ef-accent" style="width: {{ $album['percentage'] }}%"></div>
                             </div>
-                            <span class="shrink-0 text-xs font-medium tabular-nums text-ef-text">{{ $album['heard'] }} of
-                                {{ $album['total'] }} tracks · {{ $album['percentage'] }}%</span>
+                            <span
+                                class="shrink-0 text-xs font-medium tabular-nums text-ef-text">{{ $album['heard'] . ' of ' . $album['total'] . ' tracks · ' . $album['percentage'] . '%' }}</span>
                         </div>
                     </div>
                     @if ($album['spotify_url'])
