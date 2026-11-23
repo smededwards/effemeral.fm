@@ -49,6 +49,11 @@ return [
         'genre_allowlist' => array_values(array_filter(array_map('trim', explode(',', (string) env('LASTFM_GENRE_ALLOWLIST', ''))))),
     ],
 
+    'musicbrainz' => [
+        'endpoint' => env('MUSICBRAINZ_API_ENDPOINT', 'https://musicbrainz.org/ws/2'),
+        'user_agent' => env('MUSICBRAINZ_USER_AGENT', 'Effemeral/0.1 (https://github.com/smededwards/effemeral.fm)'),
+    ],
+
     'spotify' => [
         'client_id' => env('SPOTIFY_CLIENT_ID'),
         'client_secret' => env('SPOTIFY_CLIENT_SECRET'),

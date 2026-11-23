@@ -1,0 +1,65 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Models\Artist;
+use App\Services\MusicBrainz\MusicBrainzClient;
+use Illuminate\Console\Attributes\Description;
+use Illuminate\Console\Attributes\Signature;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
+
+#[Signature('artists:import-musicbrainz {--refresh : Check all artists again, including previously checked artists} {--limit=0 : Stop after this many artists (0 means all)}')]
+#[Description('Import artist origin and region from MusicBrainz')]
+class ImportMusicBrainzArtistMetadata extends Command
+{
+    public function handle(MusicBrainzClient $client): int
+    {
+        $lock = Cache::lock('musicbrainz-artist-metadata-import', 86400);
+        if (! $lock->get()) {
+            $this->error('A MusicBrainz artist import is already in progress.');
+
+            return self::FAILURE;
+        }
+
+        try {
+            $artists = Artist::query()
+                ->when(! $this->option('refresh'), fn ($query) => $query->whereNull('musicbrainz_checked_at'))
+                ->orderBy('id');
+            $limit = max(0, (int) $this->option('limit'));
+            $total = $limit > 0 ? min($limit, $artists->count()) : $artists->count();
+            $matched = 0;
+
+            if ($total === 0) {
+                $this->info('No artists need MusicBrainz metadata.');
+
+                return self::SUCCESS;
+            }
+
+            $artistsToProcess = $limit > 0
+                ? $artists->limit($limit)->get()
+                : $artists->lazyById();
+
+            $this->withProgressBar($artistsToProcess, function (Artist $artist) use ($client, &$matched): void {
+                $metadata = $client->artistMetadata($artist);
+                $artist->fill([
+                    'musicbrainz_mbid' => $metadata['musicbrainz_mbid'] ?? $artist->musicbrainz_mbid,
+                    'location' => $artist->location_manual ? $artist->location : ($metadata['location'] ?? $artist->location),
+                    'region' => $artist->region_manual ? $artist->region : ($metadata['region'] ?? $artist->region),
+                    'musicbrainz_checked_at' => now(),
+                ])->save();
+
+                if ($metadata !== null) {
+                    $matched++;
+                }
+            });
+
+            $this->newLine();
+            $this->info("Checked {$total} artists; matched {$matched}.");
+
+            return self::SUCCESS;
+        } finally {
+            $lock->release();
+        }
+    }
+}

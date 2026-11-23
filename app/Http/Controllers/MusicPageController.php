@@ -14,10 +14,22 @@ class MusicPageController extends Controller
 {
     public function updateArtistRegion(Request $request, Artist $artist): RedirectResponse
     {
-        $validated = $request->validate(['region' => ['nullable', 'string', 'max:100']]);
-        $artist->update(['region' => trim((string) ($validated['region'] ?? '')) ?: null]);
+        $validated = $request->validate([
+            'location' => ['nullable', 'string', 'max:150'],
+            'region' => ['nullable', 'string', 'max:100'],
+        ]);
+        $updates = [];
 
-        return back()->with('success', 'Artist region updated.');
+        foreach (['location', 'region'] as $field) {
+            if ($request->exists($field)) {
+                $updates[$field] = trim((string) ($validated[$field] ?? '')) ?: null;
+                $updates[$field.'_manual'] = true;
+            }
+        }
+
+        $artist->update($updates);
+
+        return back()->with('success', 'Artist location updated.');
     }
 
     public function genre(Genre $genre): View

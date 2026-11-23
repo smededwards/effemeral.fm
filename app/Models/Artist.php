@@ -7,7 +7,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Artist extends Model
 {
-    protected $fillable = ['name', 'normalised_name', 'region', 'spotify_id', 'lastfm_mbid'];
+    protected $fillable = [
+        'name', 'normalised_name', 'location', 'location_manual', 'region', 'region_manual',
+        'spotify_id', 'lastfm_mbid', 'musicbrainz_mbid', 'musicbrainz_checked_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'location_manual' => 'boolean',
+            'region_manual' => 'boolean',
+            'musicbrainz_checked_at' => 'immutable_datetime',
+        ];
+    }
 
     public function albums(): BelongsToMany
     {
