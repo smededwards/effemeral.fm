@@ -84,7 +84,7 @@ class CatalogueDiscographyTest extends TestCase
 
         $response = $this->post(route('catalogue.discography'), ['artist_id' => $artist->id]);
 
-        $response->assertSessionHas('error', 'No saved albums are available for this artist.');
+        $response->assertSessionHas('error', 'No Spotify-playable albums are available for this artist.');
         $this->assertDatabaseCount('recommendation_runs', 0);
     }
 

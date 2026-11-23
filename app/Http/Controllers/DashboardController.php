@@ -269,8 +269,11 @@ class DashboardController extends Controller
         /** @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums */
         $albums = $artist->albums()
             ->with('tracks')
-            ->when(! $includeNonAlbums, fn ($query) => $query->where('album_type', 'album'))
-            ->whereHas('spotifyCollections', fn ($query) => $query->where('collection_type', 'saved'))
+            ->when(! $includeNonAlbums, fn ($query) => $query->whereIn('album_type', ['album', 'ep']))
+            ->where(function ($query): void {
+                $query->whereHas('spotifyCollections', fn ($collectionQuery) => $collectionQuery->where('collection_type', 'saved'))
+                    ->orWhere(fn ($catalogueQuery) => $catalogueQuery->whereNotNull('musicbrainz_release_group_mbid')->whereNotNull('spotify_id'));
+            })
             ->orderBy('release_date')
             ->orderBy('title')
             ->get();
@@ -278,19 +281,16 @@ class DashboardController extends Controller
             ->whereIn('spotify_album_id', $albums->pluck('spotify_id')->filter())
             ->get()
             ->keyBy('spotify_album_id');
-        $candidates = $albums->filter(function (Album $album) use ($savedAlbums): bool {
-            $savedAlbum = $savedAlbums->get($album->spotify_id);
+        $candidates = $albums->filter(fn (Album $album): bool => $album->tracks->pluck('spotify_uri')->contains(fn (mixed $uri): bool => is_string($uri) && str_starts_with($uri, 'spotify:track:'))
+            || data_get($savedAlbums->get($album->spotify_id)?->tracks, 'items', []) !== [])
+            ->map(fn (Album $album): array => [
+                'album' => $album,
+                'saved_album' => $savedAlbums->get($album->spotify_id),
+                'title' => $album->title,
+                'release_date' => $album->release_date,
+            ]);
 
-            return $savedAlbum !== null
-                && ($album->tracks->isNotEmpty() || data_get($savedAlbum->tracks, 'items', []) !== []);
-        })->map(fn (Album $album): array => [
-            'album' => $album,
-            'saved_album' => $savedAlbums->get($album->spotify_id),
-            'title' => $album->title,
-            'release_date' => $album->release_date,
-        ]);
-
-        $matchedSavedAlbumIds = $candidates->pluck('saved_album.id');
+        $matchedSavedAlbumIds = $candidates->pluck('saved_album.id')->filter();
         $unmatchedCandidates = SpotifySavedAlbum::query()
             ->whereNotIn('id', $matchedSavedAlbumIds)
             ->get()
@@ -315,7 +315,7 @@ class DashboardController extends Controller
             ->values();
 
         if ($candidates->isEmpty()) {
-            return back()->with('error', 'No saved albums are available for this artist.');
+            return back()->with('error', 'No Spotify-playable albums are available for this artist.');
         }
 
         $recommendationRun = DB::transaction(function () use ($candidates): RecommendationRun {
@@ -332,11 +332,15 @@ class DashboardController extends Controller
             foreach ($candidates as $position => $candidate) {
                 /** @var Album|null $album */
                 $album = $candidate['album'];
-                /** @var SpotifySavedAlbum $savedAlbum */
+                /** @var SpotifySavedAlbum|null $savedAlbum */
                 $savedAlbum = $candidate['saved_album'];
                 $tracks = $album === null ? collect() : $album->tracks;
-                $trackUris = collect(data_get($savedAlbum->tracks, 'items', []))
+                $trackUris = $tracks->pluck('spotify_uri')
+                    ->filter(fn (mixed $uri): bool => is_string($uri) && str_starts_with($uri, 'spotify:track:'))
+                    ->values();
+                $trackUris = $trackUris->isNotEmpty() ? $trackUris : collect(data_get($savedAlbum?->tracks, 'items', []))
                     ->filter(fn (mixed $track): bool => is_array($track) && is_string($track['uri'] ?? null))
+                    ->map(fn (array $track): string => $track['uri'])
                     ->values();
                 $totalTracks = $tracks->count() > 0 ? $tracks->count() : $trackUris->count();
                 $heard = $tracks->filter(fn (Track $track): bool => $heardTrackIds->has($track->id))->count();
@@ -344,7 +348,7 @@ class DashboardController extends Controller
                 AlbumRecommendation::query()->create([
                     'recommendation_run_id' => $run->id,
                     'album_id' => $album?->id,
-                    'spotify_saved_album_id' => $savedAlbum->id,
+                    'spotify_saved_album_id' => $savedAlbum?->id,
                     'position' => $position + 1,
                     'heard_tracks' => $heard,
                     'total_tracks' => $totalTracks,

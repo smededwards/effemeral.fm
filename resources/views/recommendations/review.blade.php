@@ -48,14 +48,14 @@
                         @php($recommendation = $item['recommendation'])
                         <li class="flex items-center gap-4 rounded-lg border border-ef-line bg-ef-canvas p-4">
                             <span class="w-8 text-center text-lg text-ef-muted">{{ $recommendation->position }}</span>
-                            @if ($recommendation->spotifySavedAlbum->cover_image_url)
-                                <img class="h-16 w-16 rounded object-cover" src="{{ $recommendation->spotifySavedAlbum->cover_image_url }}" alt="Cover art for {{ $recommendation->spotifySavedAlbum->name }}">
+                            @if ($recommendation->spotifySavedAlbum?->cover_image_url ?? $recommendation->album?->cover_image_url)
+                                <img class="h-16 w-16 rounded object-cover" src="{{ $recommendation->spotifySavedAlbum?->cover_image_url ?? $recommendation->album?->cover_image_url }}" alt="Cover art for {{ $recommendation->spotifySavedAlbum?->name ?? $recommendation->album?->title }}">
                             @else
                                 <div class="flex h-16 w-16 items-center justify-center rounded bg-ef-surface text-xs text-ef-muted">No artwork</div>
                             @endif
                             <div class="min-w-0 flex-1">
-                                <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum->name }}</h3>
-                                <p class="mt-1 text-sm text-ef-muted">{{ $recommendation->spotifySavedAlbum->primary_artist_name ?? 'Unknown artist' }}</p>
+                                <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum?->name ?? $recommendation->album?->title ?? 'Unknown album' }}</h3>
+                                <p class="mt-1 text-sm text-ef-muted">{{ $recommendation->spotifySavedAlbum?->primary_artist_name ?? $recommendation->album?->artists->first()?->name ?? 'Unknown artist' }}</p>
                                 <p class="mt-1 text-xs text-ef-muted">{{ $item['track_count'] }} Spotify tracks available</p>
                                 @if ($recommendation->album === null)
                                     <p class="mt-2 text-xs text-ef-accent-strong">Needs catalogue match; review before syncing.</p>

@@ -43,6 +43,49 @@ class MusicBrainzClient
         ];
     }
 
+    /** @return list<array<string, mixed>> */
+    public function artistReleaseGroups(Artist $artist): array
+    {
+        if (! is_string($artist->musicbrainz_mbid) || $artist->musicbrainz_mbid === '') {
+            return [];
+        }
+
+        $groups = [];
+        $offset = 0;
+        $limit = 100;
+        $total = null;
+
+        do {
+            $payload = $this->get('release-group', [
+                'artist' => $artist->musicbrainz_mbid,
+                'type' => 'album|ep',
+                'fmt' => 'json',
+                'limit' => $limit,
+                'offset' => $offset,
+            ]);
+
+            if ($payload === null) {
+                throw new RuntimeException('MusicBrainz did not find release groups for this artist ID. Confirm the artist link and retry.');
+            }
+
+            $page = data_get($payload, 'release-groups', []);
+            $total ??= (int) data_get($payload, 'release-group-count', count($page));
+
+            if (! is_array($page) || $page === []) {
+                break;
+            }
+
+            $groups = array_merge($groups, array_values(array_filter(
+                $page,
+                fn (mixed $group): bool => is_array($group)
+                    && in_array(mb_strtolower((string) ($group['primary-type'] ?? '')), ['album', 'ep'], true),
+            )));
+            $offset += count($page);
+        } while ($offset < $total);
+
+        return $groups;
+    }
+
     /** @return array<string, mixed>|null */
     private function search(string $artistName): ?array
     {

@@ -14,15 +14,16 @@ class CatalogWriter
     public function spotifyAlbum(
         array $albumData,
         mixed $savedAt = null,
-        string $collectionType = 'saved',
+        ?string $collectionType = 'saved',
         ?string $playlistId = null,
+        ?Album $canonicalAlbum = null,
     ): Album {
         $title = (string) ($albumData['name'] ?? 'Unknown album');
         $normalisedTitle = $this->normalise($title);
         $primaryArtist = $this->normalise((string) data_get($albumData, 'artists.0.name', ''));
-        $album = isset($albumData['id']) && $albumData['id'] !== ''
+        $album = $canonicalAlbum ?? (isset($albumData['id']) && $albumData['id'] !== ''
             ? Album::query()->where('spotify_id', $albumData['id'])->first()
-            : null;
+            : null);
         $album ??= Album::query()
             ->where('normalised_title', $normalisedTitle)
             ->whereHas('artists', fn ($query) => $query->where('normalised_name', $primaryArtist))
@@ -62,10 +63,12 @@ class CatalogWriter
 
         $this->spotifyAlbumTracks($album, Arr::wrap(data_get($albumData, 'tracks.items', [])));
 
-        SpotifyAlbumCollection::query()->updateOrCreate(
-            ['album_id' => $album->id, 'collection_type' => $collectionType, 'spotify_playlist_id' => $playlistId],
-            ['saved_at' => $savedAt],
-        );
+        if ($collectionType !== null) {
+            SpotifyAlbumCollection::query()->updateOrCreate(
+                ['album_id' => $album->id, 'collection_type' => $collectionType, 'spotify_playlist_id' => $playlistId],
+                ['saved_at' => $savedAt],
+            );
+        }
 
         return $album;
     }

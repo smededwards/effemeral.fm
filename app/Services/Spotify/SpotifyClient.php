@@ -79,6 +79,24 @@ class SpotifyClient
     }
 
     /** @return list<array<string, mixed>> */
+    public function searchAlbums(string $artistName, string $albumTitle): array
+    {
+        $response = $this->get('/search', [
+            'q' => 'album:"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $albumTitle).'" artist:"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $artistName).'"',
+            'type' => 'album',
+            'limit' => 10,
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException('Spotify album search failed (HTTP '.$response->status().').');
+        }
+
+        $items = data_get($response->json(), 'albums.items', []);
+
+        return is_array($items) ? array_values(array_filter($items, 'is_array')) : [];
+    }
+
+    /** @return list<array<string, mixed>> */
     public function albumTracks(string $albumId): array
     {
         return $this->paginate(

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Album extends Model
 {
     protected $fillable = [
-        'title', 'normalised_title', 'album_type', 'spotify_id', 'lastfm_mbid',
+        'title', 'normalised_title', 'album_type', 'spotify_id', 'lastfm_mbid', 'musicbrainz_release_group_mbid',
         'spotify_uri', 'spotify_url', 'total_tracks', 'release_date',
         'release_date_precision', 'cover_image_url',
     ];

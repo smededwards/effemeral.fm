@@ -4,6 +4,7 @@ use App\Http\Controllers\AlbumPlaylistController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ListeningArchiveController;
+use App\Http\Controllers\MusicBrainzDiscographyController;
 use App\Http\Controllers\MusicPageController;
 use App\Http\Controllers\RecommendationPlaylistController;
 use App\Http\Controllers\SpotifyAuthController;
@@ -42,6 +43,7 @@ Route::middleware('private')->group(function (): void {
     Route::post('/albums/{album}/completion/incomplete', [DashboardController::class, 'markAlbumIncomplete'])->name('albums.completion.incomplete');
     Route::post('/albums/{album}/completion/clear', [DashboardController::class, 'clearAlbumCompletionOverride'])->name('albums.completion.clear');
     Route::post('/artists/{artist}/genres', [DashboardController::class, 'updateArtistGenres'])->name('artists.genres.update');
+    Route::post('/artists/{artist}/musicbrainz-discography', [MusicBrainzDiscographyController::class, 'store'])->name('artists.musicbrainz-discography.store');
     Route::patch('/artists/{artist}/region', [MusicPageController::class, 'updateArtistRegion'])->name('artists.region.update');
     Route::post('/playlists/albums', [AlbumPlaylistController::class, 'addAlbums'])->name('album-playlists.albums.bulk-store');
     Route::post('/recommendations/generate', [DashboardController::class, 'generateRecommendations'])->name('recommendations.generate');
