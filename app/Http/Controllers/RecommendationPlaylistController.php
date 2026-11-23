@@ -6,8 +6,7 @@ use App\Models\Album;
 use App\Models\AlbumRecommendation;
 use App\Models\RecommendationRun;
 use App\Models\SpotifyPlaylist;
-use App\Models\SpotifySavedAlbum;
-use App\Models\Track;
+use App\Services\Recommendations\RecommendationTrackResolver;
 use App\Services\Spotify\SpotifyClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,6 +19,8 @@ use Throwable;
  */
 class RecommendationPlaylistController extends Controller
 {
+    public function __construct(private RecommendationTrackResolver $trackResolver) {}
+
     private function playlistNameSuggestion(iterable $reviewAlbums): string
     {
         $stopWords = ['a', 'an', 'and', 'for', 'in', 'of', 'the', 'to'];
@@ -74,7 +75,7 @@ class RecommendationPlaylistController extends Controller
         $reviewAlbums = $recommendations->map(function (AlbumRecommendation $recommendation): array {
             return [
                 'recommendation' => $recommendation,
-                'track_count' => count($this->recommendationTrackUris($recommendation)),
+                'track_count' => count($this->trackResolver->resolve($recommendation)),
             ];
         });
 
@@ -117,7 +118,7 @@ class RecommendationPlaylistController extends Controller
                 ->latest('last_synced_at')
                 ->get();
             $auditAlbums = $recommendations->map(function (AlbumRecommendation $recommendation) use ($playlists): array {
-                $expectedUris = $this->recommendationTrackUris($recommendation);
+                $expectedUris = $this->trackResolver->resolve($recommendation);
                 $coveredUris = collect();
                 $playlistMatches = collect();
 
@@ -217,7 +218,7 @@ class RecommendationPlaylistController extends Controller
         $trackUris = [];
 
         foreach ($recommendations as $recommendation) {
-            $trackUris = [...$trackUris, ...$this->recommendationTrackUris($recommendation)];
+            $trackUris = [...$trackUris, ...$this->trackResolver->resolve($recommendation)];
         }
         $trackUris = array_values(array_unique($trackUris));
 
@@ -267,43 +268,5 @@ class RecommendationPlaylistController extends Controller
         }
 
         return back()->with('success', 'Recommendation draft synced to Spotify.');
-    }
-
-    /**
-     * @return list<string> The canonical Spotify track URIs.
-     */
-    private function recommendationTrackUris(AlbumRecommendation $recommendation): array
-    {
-        /**
-         * @var Album|null $album
-         */
-        $album = $recommendation->getRelation('album');
-        /**
-         * @var SpotifySavedAlbum|null $legacyAlbum
-         */
-        $legacyAlbum = $recommendation->getRelation('spotifySavedAlbum');
-
-        if ($album !== null && $album->getRelation('tracks')->isNotEmpty()) {
-            /**
-             * @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks
-             */
-            $tracks = $album->getRelation('tracks');
-
-            return $tracks
-                ->pluck('spotify_uri')
-                ->filter(fn (mixed $uri): bool => is_string($uri) && str_starts_with($uri, 'spotify:track:'))
-                ->values()
-                ->all();
-        }
-
-        if ($legacyAlbum === null) {
-            return [];
-        }
-
-        return collect(data_get($legacyAlbum->tracks, 'items', []))
-            ->map(fn (mixed $track): mixed => is_array($track) ? ($track['uri'] ?? null) : null)
-            ->filter(fn (mixed $uri): bool => is_string($uri) && str_starts_with($uri, 'spotify:track:'))
-            ->values()
-            ->all();
     }
 }
