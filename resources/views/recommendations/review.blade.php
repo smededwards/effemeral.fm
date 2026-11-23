@@ -75,7 +75,7 @@
                     <p class="text-sm text-ef-accent-soft">Syncing will append {{ $includedTracks }} reviewed tracks to Spotify. Existing tracks are preserved.</p>
                 </div>
                 @if ($recommendationRun->spotify_playlist_url)
-                    <a class="mt-5 inline-block bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-soft" href="{{ $recommendationRun->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify Playlist</a>
+                    <a class="mt-5 inline-block bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover" href="{{ $recommendationRun->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open Spotify Playlist</a>
                 @endif
                 @if ($recommendationRun->status !== 'synced')
                     <form class="mt-6 grid gap-5 border-t border-ef-accent-line pt-6" method="POST" action="{{ route('recommendations.sync', $recommendationRun, false) }}">
@@ -106,7 +106,7 @@
                             <input class="mt-1" type="checkbox" name="confirmed" value="1" required>
                             <span>I have reviewed the included albums and confirm this playlist should be updated.</span>
                         </label>
-                        <button class="w-fit bg-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-soft" type="submit">Sync included albums</button>
+                        <button class="w-fit bg-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Sync included albums</button>
                     </form>
                 @endif
             </section>

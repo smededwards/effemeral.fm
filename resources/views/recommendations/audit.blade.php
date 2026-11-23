@@ -27,7 +27,7 @@
                         @endforeach
                         </select>
                     </label>
-                    <button class="rounded-md bg-ef-accent px-4 py-2 text-sm font-medium text-ef-accent-ink hover:bg-ef-accent-soft" type="submit">Run audit</button>
+                    <button class="rounded-md bg-ef-accent px-4 py-2 text-sm font-medium text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Run audit</button>
                 </div>
             </form>
 
