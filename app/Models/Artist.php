@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Artist extends Model
 {
     protected $fillable = [
-        'name', 'normalised_name', 'location', 'location_manual', 'region', 'region_manual',
+        'name', 'normalised_name', 'location', 'location_manual', 'region', 'region_manual', 'country_code', 'country_manual',
         'spotify_id', 'lastfm_mbid', 'musicbrainz_mbid', 'musicbrainz_checked_at',
     ];
 
@@ -18,6 +18,7 @@ class Artist extends Model
         return [
             'location_manual' => 'boolean',
             'region_manual' => 'boolean',
+            'country_manual' => 'boolean',
             'musicbrainz_checked_at' => 'immutable_datetime',
         ];
     }
@@ -39,6 +40,10 @@ class Artist extends Model
 
     public function acceptedGenres(): BelongsToMany
     {
-        return $this->genres()->wherePivot('suppressed', false)->select('genres.*')->distinct();
+        return $this->genres()
+            ->wherePivot('suppressed', false)
+            ->whereIn('genres.id', Genre::filterableIds())
+            ->select('genres.*')
+            ->distinct();
     }
 }

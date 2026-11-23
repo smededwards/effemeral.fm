@@ -22,6 +22,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
                 'name' => 'The Artist',
                 'begin-area' => ['name' => 'Manchester'],
                 'area' => ['name' => 'England'],
+                'country' => 'GB',
             ]),
         ]);
         $artist = Artist::query()->create([
@@ -35,10 +36,10 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
         $this->assertDatabaseHas('artists', [
             'id' => $artist->id,
             'location' => 'Manchester',
-            'region' => 'England',
+            'country_code' => 'GB',
             'musicbrainz_mbid' => 'artist-mbid',
             'location_manual' => false,
-            'region_manual' => false,
+            'country_manual' => false,
         ]);
         Http::assertSent(fn ($request): bool => $request->hasHeader('User-Agent', 'Effemeral/0.1 (https://github.com/smededwards/effemeral.fm)')
             && $request->url() === 'https://musicbrainz.org/ws/2/artist/artist-mbid?fmt=json');
@@ -53,7 +54,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
             'musicbrainz.org/ws/2/artist*' => Http::response([
                 'count' => 2,
                 'artists' => [
-                    ['id' => 'artist-one', 'name' => 'The Artist', 'begin-area' => ['name' => 'Leeds']],
+                    ['id' => 'artist-one', 'name' => 'The Artist', 'begin-area' => ['name' => 'Leeds'], 'country' => 'GB'],
                     ['id' => 'near-match', 'name' => 'The Artist Project'],
                 ],
             ]),
@@ -68,6 +69,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
         $this->assertDatabaseHas('artists', [
             'id' => $artist->id,
             'location' => 'Leeds',
+            'country_code' => 'GB',
             'musicbrainz_mbid' => 'artist-one',
         ]);
         Http::assertSent(fn ($request): bool => $request['query'] === 'artist:"The Artist"');
@@ -85,6 +87,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
                     'id' => 'artist-mbid',
                     'name' => 'The Artist',
                     'begin-area' => ['name' => 'Manchester'],
+                    'country' => 'US',
                 ]],
             ]),
         ]);
@@ -99,6 +102,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
         $this->assertDatabaseHas('artists', [
             'id' => $artist->id,
             'location' => 'Manchester',
+            'country_code' => 'US',
             'musicbrainz_mbid' => 'artist-mbid',
         ]);
     }
@@ -127,6 +131,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
             'id' => $artist->id,
             'location' => null,
             'region' => null,
+            'country_code' => null,
             'musicbrainz_mbid' => null,
         ]);
         $this->assertNotNull($artist->fresh()->musicbrainz_checked_at);
@@ -142,6 +147,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
                 'name' => 'The Artist',
                 'begin-area' => ['name' => 'Manchester'],
                 'area' => ['name' => 'England'],
+                'country' => 'GB',
             ]),
         ]);
         $artist = Artist::query()->create([
@@ -150,8 +156,10 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
             'lastfm_mbid' => 'artist-mbid',
             'location' => 'Bristol',
             'location_manual' => true,
-            'region' => 'United Kingdom',
+            'region' => 'England',
             'region_manual' => true,
+            'country_code' => 'US',
+            'country_manual' => true,
         ]);
 
         $this->artisan('artists:import-musicbrainz --refresh --limit=1')->assertSuccessful();
@@ -159,30 +167,32 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
         $this->assertDatabaseHas('artists', [
             'id' => $artist->id,
             'location' => 'Bristol',
-            'region' => 'United Kingdom',
+            'region' => 'England',
             'location_manual' => true,
             'region_manual' => true,
+            'country_code' => 'US',
+            'country_manual' => true,
         ]);
     }
 
-    public function test_artist_location_and_region_can_be_manually_edited(): void
+    public function test_artist_country_and_locality_can_be_manually_edited(): void
     {
         $artist = Artist::query()->create([
             'name' => 'The Artist',
             'normalised_name' => 'the artist',
         ]);
 
-        $this->patch(route('artists.region.update', $artist), [
+        $this->patch(route('artists.location.update', $artist), [
             'location' => 'Bristol',
-            'region' => 'United Kingdom',
+            'country_code' => 'GB',
         ])->assertRedirect();
 
         $this->assertDatabaseHas('artists', [
             'id' => $artist->id,
             'location' => 'Bristol',
             'location_manual' => true,
-            'region' => 'United Kingdom',
-            'region_manual' => true,
+            'country_code' => 'GB',
+            'country_manual' => true,
         ]);
     }
 }

@@ -8,22 +8,23 @@ use App\Models\Genre;
 use App\Models\SpotifyPlaylist;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class MusicPageController extends Controller
 {
-    public function updateArtistRegion(Request $request, Artist $artist): RedirectResponse
+    public function updateArtistLocation(Request $request, Artist $artist): RedirectResponse
     {
         $validated = $request->validate([
             'location' => ['nullable', 'string', 'max:150'],
-            'region' => ['nullable', 'string', 'max:100'],
+            'country_code' => ['nullable', 'string', Rule::in(array_keys(config('countries')))],
         ]);
         $updates = [];
 
-        foreach (['location', 'region'] as $field) {
+        foreach (['location', 'country_code'] as $field) {
             if ($request->exists($field)) {
                 $updates[$field] = trim((string) ($validated[$field] ?? '')) ?: null;
-                $updates[$field.'_manual'] = true;
+                $updates[$field === 'country_code' ? 'country_manual' : 'location_manual'] = true;
             }
         }
 

@@ -22,6 +22,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -67,16 +68,14 @@ class DashboardController extends Controller
 
         $filters = $request->validate([
             'genre' => ['nullable', 'integer', 'exists:genres,id'],
-            'artist_id' => ['nullable', 'integer', 'exists:artists,id'],
-            'region' => ['nullable', 'string', 'max:100'],
-            'year_from' => ['nullable', 'integer', 'between:1900,2100'],
-            'year_to' => ['nullable', 'integer', 'between:1900,2100'],
+            'country' => ['nullable', 'string', 'size:2', Rule::in(array_keys(config('countries')))],
+            'year' => ['nullable', 'integer', 'between:1900,2100'],
             'completion' => ['nullable', 'in:incomplete,partial,complete'],
             'include_non_albums' => ['nullable', 'boolean'],
         ]);
         $filteredAlbums = null;
 
-        if ($request->hasAny(['filter', 'genre', 'artist_id', 'region', 'year_from', 'year_to', 'completion', 'include_completed', 'include_non_albums'])) {
+        if ($request->hasAny(['filter', 'genre', 'country', 'year', 'completion', 'include_completed', 'include_non_albums'])) {
             $catalogueQuery = Album::query()
                 ->withCount('tracks')
                 ->selectSub(Scrobble::query()->selectRaw('COUNT(DISTINCT track_id)')
@@ -88,18 +87,11 @@ class DashboardController extends Controller
             if (! empty($filters['genre'])) {
                 $catalogueQuery->whereHas('artists.acceptedGenres', fn ($query) => $query->whereKey($filters['genre']));
             }
-            if (! empty($filters['artist_id'])) {
-                $catalogueQuery->whereHas('artists', fn ($query) => $query->whereKey($filters['artist_id']));
+            if (! empty($filters['country'])) {
+                $catalogueQuery->whereHas('artists', fn ($query) => $query->where('country_code', $filters['country']));
             }
-            if (! empty($filters['region'])) {
-                $region = $this->normalise($filters['region']);
-                $catalogueQuery->whereHas('artists', fn ($query) => $query->whereRaw('LOWER(region) = ?', [$region]));
-            }
-            if (! empty($filters['year_from'])) {
-                $catalogueQuery->whereRaw('CAST(SUBSTRING(release_date, 1, 4) AS UNSIGNED) >= ?', [$filters['year_from']]);
-            }
-            if (! empty($filters['year_to'])) {
-                $catalogueQuery->whereRaw('CAST(SUBSTRING(release_date, 1, 4) AS UNSIGNED) <= ?', [$filters['year_to']]);
+            if (! empty($filters['year'])) {
+                $catalogueQuery->where('release_date', 'like', $filters['year'].'%');
             }
             if (empty($filters['include_non_albums'])) {
                 $catalogueQuery->where(fn ($query) => $query->whereNull('album_type')->orWhere('album_type', 'album'));
@@ -138,9 +130,8 @@ class DashboardController extends Controller
             'artists' => $artists,
             'albums' => $albums,
             'filteredAlbums' => $filteredAlbums,
-            'catalogueGenres' => Genre::query()->whereHas('artists')->orderBy('normalised_name')->get(),
-            'catalogueRegions' => Artist::query()->whereNotNull('region')->where('region', '!=', '')->distinct()->orderBy('region')->pluck('region'),
-            'catalogueArtists' => Artist::query()->orderBy('name')->get(['id', 'name']),
+            'catalogueGenres' => Genre::query()->filterable()->whereHas('artists')->orderBy('normalised_name')->get(),
+            'catalogueCountries' => Artist::query()->whereNotNull('country_code')->distinct()->orderBy('country_code')->pluck('country_code'),
             'albumPlaylists' => AlbumPlaylist::query()->orderBy('name')->get(['id', 'name']),
             'filters' => $filters,
             'selectedArtist' => $artistId > 0

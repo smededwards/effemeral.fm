@@ -49,7 +49,7 @@
                             @endif
                             @if ($item->album)
                                 <p class="mt-1 text-sm text-ef-muted">
-                                    <a class="hover:text-ef-accent-strong" href="{{ route('albums.show', $item->album, false) }}">{{ $item->album->title }}</a>
+                                    <a class="hover:text-ef-accent-strong" href="{{ route('albums.show', $item->album, false) }}">{{ $item->album->displayTitle() }}</a>
                                     @if ($item->album->artists->isNotEmpty())
                                         · @foreach ($item->album->artists as $artist)
                                             @if (! $loop->first), @endif<a class="hover:text-ef-accent-strong" href="{{ route('artists.show', $artist, false) }}">{{ $artist->name }}</a>

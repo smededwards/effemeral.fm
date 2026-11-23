@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class SpotifySavedAlbum extends Model
 {
@@ -13,6 +14,11 @@ class SpotifySavedAlbum extends Model
         'primary_artist_name', 'artists', 'tracks', 'cover_image_url', 'saved_at',
         'last_synced_at', 'completion_override',
     ];
+
+    public function displayTitle(): string
+    {
+        return Str::title($this->name);
+    }
 
     protected function casts(): array
     {
