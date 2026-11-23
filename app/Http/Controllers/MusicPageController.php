@@ -56,6 +56,7 @@ class MusicPageController extends Controller
             'artist' => $artist->load([
                 'acceptedGenres',
                 'albums' => fn ($query) => $query->with('artists')->withCount('tracks')->orderBy('title'),
+                'musicBrainzDiscographyImportRuns' => fn ($query) => $query->latest()->limit(1),
             ]),
         ]);
     }

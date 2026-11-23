@@ -55,8 +55,8 @@
                             <article class="rounded-lg border border-ef-line bg-ef-canvas p-4">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
-                                        <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum->name }}</h3>
-                                        <p class="mt-1 text-sm text-ef-muted">{{ $recommendation->spotifySavedAlbum->primary_artist_name ?? 'Unknown artist' }}</p>
+                                        <h3 class="font-medium">{{ $recommendation->spotifySavedAlbum?->name ?? $recommendation->album?->title ?? 'Unknown album' }}</h3>
+                                        <p class="mt-1 text-sm text-ef-muted">{{ $recommendation->spotifySavedAlbum?->primary_artist_name ?? $recommendation->album?->artists->first()?->name ?? 'Unknown artist' }}</p>
                                     </div>
                                     <span class="rounded-full px-3 py-1 text-xs {{ $item['status'] === 'complete' ? 'bg-ef-accent-wash text-ef-accent-strong' : ($item['status'] === 'partial' ? 'bg-amber-950 text-ef-accent-strong' : 'bg-red-950 text-red-300') }}">{{ ucfirst($item['status']) }}</span>
                                 </div>

@@ -23,7 +23,7 @@ class RecommendationPlaylistController extends Controller
         $words = [];
 
         foreach ($reviewAlbums as $item) {
-            $title = $item['recommendation']->spotifySavedAlbum->name ?? '';
+            $title = $item['recommendation']->spotifySavedAlbum->name ?? $item['recommendation']->album->title ?? '';
             $titleWords = preg_split('/[^\pL\pN]+/u', $title, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
             foreach ($titleWords as $word) {
@@ -58,7 +58,7 @@ class RecommendationPlaylistController extends Controller
     {
         /** @var Collection<int, AlbumRecommendation> $recommendations */
         $recommendations = $recommendationRun->albumRecommendations()
-            ->with('album.tracks', 'spotifySavedAlbum')
+            ->with('album.tracks', 'album.artists', 'spotifySavedAlbum')
             ->get();
         $reviewAlbums = $recommendations->map(function (AlbumRecommendation $recommendation): array {
             return [
@@ -90,7 +90,7 @@ class RecommendationPlaylistController extends Controller
         if ($selectedRun !== null) {
             /** @var Collection<int, AlbumRecommendation> $recommendations */
             $recommendations = $selectedRun->albumRecommendations()
-                ->with('album.tracks', 'spotifySavedAlbum')
+                ->with('album.tracks', 'album.artists', 'spotifySavedAlbum')
                 ->get();
             $playlists = SpotifyPlaylist::query()
                 ->when($selectedPlaylist !== null, fn ($query) => $query->whereKey($selectedPlaylist->id))

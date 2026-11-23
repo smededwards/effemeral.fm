@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Artist extends Model
 {
@@ -24,6 +25,11 @@ class Artist extends Model
     public function albums(): BelongsToMany
     {
         return $this->belongsToMany(Album::class);
+    }
+
+    public function musicBrainzDiscographyImportRuns(): HasMany
+    {
+        return $this->hasMany(MusicBrainzDiscographyImportRun::class);
     }
 
     public function genres(): BelongsToMany

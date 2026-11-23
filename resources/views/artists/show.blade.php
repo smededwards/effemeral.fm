@@ -20,6 +20,34 @@
         @endif
     </header>
 
+    <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="artist-musicbrainz-discography">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 id="artist-musicbrainz-discography" class="text-xl font-semibold">MusicBrainz Discography</h2>
+                <p class="mt-2 max-w-2xl text-sm text-ef-muted">Import this artist’s albums and EPs into the catalogue and find Spotify editions where available.</p>
+            </div>
+            @if ($artist->musicbrainz_mbid)
+                <form method="POST" action="{{ route('artists.musicbrainz-discography.store', $artist, false) }}">
+                    @csrf
+                    <button class="rounded-md border border-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash" type="submit">Refresh Discography</button>
+                </form>
+            @else
+                <p class="text-sm text-ef-muted">A MusicBrainz artist ID is needed before this can be imported.</p>
+            @endif
+        </div>
+        @if ($artist->musicBrainzDiscographyImportRuns->isNotEmpty())
+            @php($discographyRun = $artist->musicBrainzDiscographyImportRuns->first())
+            <div class="mt-5 border-t border-ef-line pt-4 text-sm" aria-live="polite">
+                <p class="font-medium">Latest refresh: {{ ucfirst($discographyRun->status) }}</p>
+                @if ($discographyRun->status === 'completed')
+                    <p class="mt-1 text-ef-muted">{{ $discographyRun->fetched_count }} release groups · {{ $discographyRun->matched_count }} Spotify matches · {{ $discographyRun->unmatched_count }} without a confident match</p>
+                @elseif ($discographyRun->error)
+                    <p class="mt-1 text-red-300">{{ $discographyRun->error }}</p>
+                @endif
+            </div>
+        @endif
+    </section>
+
     <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="artist-genres">
         <h2 id="artist-genres" class="text-2xl font-semibold">Genres</h2>
         @if ($artist->acceptedGenres->isNotEmpty())
@@ -46,7 +74,7 @@
                 @foreach ($artist->albums as $album)
                     <a class="border border-ef-line bg-ef-surface p-5 transition hover:border-ef-accent" href="{{ route('albums.show', $album, false) }}">
                         <h3 class="font-semibold">{{ $album->title }}</h3>
-                        <p class="mt-2 text-sm text-ef-muted">{{ $album->release_date ?: 'Release date unknown' }} · {{ $album->tracks_count }} tracks</p>
+                        <p class="mt-2 text-sm text-ef-muted">{{ $album->release_date ?: 'Release date unknown' }} · {{ $album->tracks_count }} tracks{{ $album->spotify_id ? ($album->tracks_count === 0 ? ' · Spotify tracks unavailable' : '') : ' · No Spotify match' }}</p>
                         <span class="mt-4 inline-block text-sm font-semibold text-ef-accent-strong">View Album →</span>
                     </a>
                 @endforeach
