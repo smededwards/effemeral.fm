@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * Persistent Effemeral playlist containing ordered albums.
+ */
 class AlbumPlaylist extends Model
 {
     protected $fillable = [
@@ -21,6 +24,9 @@ class AlbumPlaylist extends Model
         ];
     }
 
+    /**
+     * Return the ordered albums assigned to the playlist.
+     */
     public function albums(): BelongsToMany
     {
         return $this->belongsToMany(Album::class, 'album_playlist_items')

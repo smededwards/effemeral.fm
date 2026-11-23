@@ -9,12 +9,23 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
+/**
+ * Reads Last.fm history and tags with bounded retries and request pacing.
+ */
 class LastFmClient
 {
     private float $lastRequestAt = 0.0;
 
     /**
      * @return list<array<string, mixed>>
+     */
+    /**
+     * Fetch recent tracks in one bounded result set.
+     *
+     * @param  CarbonImmutable  $from  Start of the requested range.
+     * @param  CarbonImmutable  $to  End of the requested range.
+     * @param  int|null  $limit  Maximum number of scrobbles to return.
+     * @return list<array<string, mixed>> The Last.fm track payloads.
      */
     public function recentTracks(CarbonImmutable $from, CarbonImmutable $to, ?int $limit = null): array
     {
@@ -28,8 +39,13 @@ class LastFmClient
     }
 
     /**
-     * @param  Closure(array<string, mixed>): void  $trackHandler
-     * @param  Closure(int): void|null  $pageHandler
+     * Stream recent tracks page by page so full imports stay memory-safe.
+     *
+     * @param  CarbonImmutable  $from  Start of the requested range.
+     * @param  CarbonImmutable  $to  End of the requested range.
+     * @param  int|null  $limit  Maximum number of scrobbles to yield.
+     * @param  Closure(array<string, mixed>): void  $trackHandler  Handles each track.
+     * @param  Closure(int): void|null  $pageHandler  Handles each completed page.
      */
     public function eachRecentTrack(
         CarbonImmutable $from,
@@ -87,7 +103,13 @@ class LastFmClient
         } while (($limit === null || $fetched < $limit) && $page <= $totalPages && $pageTracks !== []);
     }
 
-    /** @return list<string> */
+    /**
+     * Fetch an artist's tags for genre enrichment.
+     *
+     * @param  string  $artist  The Last.fm artist name.
+     * @param  string|null  $mbid  The optional MusicBrainz artist ID.
+     * @return list<string> The Last.fm tag names.
+     */
     public function artistTags(string $artist, ?string $mbid = null): array
     {
         $response = $this->getWithRateLimit(array_filter([
@@ -121,7 +143,9 @@ class LastFmClient
             ])->timeout(15)->retry(3, 1000, throw: false);
     }
 
-    /** @param array<string, mixed> $query */
+    /**
+     * @param  array<string, mixed>  $query  The Last.fm request parameters.
+     */
     private function getWithRateLimit(array $query): Response
     {
         for ($attempt = 1; $attempt <= 3; $attempt++) {

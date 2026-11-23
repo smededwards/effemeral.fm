@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * Normalised style label used to group catalogue artists.
+ */
 class Genre extends Model
 {
     protected $fillable = ['name', 'normalised_name'];
@@ -18,12 +21,20 @@ class Genre extends Model
         );
     }
 
+    /**
+     * Limit the catalogue to approved, non-numeric style labels.
+     *
+     * @param  Builder<Genre>  $query  The genre query.
+     * @return Builder<Genre> The constrained query.
+     */
     public function scopeFilterable(Builder $query): Builder
     {
         return $query->whereKey(self::filterableIds());
     }
 
-    /** @return list<int> */
+    /**
+     * @return list<int> The associated artist IDs.
+     */
     public static function filterableIds(): array
     {
         return static::query()->get(['id', 'normalised_name'])
@@ -39,6 +50,9 @@ class Genre extends Model
         return $words !== [] && collect($words)->every(fn (string $word): bool => isset($allowedWords[$word]));
     }
 
+    /**
+     * Return artists carrying this accepted or suppressed style label.
+     */
     public function artists(): BelongsToMany
     {
         return $this->belongsToMany(Artist::class)->withPivot('source', 'suppressed')->withTimestamps();

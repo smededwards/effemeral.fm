@@ -13,6 +13,7 @@ Closes #
 ## Testing
 
 - [ ] `composer run lint`
+- [ ] PSR-12 formatting and repo-wide control-flow rules reviewed
 - [ ] `composer run analyse`
 - [ ] `php artisan test`
 - [ ] Other verification: <!-- describe if applicable -->

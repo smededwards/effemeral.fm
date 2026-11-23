@@ -12,9 +12,14 @@ use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
+/**
+ * Application user model retained for Laravel authentication compatibility.
+ */
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
+    /**
+     * @use HasFactory<UserFactory>
+     */
     use HasFactory, Notifiable;
 
     /**

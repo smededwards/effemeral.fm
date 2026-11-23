@@ -14,14 +14,27 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
+/**
+ * Imports Last.fm scrobbles while preserving progress and source identity.
+ */
 class ImportLastFmScrobbles implements ShouldQueue
 {
     use Queueable;
 
     public int $timeout = 3600;
 
+    /**
+     * @param  int  $importRunId  The persisted import run to process.
+     */
     public function __construct(public int $importRunId) {}
 
+    /**
+     * Import the requested range and continue past individual track failures.
+     *
+     * @param  LastFmClient  $client  The Last.fm API client.
+     * @param  CatalogWriter|null  $catalog  The canonical catalogue writer.
+     * @param  GenreWriter|null  $genreWriter  The genre persistence service.
+     */
     public function handle(LastFmClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
     {
         $catalog ??= app(CatalogWriter::class);

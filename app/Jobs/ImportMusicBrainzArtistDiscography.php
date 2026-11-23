@@ -12,14 +12,27 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
+/**
+ * Enriches an existing artist with matching MusicBrainz album metadata.
+ */
 class ImportMusicBrainzArtistDiscography implements ShouldQueue
 {
     use Queueable;
 
     public int $timeout = 3600;
 
+    /**
+     * @param  int  $importRunId  The persisted enrichment run to update.
+     */
     public function __construct(public int $importRunId) {}
 
+    /**
+     * Process the artist discography without importing unrelated releases.
+     *
+     * @param  MusicBrainzClient  $musicBrainz  The MusicBrainz API client.
+     * @param  SpotifyClient  $spotify  The Spotify matching client.
+     * @param  CatalogWriter  $catalog  The canonical catalogue writer.
+     */
     public function handle(MusicBrainzClient $musicBrainz, SpotifyClient $spotify, CatalogWriter $catalog): void
     {
         $run = MusicBrainzDiscographyImportRun::query()->findOrFail($this->importRunId);
@@ -110,7 +123,9 @@ class ImportMusicBrainzArtistDiscography implements ShouldQueue
         }
     }
 
-    /** @param array<string, mixed> $releaseGroup */
+    /**
+     * @param  array<string, mixed>  $releaseGroup  The MusicBrainz release group.
+     */
     private function createMusicBrainzAlbum(Artist $artist, array $releaseGroup, string $title, string $releaseGroupId): Album
     {
         $date = $releaseGroup['first-release-date'] ?? null;

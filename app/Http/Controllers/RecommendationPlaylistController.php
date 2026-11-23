@@ -15,6 +15,9 @@ use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Throwable;
 
+/**
+ * Reviews and syncs recommendation drafts as album-level Spotify playlists.
+ */
 class RecommendationPlaylistController extends Controller
 {
     private function playlistNameSuggestion(iterable $reviewAlbums): string
@@ -54,9 +57,17 @@ class RecommendationPlaylistController extends Controller
         return $uniqueSuggestion;
     }
 
+    /**
+     * Show the included albums, tracks, and Spotify sync choices for a draft.
+     *
+     * @param  RecommendationRun  $recommendationRun  The draft being reviewed.
+     * @return View The recommendation review page.
+     */
     public function review(RecommendationRun $recommendationRun): View
     {
-        /** @var Collection<int, AlbumRecommendation> $recommendations */
+        /**
+         * @var Collection<int, AlbumRecommendation> $recommendations
+         */
         $recommendations = $recommendationRun->albumRecommendations()
             ->with('album.tracks', 'album.artists', 'spotifySavedAlbum')
             ->get();
@@ -80,6 +91,12 @@ class RecommendationPlaylistController extends Controller
         ]);
     }
 
+    /**
+     * Compare an Effemeral draft against an imported Spotify playlist.
+     *
+     * @param  Request  $request  The selected draft and playlist.
+     * @return View The audit page.
+     */
     public function audit(Request $request): View
     {
         $recommendationRuns = RecommendationRun::query()->latest('generated_at')->get();
@@ -88,7 +105,9 @@ class RecommendationPlaylistController extends Controller
         $auditAlbums = collect();
 
         if ($selectedRun !== null) {
-            /** @var Collection<int, AlbumRecommendation> $recommendations */
+            /**
+             * @var Collection<int, AlbumRecommendation> $recommendations
+             */
             $recommendations = $selectedRun->albumRecommendations()
                 ->with('album.tracks', 'album.artists', 'spotifySavedAlbum')
                 ->get();
@@ -149,6 +168,14 @@ class RecommendationPlaylistController extends Controller
         ]);
     }
 
+    /**
+     * Create or update the selected Spotify playlist after review.
+     *
+     * @param  Request  $request  The submitted sync choice.
+     * @param  RecommendationRun  $recommendationRun  The reviewed draft.
+     * @param  SpotifyClient  $client  The Spotify API client.
+     * @return RedirectResponse The post-sync redirect.
+     */
     public function sync(Request $request, RecommendationRun $recommendationRun, SpotifyClient $client): RedirectResponse
     {
         if ($recommendationRun->status === 'synced') {
@@ -180,7 +207,9 @@ class RecommendationPlaylistController extends Controller
             }
         }
 
-        /** @var Collection<int, AlbumRecommendation> $recommendations */
+        /**
+         * @var Collection<int, AlbumRecommendation> $recommendations
+         */
         $recommendations = $recommendationRun->albumRecommendations()
             ->with('album.tracks', 'spotifySavedAlbum')
             ->where('included', true)
@@ -240,16 +269,24 @@ class RecommendationPlaylistController extends Controller
         return back()->with('success', 'Recommendation draft synced to Spotify.');
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string> The canonical Spotify track URIs.
+     */
     private function recommendationTrackUris(AlbumRecommendation $recommendation): array
     {
-        /** @var Album|null $album */
+        /**
+         * @var Album|null $album
+         */
         $album = $recommendation->getRelation('album');
-        /** @var SpotifySavedAlbum|null $legacyAlbum */
+        /**
+         * @var SpotifySavedAlbum|null $legacyAlbum
+         */
         $legacyAlbum = $recommendation->getRelation('spotifySavedAlbum');
 
         if ($album !== null && $album->getRelation('tracks')->isNotEmpty()) {
-            /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+            /**
+             * @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks
+             */
             $tracks = $album->getRelation('tracks');
 
             return $tracks

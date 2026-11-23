@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Persisted resumable Spotify playlist import progress.
+ */
 class SpotifyPlaylistImportRun extends Model
 {
     protected $fillable = [

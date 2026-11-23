@@ -15,20 +15,36 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
+/**
+ * Imports Spotify playlists in resumable pages and enriches their albums.
+ */
 class ImportSpotifyPlaylists implements ShouldQueue
 {
     use Queueable;
 
     public int $timeout = 3600;
 
+    /**
+     * @param  int  $importRunId  The persisted import run to update.
+     * @param  string|null  $playlistId  A single playlist ID for an individual retry.
+     */
     public function __construct(public int $importRunId, public ?string $playlistId = null) {}
 
-    /** @return list<int> */
+    /**
+     * @return list<int> Retry delays in seconds.
+     */
     public function backoff(): array
     {
         return [60, 300, 900];
     }
 
+    /**
+     * Process the next page, preserving progress when Spotify stops the job.
+     *
+     * @param  SpotifyClient  $client  The Spotify API client.
+     * @param  CatalogWriter|null  $catalog  The canonical catalogue writer.
+     * @param  GenreWriter|null  $genreWriter  The genre persistence service.
+     */
     public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
     {
         $catalog ??= app(CatalogWriter::class);

@@ -78,7 +78,7 @@ jobs:
           php artisan migrate --force
           npm run build
 
-      - name: Check code style
+      - name: Enforce PSR-12 code style
         run: composer run lint:check
 
       - name: Run static analysis

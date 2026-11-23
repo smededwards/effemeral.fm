@@ -177,8 +177,10 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Open pull requests into dev; do not merge them without the user's review.
 - Every pull request must include a non-empty description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
 - Use Conventional Commits and labels limited to Conventional Commit types.
+- Enforce PSR-12 across every tracked PHP file: use Laravel Pint in CI with `composer run lint:check`, and treat formatting failures as blocking.
 - Before handoff, run the narrowest relevant tests plus Pint and PHPStan. Report any skipped verification and remaining risks.
 - Before opening a pull request, run the Ponytail review against the complete proposed change, fix its actionable findings, and include the review outcome in the handoff. The user reviews and merges the PR.
+- Add PHPDoc to public classes and methods, and to non-obvious private methods or complex array shapes. PHPDoc must use a multiline block with meaningful `@param`, `@return`, `@throws`, or shape annotations where applicable. Single-line comments must start with `//` and explain why a decision is necessary, not narrate obvious code.
 - Before handoff, format Blade templates with `npx --yes blade-formatter@1.44.6 --write --indent-inner-html 'resources/views/**/*.blade.php'` and verify with the same command using `--check-formatted` instead of `--write`. Keep nested HTML and Blade directives indented to show their hierarchy, put nested elements and control directives on separate lines, and avoid compressed multi-element lines. Preserve generated or whitespace-sensitive content when reformatting would alter its output.
 - Use semantic HTML in Blade views: choose landmarks for their document role, give each `<section>` an accessible name, use lists for repeated collections, and use headings, labels, descriptions, and status roles according to their meaning. Keep decorative icons hidden from assistive technology; do not add semantic elements solely for styling.
 
@@ -189,5 +191,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Keep separate concerns in the layer responsible for them; compose small collaborators when behavior needs combining. Prefer composition over inheritance unless an existing framework or domain hierarchy makes inheritance the clearest fit.
 - Fail fast at trust boundaries and use guard clauses for invalid, unavailable, or already-completed states. Preserve user-facing error handling where recovery is useful, and never hide failures that could cause data loss.
 - Treat these principles as practical design checks, not a requirement to restructure working code without a concrete benefit. Prefer incremental refactors with narrow scope and clear behavior.
-- Write comparisons in natural order: put the variable or expression on the left and the literal on the right; avoid Yoda conditions (for example, `$value === null`).
-- Use a ternary when choosing between two concise expressions. Use `if` statements and guard clauses for side effects, multi-step branches, validation, or complex logic; avoid nested ternaries.
+- Apply these control-flow rules repo-wide: never use Yoda conditions; put the variable or expression on the left and the literal on the right.
+- Use guard clauses and early returns for invalid, unavailable, or already-completed states so the main path stays flat.
+- Use ternary operators only for simple, single-line value selection. Use `??` for null defaults, and use `if` or `match` for multi-step or multi-branch logic. Never nest ternaries.

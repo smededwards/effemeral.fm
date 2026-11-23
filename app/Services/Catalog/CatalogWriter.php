@@ -8,9 +8,21 @@ use App\Models\SpotifyAlbumCollection;
 use App\Models\Track;
 use Illuminate\Support\Arr;
 
+/**
+ * Writes provider data into the canonical artists, albums, and tracks tables.
+ */
 class CatalogWriter
 {
-    /** @param array<string, mixed> $albumData */
+    /**
+     * Upsert a Spotify album and its credited artists, tracks, and membership.
+     *
+     * @param  array<string, mixed>  $albumData  The Spotify album payload.
+     * @param  mixed  $savedAt  The source collection timestamp, when available.
+     * @param  string|null  $collectionType  The source collection type.
+     * @param  string|null  $playlistId  The source playlist ID, when applicable.
+     * @param  Album|null  $canonicalAlbum  An existing album to enrich.
+     * @return Album The canonical album record.
+     */
     public function spotifyAlbum(
         array $albumData,
         mixed $savedAt = null,
@@ -73,7 +85,12 @@ class CatalogWriter
         return $album;
     }
 
-    /** @param list<array<string, mixed>> $tracks */
+    /**
+     * Upsert Spotify tracks for an existing album without deleting local data.
+     *
+     * @param  Album  $album  The canonical album to update.
+     * @param  list<array<string, mixed>>  $tracks  The Spotify track payloads.
+     */
     public function spotifyAlbumTracks(Album $album, array $tracks): void
     {
         foreach ($tracks as $trackData) {
@@ -102,6 +119,12 @@ class CatalogWriter
         }
     }
 
+    /**
+     * Link one Last.fm scrobble to canonical records when possible.
+     *
+     * @param  array<string, mixed>  $data  The Last.fm scrobble payload.
+     * @return Track|null The linked track, when a track name was available.
+     */
     public function lastFmScrobble(array $data): ?Track
     {
         $artistName = (string) ($data['artist_name'] ?? 'Unknown artist');

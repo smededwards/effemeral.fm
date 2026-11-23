@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Persisted MusicBrainz enrichment progress for one artist.
+ */
 class MusicBrainzDiscographyImportRun extends Model
 {
     protected $fillable = [

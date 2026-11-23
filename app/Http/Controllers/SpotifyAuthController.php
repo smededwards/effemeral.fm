@@ -8,8 +8,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
+/**
+ * Manages the single-user Spotify OAuth connection.
+ */
 class SpotifyAuthController extends Controller
 {
+    /**
+     * Redirect the user to Spotify's authorization screen.
+     *
+     * @return RedirectResponse The Spotify authorization redirect.
+     */
     public function redirect(): RedirectResponse
     {
         $state = Str::random(40);
@@ -24,6 +32,12 @@ class SpotifyAuthController extends Controller
         ]));
     }
 
+    /**
+     * Validate Spotify's callback state and store the encrypted tokens.
+     *
+     * @param  Request  $request  The OAuth callback request.
+     * @return RedirectResponse The connection status redirect.
+     */
     public function callback(Request $request): RedirectResponse
     {
         if (! session()->has('spotify_oauth_state') || ! $request->filled('state') || ! hash_equals((string) session('spotify_oauth_state'), (string) $request->input('state'))) {
@@ -66,6 +80,11 @@ class SpotifyAuthController extends Controller
         return redirect()->route('dashboard')->with('success', 'Spotify account connected.');
     }
 
+    /**
+     * Remove the local Spotify connection and its stored tokens.
+     *
+     * @return RedirectResponse The connection status redirect.
+     */
     public function disconnect(): RedirectResponse
     {
         SpotifyConnection::query()->delete();

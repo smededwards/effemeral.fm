@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Last.fm listening event linked to canonical artist, album, and track data.
+ */
 class Scrobble extends Model
 {
     protected $fillable = [

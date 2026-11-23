@@ -7,12 +7,21 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use RuntimeException;
 
+/**
+ * Reads MusicBrainz identity and release-group metadata for existing records.
+ */
 class MusicBrainzClient
 {
     private bool $hasRequested = false;
 
     /**
      * @return array{musicbrainz_mbid: string, location: ?string, country_code: ?string}|null
+     */
+    /**
+     * Resolve an artist's origin metadata without guessing ambiguous matches.
+     *
+     * @param  Artist  $artist  The existing artist to enrich.
+     * @return array<string, mixed>|null The matched metadata, if unambiguous.
      */
     public function artistMetadata(Artist $artist): ?array
     {
@@ -45,7 +54,12 @@ class MusicBrainzClient
         ];
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * Fetch album release groups for an existing artist identity.
+     *
+     * @param  Artist  $artist  The existing artist to query.
+     * @return list<array<string, mixed>> The matching release groups.
+     */
     public function artistReleaseGroups(Artist $artist): array
     {
         if (! is_string($artist->musicbrainz_mbid) || $artist->musicbrainz_mbid === '') {
@@ -88,7 +102,9 @@ class MusicBrainzClient
         return $groups;
     }
 
-    /** @return array<string, mixed>|null */
+    /**
+     * @return array<string, mixed>|null The decoded provider payload.
+     */
     private function search(string $artistName): ?array
     {
         $escapedName = str_replace(['\\', '"'], ['\\\\', '\\"'], $artistName);
@@ -159,7 +175,9 @@ class MusicBrainzClient
         return preg_replace('/\s+/', ' ', mb_strtolower(trim($name))) ?? '';
     }
 
-    /** @param array<string, mixed> $payload */
+    /**
+     * @param  array<string, mixed>  $payload  The MusicBrainz area payload.
+     */
     private function areaName(array $payload, string $path): ?string
     {
         $name = data_get($payload, $path);

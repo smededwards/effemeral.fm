@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Canonical artist record with source identities and accepted genres.
+ */
 class Artist extends Model
 {
     protected $fillable = [
@@ -23,21 +26,33 @@ class Artist extends Model
         ];
     }
 
+    /**
+     * Return albums credited to the artist.
+     */
     public function albums(): BelongsToMany
     {
         return $this->belongsToMany(Album::class);
     }
 
+    /**
+     * Return MusicBrainz enrichment runs for the artist.
+     */
     public function musicBrainzDiscographyImportRuns(): HasMany
     {
         return $this->hasMany(MusicBrainzDiscographyImportRun::class);
     }
 
+    /**
+     * Return all imported and manual genre links.
+     */
     public function genres(): BelongsToMany
     {
         return $this->belongsToMany(Genre::class)->withPivot('source', 'suppressed')->withTimestamps();
     }
 
+    /**
+     * Return non-suppressed genre links used by discovery.
+     */
     public function acceptedGenres(): BelongsToMany
     {
         return $this->genres()

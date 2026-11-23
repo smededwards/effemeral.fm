@@ -11,8 +11,18 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
+/**
+ * Renders linked artist, album, genre, and imported playlist pages.
+ */
 class MusicPageController extends Controller
 {
+    /**
+     * Save a manually reviewed country and locality for an artist.
+     *
+     * @param  Request  $request  The submitted location values.
+     * @param  Artist  $artist  The artist being edited.
+     * @return RedirectResponse The artist page redirect.
+     */
     public function updateArtistLocation(Request $request, Artist $artist): RedirectResponse
     {
         $validated = $request->validate([
@@ -33,6 +43,12 @@ class MusicPageController extends Controller
         return back()->with('success', 'Artist location updated.');
     }
 
+    /**
+     * Show the artists associated with a genre.
+     *
+     * @param  Genre  $genre  The genre being viewed.
+     * @return View The genre page.
+     */
     public function genre(Genre $genre): View
     {
         return view('genres.show', [
@@ -51,6 +67,12 @@ class MusicPageController extends Controller
         ]);
     }
 
+    /**
+     * Show an artist with its albums and accepted genres.
+     *
+     * @param  Artist  $artist  The artist being viewed.
+     * @return View The artist page.
+     */
     public function artist(Artist $artist): View
     {
         return view('artists.show', [
@@ -62,6 +84,12 @@ class MusicPageController extends Controller
         ]);
     }
 
+    /**
+     * Show an album with its tracks, genres, and playlists.
+     *
+     * @param  Album  $album  The album being viewed.
+     * @return View The album page.
+     */
     public function album(Album $album): View
     {
         return view('albums.show', [
@@ -74,6 +102,12 @@ class MusicPageController extends Controller
         ]);
     }
 
+    /**
+     * Show an imported Spotify playlist and its catalogue content.
+     *
+     * @param  SpotifyPlaylist  $spotifyPlaylist  The playlist being viewed.
+     * @return View The imported playlist page.
+     */
     public function spotifyPlaylist(SpotifyPlaylist $spotifyPlaylist): View
     {
         $playlistItems = $spotifyPlaylist->items()

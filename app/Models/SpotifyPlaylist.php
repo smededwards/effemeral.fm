@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Imported Spotify playlist metadata used for audit and sync selection.
+ */
 class SpotifyPlaylist extends Model
 {
     protected $fillable = [
@@ -23,6 +26,9 @@ class SpotifyPlaylist extends Model
         ];
     }
 
+    /**
+     * Return imported items associated with the playlist.
+     */
     public function items(): HasMany
     {
         return $this->hasMany(SpotifyPlaylistItem::class);
