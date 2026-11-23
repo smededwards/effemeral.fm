@@ -6,6 +6,8 @@
         <h1 class="mt-3 text-4xl font-semibold">Catalogue</h1>
         <p class="mt-3 max-w-2xl text-ef-muted">Choose a canonical artist or album to use as the starting point for
             discovery.</p>
+        <a class="mt-4 inline-block text-sm font-semibold text-ef-accent-strong hover:underline"
+            href="{{ route('catalogue.styles', [], false) }}">Browse styles →</a>
     </header>
 
     <form class="rounded-xl border border-ef-line bg-ef-surface p-6" method="GET"

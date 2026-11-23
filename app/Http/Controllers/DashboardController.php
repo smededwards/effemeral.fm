@@ -27,6 +27,11 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function styles(): View
+    {
+        return view('catalogue.styles', ['genres' => $this->catalogueGenres()]);
+    }
+
     public function catalogue(Request $request): View
     {
         $search = trim((string) $request->query('q'));
@@ -130,7 +135,7 @@ class DashboardController extends Controller
             'artists' => $artists,
             'albums' => $albums,
             'filteredAlbums' => $filteredAlbums,
-            'catalogueGenres' => Genre::query()->filterable()->whereHas('artists.acceptedGenres')->orderBy('normalised_name')->get(),
+            'catalogueGenres' => $this->catalogueGenres(),
             'catalogueCountries' => Artist::query()->whereNotNull('country_code')->distinct()->orderBy('country_code')->pluck('country_code'),
             'albumPlaylists' => AlbumPlaylist::query()->orderBy('name')->get(['id', 'name']),
             'filters' => $filters,
@@ -141,6 +146,17 @@ class DashboardController extends Controller
                 ? Album::query()->with('artists.acceptedGenres', 'tracks')->find($albumId)
                 : null,
         ]);
+    }
+
+    /** @return Collection<int, Genre> */
+    private function catalogueGenres(): Collection
+    {
+        return Genre::query()
+            ->filterable()
+            ->whereHas('artists', fn ($query) => $query->where('artist_genre.suppressed', false))
+            ->withCount(['artists' => fn ($query) => $query->where('artist_genre.suppressed', false)])
+            ->orderBy('normalised_name')
+            ->get();
     }
 
     public function discoverRecommendations(Request $request): RedirectResponse

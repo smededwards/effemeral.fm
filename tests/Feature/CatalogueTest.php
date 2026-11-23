@@ -101,4 +101,29 @@ class CatalogueTest extends TestCase
             ->assertDontSee('Unfiltered Artist')
             ->assertSee('Clear filters');
     }
+
+    public function test_catalogue_styles_page_browses_accepted_genres(): void
+    {
+        $artist = Artist::query()->create([
+            'name' => 'Mastodon',
+            'normalised_name' => 'mastodon',
+        ]);
+        $genre = Genre::query()->create([
+            'name' => 'Progressive Metal',
+            'normalised_name' => 'progressive metal',
+        ]);
+        $artist->genres()->attach($genre->id, ['source' => 'manual', 'suppressed' => false]);
+
+        $this->get(route('catalogue.styles'))
+            ->assertOk()
+            ->assertSee('All styles')
+            ->assertSee('progressive metal')
+            ->assertSee(route('genres.show', $genre, false), false)
+            ->assertSee('1');
+
+        $this->get(route('catalogue.index'))
+            ->assertOk()
+            ->assertSee('Browse styles')
+            ->assertDontSee('Browse by genre');
+    }
 }
