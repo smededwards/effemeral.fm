@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Album extends Model
 {
@@ -13,6 +14,11 @@ class Album extends Model
         'spotify_uri', 'spotify_url', 'total_tracks', 'release_date',
         'release_date_precision', 'cover_image_url',
     ];
+
+    public function displayTitle(): string
+    {
+        return Str::title($this->title);
+    }
 
     public function artists(): BelongsToMany
     {

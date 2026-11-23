@@ -30,7 +30,7 @@ class GenreWriter
     /** @param list<string> $genres */
     private function syncImported(Artist $artist, array $genres, string $source): void
     {
-        foreach ($this->normalisedGenres($genres) as $normalisedName => $name) {
+        foreach ($this->filterAllowedGenres($genres) as $normalisedName => $name) {
             $genre = Genre::query()->firstOrCreate(
                 ['normalised_name' => $normalisedName],
                 ['name' => $name],
@@ -57,7 +57,7 @@ class GenreWriter
     /** @param list<string> $genres */
     public function applyManualOverride(Artist $artist, array $genres): void
     {
-        $normalisedGenres = $this->normalisedGenres($genres);
+        $normalisedGenres = $this->filterAllowedGenres($genres);
         /** @var Collection<int, Genre> $existingGenres */
         $existingGenres = $artist->genres()->get();
         $existing = $existingGenres->keyBy('normalised_name');
@@ -126,6 +126,18 @@ class GenreWriter
         }
 
         return $normalisedGenres;
+    }
+
+    /** @param list<string> $genres
+     * @return array<string, string>
+     */
+    private function filterAllowedGenres(array $genres): array
+    {
+        return array_filter(
+            $this->normalisedGenres($genres),
+            fn (string $name, string $normalisedName): bool => Genre::isFilterableName($normalisedName),
+            ARRAY_FILTER_USE_BOTH,
+        );
     }
 
     private function normalise(string $genre): string

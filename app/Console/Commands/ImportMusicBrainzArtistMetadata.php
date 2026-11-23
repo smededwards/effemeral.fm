@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
 #[Signature('artists:import-musicbrainz {--refresh : Check all artists again, including previously checked artists} {--limit=0 : Stop after this many artists (0 means all)}')]
-#[Description('Import artist origin and region from MusicBrainz')]
+#[Description('Import artist country and locality from MusicBrainz')]
 class ImportMusicBrainzArtistMetadata extends Command
 {
     public function handle(MusicBrainzClient $client): int
@@ -45,7 +45,7 @@ class ImportMusicBrainzArtistMetadata extends Command
                 $artist->fill([
                     'musicbrainz_mbid' => $metadata['musicbrainz_mbid'] ?? $artist->musicbrainz_mbid,
                     'location' => $artist->location_manual ? $artist->location : ($metadata['location'] ?? $artist->location),
-                    'region' => $artist->region_manual ? $artist->region : ($metadata['region'] ?? $artist->region),
+                    'country_code' => $artist->country_manual ? $artist->country_code : ($metadata['country_code'] ?? $artist->country_code),
                     'musicbrainz_checked_at' => now(),
                 ])->save();
 

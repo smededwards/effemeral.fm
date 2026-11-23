@@ -12,7 +12,7 @@ class MusicBrainzClient
     private bool $hasRequested = false;
 
     /**
-     * @return array{musicbrainz_mbid: string, location: ?string, region: ?string}|null
+     * @return array{musicbrainz_mbid: string, location: ?string, country_code: ?string}|null
      */
     public function artistMetadata(Artist $artist): ?array
     {
@@ -36,10 +36,12 @@ class MusicBrainzClient
             return null;
         }
 
+        $countryCode = strtoupper((string) ($payload['country'] ?? ''));
+
         return [
             'musicbrainz_mbid' => $musicbrainzId,
             'location' => $this->areaName($payload, 'begin-area.name'),
-            'region' => $this->areaName($payload, 'area.name') ?: $this->areaName($payload, 'country'),
+            'country_code' => preg_match('/^[A-Z]{2}$/', $countryCode) === 1 ? $countryCode : null,
         ];
     }
 

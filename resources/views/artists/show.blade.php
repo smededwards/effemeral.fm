@@ -5,14 +5,19 @@
         <a class="text-sm font-semibold text-ef-accent-strong hover:underline" href="{{ route('catalogue.index', [], false) }}">← Catalogue</a>
         <p class="mt-5 text-xs font-semibold tracking-[0.2em] text-ef-accent-strong uppercase">Artist</p>
         <h1 class="mt-2 font-serif text-4xl font-semibold sm:text-5xl">{{ $artist->name }}</h1>
-        <p class="mt-3 text-sm text-ef-muted">{{ collect([$artist->location, $artist->region])->filter()->implode(', ') ?: 'Artist location not set' }}</p>
-        <form class="mt-4 flex max-w-xl flex-col gap-3 sm:flex-row" method="POST" action="{{ route('artists.region.update', $artist, false) }}">
+        <p class="mt-3 text-sm text-ef-muted">{{ config('countries.'.$artist->country_code, 'Country not set') }}{{ $artist->location ? ' · '.$artist->location : '' }}</p>
+        <form class="mt-4 flex max-w-xl flex-col gap-3 sm:flex-row" method="POST" action="{{ route('artists.location.update', $artist, false) }}">
             @csrf
             @method('PATCH')
-            <label class="sr-only" for="artist-location">Location</label>
-            <input id="artist-location" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="text" name="location" maxlength="150" value="{{ $artist->location }}" placeholder="Origin city">
-            <label class="sr-only" for="artist-region">Country or region</label>
-            <input id="artist-region" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="text" name="region" maxlength="100" value="{{ $artist->region }}" placeholder="Country or region">
+            <label class="sr-only" for="artist-country">Country</label>
+            <select id="artist-country" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="country_code">
+                <option value="">Country not set</option>
+                @foreach (config('countries') as $countryCode => $countryName)
+                    <option value="{{ $countryCode }}" @selected($artist->country_code === $countryCode)>{{ $countryName }}</option>
+                @endforeach
+            </select>
+            <label class="sr-only" for="artist-location">City or locality</label>
+            <input id="artist-location" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="text" name="location" maxlength="150" value="{{ $artist->location }}" placeholder="City or locality (optional)">
             <button class="shrink-0 rounded-md border border-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash" type="submit">Save location</button>
         </form>
         @if ($artist->spotify_id)
@@ -73,7 +78,7 @@
             <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($artist->albums as $album)
                     <a class="border border-ef-line bg-ef-surface p-5 transition hover:border-ef-accent" href="{{ route('albums.show', $album, false) }}">
-                        <h3 class="font-semibold">{{ $album->title }}</h3>
+                        <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
                         <p class="mt-2 text-sm text-ef-muted">{{ $album->release_date ?: 'Release date unknown' }} · {{ $album->tracks_count }} tracks{{ $album->spotify_id ? ($album->tracks_count === 0 ? ' · Spotify tracks unavailable' : '') : ' · No Spotify match' }}</p>
                         <span class="mt-4 inline-block text-sm font-semibold text-ef-accent-strong">View Album →</span>
                     </a>

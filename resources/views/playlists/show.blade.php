@@ -100,10 +100,10 @@
                     <li class="flex flex-col gap-4 py-4 sm:flex-row sm:items-center">
                         <span class="w-8 text-sm font-semibold tabular-nums text-ef-accent-strong">{{ $loop->iteration }}</span>
                         @if ($album->cover_image_url)
-                            <img class="h-14 w-14 object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->title }}">
+                            <img class="h-14 w-14 object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->displayTitle() }}">
                         @endif
                         <div class="min-w-0 flex-1">
-                            <h3 class="font-semibold">{{ $album->title }}</h3>
+                            <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
                             <p class="mt-1 text-sm text-ef-muted">{{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
@@ -143,7 +143,7 @@
                 @forelse ($albums as $album)
                     <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
                         <div class="min-w-0 flex-1">
-                            <h3 class="font-semibold">{{ $album->title }}</h3>
+                            <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
                             <p class="mt-1 text-sm text-ef-muted">{{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
                         </div>
                         <form method="POST" action="{{ route('album-playlists.albums.store', $albumPlaylist, false) }}">

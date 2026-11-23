@@ -29,34 +29,23 @@
                             @endforeach
                         </select>
                     </label>
-                    <label class="text-sm text-ef-muted">Artist
-                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="artist_id">
-                            <option value="">All artists</option>
-                            @foreach ($catalogueArtists as $artist)
-                                <option value="{{ $artist->id }}" @selected((string) ($filters['artist_id'] ?? '') === (string) $artist->id)>{{ $artist->name }}</option>
+                    <label class="text-sm text-ef-muted">Country
+                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="country">
+                            <option value="">All countries</option>
+                            @foreach ($catalogueCountries as $countryCode)
+                                <option value="{{ $countryCode }}" @selected(($filters['country'] ?? '') === $countryCode)>{{ config('countries.'.$countryCode, $countryCode) }}</option>
                             @endforeach
                         </select>
                     </label>
-                    <label class="text-sm text-ef-muted">Country or region
-                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="region">
-                            <option value="">All regions</option>
-                            @foreach ($catalogueRegions as $region)
-                                <option value="{{ $region }}" @selected(($filters['region'] ?? '') === $region)>{{ $region }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-                    <label class="text-sm text-ef-muted">Release year from
-                        <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="number" name="year_from" min="1900" max="2100" value="{{ $filters['year_from'] ?? '' }}">
-                    </label>
-                    <label class="text-sm text-ef-muted">Release year to
-                        <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="number" name="year_to" min="1900" max="2100" value="{{ $filters['year_to'] ?? '' }}">
+                    <label class="text-sm text-ef-muted">Release year
+                        <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="number" name="year" min="1900" max="2100" value="{{ $filters['year'] ?? '' }}">
                     </label>
                     <label class="text-sm text-ef-muted">Listening completion
                         <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="completion">
-                            <option value="">Incomplete or partial</option>
-                            <option value="incomplete" @selected(($filters['completion'] ?? '') === 'incomplete')>Not heard</option>
-                            <option value="partial" @selected(($filters['completion'] ?? '') === 'partial')>Partially heard</option>
-                            <option value="complete" @selected(($filters['completion'] ?? '') === 'complete')>Completed (include manually)</option>
+                            <option value="">Not completed yet</option>
+                            <option value="incomplete" @selected(($filters['completion'] ?? '') === 'incomplete')>Not started</option>
+                            <option value="partial" @selected(($filters['completion'] ?? '') === 'partial')>In progress</option>
+                            <option value="complete" @selected(($filters['completion'] ?? '') === 'complete')>Completed</option>
                         </select>
                     </label>
                     <label class="flex items-center gap-2 text-sm text-ef-muted">
@@ -110,7 +99,7 @@
                                     <div class="flex gap-4 rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent">
                                         <input class="mt-1" id="catalogue-album-{{ $album->id }}" type="checkbox" name="album_ids[]" value="{{ $album->id }}">
                                         <label class="min-w-0 flex-1 cursor-pointer" for="catalogue-album-{{ $album->id }}">
-                                            <span class="block font-semibold">{{ $album->title }}</span>
+                                            <span class="block font-semibold">{{ $album->displayTitle() }}</span>
                                             <span class="mt-1 block text-sm text-ef-muted">{{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }} · {{ $album->release_date ?: 'Release year unknown' }}</span>
                                             <span class="mt-1 block text-sm text-ef-muted">{{ $album->artists->flatMap->acceptedGenres->pluck('name')->unique()->implode(', ') ?: 'No genres recorded' }} · {{ $album->completion_summary }}</span>
                                             <span class="mt-1 block text-xs font-semibold text-ef-accent-strong uppercase">{{ $album->completion_status }}</span>
@@ -137,7 +126,7 @@
                         <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             @foreach ($selectedArtist->albums as $album)
                                 <a class="rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent" href="{{ route('albums.show', $album, false) }}">
-                                    <h3 class="font-medium">{{ $album->title }}</h3>
+                                    <h3 class="font-medium">{{ $album->displayTitle() }}</h3>
                                     <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks_count }} tracks</p>
                                 </a>
                             @endforeach
@@ -174,7 +163,7 @@
             @if ($selectedAlbum)
                 <section class="rounded-xl border border-ef-accent-line bg-ef-accent-wash/30 p-6">
                     <p class="text-xs tracking-[0.2em] text-ef-accent-strong uppercase">Selected album</p>
-                    <h2 class="mt-2 text-2xl font-semibold">{{ $selectedAlbum->title }}</h2>
+                    <h2 class="mt-2 text-2xl font-semibold">{{ $selectedAlbum->displayTitle() }}</h2>
                     <p class="mt-2 flex flex-wrap gap-x-2 text-ef-muted">
                         @forelse ($selectedAlbum->artists as $artist)
                             @if (! $loop->first)<span aria-hidden="true">·</span>@endif
@@ -226,7 +215,7 @@
                             <div class="mt-5 space-y-3">
                                 @foreach ($albums as $album)
                                     <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent" href="{{ route('albums.show', $album, false) }}">
-                                        <h3 class="font-medium">{{ $album->title }}</h3>
+                                        <h3 class="font-medium">{{ $album->displayTitle() }}</h3>
                                         <p class="mt-1 text-sm text-ef-muted">{{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
                                         <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks_count }} canonical tracks</p>
                                     </a>

@@ -37,7 +37,7 @@
             <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($albums as $album)
                     <a class="border border-ef-line bg-ef-surface p-5 hover:border-ef-accent" href="{{ route('albums.show', $album, false) }}">
-                        <h3 class="font-semibold">{{ $album->title }}</h3>
+                        <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
                         <p class="mt-2 text-sm text-ef-muted">{{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
                         <p class="mt-2 text-sm text-ef-muted">{{ $album->tracks_count }} tracks</p>
                     </a>

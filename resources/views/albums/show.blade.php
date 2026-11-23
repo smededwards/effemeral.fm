@@ -1,15 +1,15 @@
-@extends('layouts.app', ['title' => $album->title.' · Album · Effemeral'])
+@extends('layouts.app', ['title' => $album->displayTitle().' · Album · Effemeral'])
 
 @section('content')
     <header class="border-b border-ef-line pb-8">
         <a class="text-sm font-semibold text-ef-accent-strong hover:underline" href="{{ route('catalogue.index', [], false) }}">← Catalogue</a>
         <div class="mt-5 flex flex-col gap-6 sm:flex-row sm:items-end">
             @if ($album->cover_image_url)
-                <img class="h-36 w-36 border border-ef-line object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->title }}">
+                <img class="h-36 w-36 border border-ef-line object-cover" src="{{ $album->cover_image_url }}" alt="Cover art for {{ $album->displayTitle() }}">
             @endif
             <div>
                 <p class="text-xs font-semibold tracking-[0.2em] text-ef-accent-strong uppercase">Album</p>
-                <h1 class="mt-2 font-serif text-4xl font-semibold sm:text-5xl">{{ $album->title }}</h1>
+                <h1 class="mt-2 font-serif text-4xl font-semibold sm:text-5xl">{{ $album->displayTitle() }}</h1>
                 <p class="mt-3 flex flex-wrap gap-x-2 text-base text-ef-muted">
                     @forelse ($album->artists as $artist)
                         @if (! $loop->first)<span aria-hidden="true">·</span>@endif
