@@ -14,11 +14,11 @@ use App\Models\SpotifyConnection;
 use App\Models\SpotifyImportRun;
 use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
-use App\Models\SpotifyPlaylistItem;
 use App\Models\SpotifySavedAlbum;
 use App\Models\Track;
 use App\Services\Catalog\CataloguePageService;
 use App\Services\Catalog\GenreWriter;
+use App\Services\Playlists\SpotifyPlaylistOverviewService;
 use App\Services\Recommendations\AlbumCompletionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -347,7 +347,7 @@ class DashboardController extends Controller
      *
      * @return View The playlist overview page.
      */
-    public function playlists(): View
+    public function playlists(SpotifyPlaylistOverviewService $overviewService): View
     {
         $search = trim((string) request('playlist_search'));
         $playlists = SpotifyPlaylist::query()
@@ -361,8 +361,8 @@ class DashboardController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $playlists->getCollection()->transform(function (SpotifyPlaylist $playlist): SpotifyPlaylist {
-            foreach ($this->playlistOverviewData($playlist) as $key => $value) {
+        $playlists->getCollection()->transform(function (SpotifyPlaylist $playlist) use ($overviewService): SpotifyPlaylist {
+            foreach ($overviewService->status($playlist) as $key => $value) {
                 $playlist->setAttribute($key, $value);
             }
 
@@ -376,56 +376,6 @@ class DashboardController extends Controller
             'latestPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
             'failedPlaylists' => SpotifyPlaylist::query()->whereNotNull('last_import_error')->latest('last_import_attempted_at')->get(),
         ]);
-    }
-
-    /**
-     * @return array{import_status: string, album_status: string, complete_album_count: int} The playlist overview status.
-     */
-    private function playlistOverviewData(SpotifyPlaylist $playlist): array
-    {
-        /**
-         * @var \Illuminate\Database\Eloquent\Collection<int, SpotifyPlaylistItem> $items
-         */
-        $items = $playlist->items;
-        $albumGroups = $items
-            ->filter(fn (SpotifyPlaylistItem $item): bool => $item->album !== null)
-            ->groupBy('album_id');
-        $completeAlbumCount = $albumGroups->filter(function (Collection $items): bool {
-            $firstItem = $items->first();
-
-            if (! $firstItem instanceof SpotifyPlaylistItem) {
-                return false;
-            }
-
-            /**
-             * @var Album|null $album
-             */
-            $album = $firstItem->album;
-
-            if ($album === null || $album->total_tracks === null) {
-                return false;
-            }
-
-            return $items
-                ->map(fn (SpotifyPlaylistItem $item): ?string => $item->spotify_track_id ?? ($item->track_id === null ? null : (string) $item->track_id))
-                ->filter()
-                ->unique()
-                ->count() >= $album->total_tracks;
-        })->count();
-
-        return [
-            'import_status' => $playlist->last_import_error !== null
-                ? 'failed'
-                : ($playlist->last_synced_at === null
-                    ? 'pending'
-                    : ($playlist->items_count === 0
-                        ? 'empty'
-                        : ((int) $playlist->getAttribute('items_count') < $playlist->tracks_total ? 'partial' : 'imported'))),
-            'album_status' => $completeAlbumCount > 0
-                ? 'complete'
-                : ((int) $playlist->getAttribute('album_items_count') > 0 ? 'partial' : 'none'),
-            'complete_album_count' => $completeAlbumCount,
-        ];
     }
 
     /**
