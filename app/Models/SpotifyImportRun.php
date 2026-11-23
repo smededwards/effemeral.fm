@@ -9,7 +9,7 @@ class SpotifyImportRun extends Model
     protected $table = 'spotify_album_import_runs';
 
     protected $fillable = [
-        'source', 'status', 'requested_limit', 'fetched_count', 'imported_count',
+        'source', 'status', 'requested_limit', 'next_offset', 'total_count', 'fetched_count', 'imported_count',
         'updated_count', 'skipped_count', 'error', 'started_at', 'completed_at',
     ];
 

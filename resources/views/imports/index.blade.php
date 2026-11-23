@@ -81,11 +81,15 @@
         @if ($latestSpotifyImport)
             <p class="mt-6 text-sm text-ef-muted">Latest library import: <span
                     class="font-semibold text-ef-accent-soft">{{ ucfirst(str_replace('_', ' ', $latestSpotifyImport->status)) }}</span>
-                · {{ number_format($latestSpotifyImport->fetched_count) }} fetched.</p>
+                · {{ number_format($latestSpotifyImport->next_offset) }} of
+                {{ $latestSpotifyImport->total_count === null ? 'an unknown total' : number_format($latestSpotifyImport->total_count) }}
+                albums reached · {{ number_format($latestSpotifyImport->fetched_count) }} fetched.</p>
             @endif @if ($latestSpotifyPlaylistImport)
                 <p class="mt-2 text-sm text-ef-muted">Latest playlist import: <span
                         class="font-semibold text-ef-accent-soft">{{ ucfirst(str_replace('_', ' ', $latestSpotifyPlaylistImport->status)) }}</span>
-                    · {{ number_format($latestSpotifyPlaylistImport->fetched_count) }} tracks.</p>
+                    · {{ number_format($latestSpotifyPlaylistImport->next_offset) }} of
+                    {{ $latestSpotifyPlaylistImport->total_count === null ? 'an unknown total' : number_format($latestSpotifyPlaylistImport->total_count) }}
+                    playlists reached · {{ number_format($latestSpotifyPlaylistImport->fetched_count) }} tracks.</p>
             @endif
     </section>
     <section class="border border-ef-line bg-ef-canvas p-6 sm:p-8" aria-labelledby="lastfm-imports-heading">

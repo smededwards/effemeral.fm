@@ -44,6 +44,29 @@ class SpotifyClient
         return $limit === null ? $albums : array_slice($albums, 0, $limit);
     }
 
+    /** @return array{items: list<array<string, mixed>>, next_offset: int, total: int} */
+    public function savedAlbumsPage(int $offset = 0, int $limit = 50): array
+    {
+        $response = $this->get('/me/albums', [
+            'limit' => min(50, max(1, $limit)),
+            'offset' => max(0, $offset),
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException($this->errorMessage($response));
+        }
+
+        $payload = $response->json();
+        $rawItems = data_get($payload, 'items', []);
+        $rawItems = is_array($rawItems) ? array_values($rawItems) : [];
+
+        return [
+            'items' => array_values(array_filter($rawItems, fn (mixed $item): bool => is_array($item) && is_array($item['album'] ?? null))),
+            'next_offset' => $offset + count($rawItems),
+            'total' => (int) data_get($payload, 'total', $offset + count($rawItems)),
+        ];
+    }
+
     /** @return list<array<string, mixed>> */
     public function likedTracks(?int $limit = null): array
     {
@@ -58,6 +81,29 @@ class SpotifyClient
     public function playlists(?int $limit = null): array
     {
         return $this->paginate('/me/playlists', $limit, fn (array $item): bool => isset($item['id']));
+    }
+
+    /** @return array{items: list<array<string, mixed>>, next_offset: int, total: int} */
+    public function playlistsPage(int $offset = 0, int $limit = 50): array
+    {
+        $response = $this->get('/me/playlists', [
+            'limit' => min(50, max(1, $limit)),
+            'offset' => max(0, $offset),
+        ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException($this->errorMessage($response));
+        }
+
+        $payload = $response->json();
+        $rawItems = data_get($payload, 'items', []);
+        $rawItems = is_array($rawItems) ? array_values($rawItems) : [];
+
+        return [
+            'items' => array_values(array_filter($rawItems, fn (mixed $item): bool => is_array($item) && isset($item['id']))),
+            'next_offset' => $offset + count($rawItems),
+            'total' => (int) data_get($payload, 'total', $offset + count($rawItems)),
+        ];
     }
 
     /** @param list<string> $ids */

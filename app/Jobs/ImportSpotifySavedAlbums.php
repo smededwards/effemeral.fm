@@ -23,60 +23,93 @@ class ImportSpotifySavedAlbums implements ShouldQueue
         $catalog ??= app(CatalogWriter::class);
         $genreWriter ??= app(GenreWriter::class);
         $run = SpotifyImportRun::query()->findOrFail($this->importRunId);
+        $resume = in_array($run->status, ['failed', 'running'], true) && (int) $run->next_offset > 0;
+        if (! $resume) {
+            $run->update([
+                'next_offset' => 0,
+                'total_count' => null,
+                'fetched_count' => 0,
+                'imported_count' => 0,
+                'updated_count' => 0,
+                'skipped_count' => 0,
+            ]);
+        }
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
         try {
-            $items = $client->savedAlbums($run->requested_limit === null ? null : (int) $run->requested_limit);
-            $imported = 0;
-            $updated = 0;
-            $skipped = 0;
+            $offset = (int) $run->next_offset;
+            $imported = (int) $run->imported_count;
+            $updated = (int) $run->updated_count;
+            $skipped = (int) $run->skipped_count;
             $artistIds = [];
 
-            foreach ($items as $item) {
-                $album = $item['album'];
-                $albumId = (string) ($album['id'] ?? '');
+            do {
+                $remaining = $run->requested_limit === null
+                    ? 50
+                    : min(50, (int) $run->requested_limit - $offset);
+                if ($remaining < 1) {
+                    break;
+                }
 
-                foreach ($album['artists'] ?? [] as $artist) {
-                    if (is_array($artist) && is_string($artist['id'] ?? null) && $artist['id'] !== '') {
-                        $artistIds[$artist['id']] = true;
+                $page = $client->savedAlbumsPage($offset, $remaining);
+                $items = $page['items'];
+                $run->update(['total_count' => $page['total']]);
+
+                foreach ($items as $item) {
+                    $album = $item['album'];
+                    $albumId = (string) ($album['id'] ?? '');
+
+                    foreach ($album['artists'] ?? [] as $artist) {
+                        if (is_array($artist) && is_string($artist['id'] ?? null) && $artist['id'] !== '') {
+                            $artistIds[$artist['id']] = true;
+                        }
+                    }
+
+                    if ($albumId === '') {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    $canonicalAlbum = $catalog->spotifyAlbum($album, $item['added_at'] ?? null);
+                    $catalog->spotifyAlbumTracks($canonicalAlbum, $client->albumTracks($albumId));
+
+                    $savedAlbum = SpotifySavedAlbum::query()->firstOrNew(['spotify_album_id' => $albumId]);
+                    $wasExisting = $savedAlbum->exists;
+                    $savedAlbum->fill([
+                        'spotify_uri' => $album['uri'] ?? 'spotify:album:'.$albumId,
+                        'spotify_url' => data_get($album, 'external_urls.spotify'),
+                        'name' => $album['name'] ?? 'Unknown album',
+                        'album_type' => $album['album_type'] ?? 'album',
+                        'total_tracks' => $album['total_tracks'] ?? null,
+                        'release_date' => $album['release_date'] ?? null,
+                        'release_date_precision' => $album['release_date_precision'] ?? null,
+                        'primary_artist_id' => data_get($album, 'artists.0.id'),
+                        'primary_artist_name' => data_get($album, 'artists.0.name'),
+                        'artists' => $album['artists'] ?? [],
+                        'tracks' => data_get($album, 'tracks.items', []),
+                        'cover_image_url' => data_get($album, 'images.0.url'),
+                        'saved_at' => $item['added_at'] ?? null,
+                    ]);
+
+                    if ($savedAlbum->isDirty() || ! $wasExisting) {
+                        $savedAlbum->last_synced_at = now();
+                        $savedAlbum->save();
+                        $wasExisting ? $updated++ : $imported++;
+                    } else {
+                        $skipped++;
                     }
                 }
 
-                if ($albumId === '') {
-                    $skipped++;
-
-                    continue;
-                }
-
-                $canonicalAlbum = $catalog->spotifyAlbum($album, $item['added_at'] ?? null);
-                $catalog->spotifyAlbumTracks($canonicalAlbum, $client->albumTracks($albumId));
-
-                $savedAlbum = SpotifySavedAlbum::query()->firstOrNew(['spotify_album_id' => $albumId]);
-                $wasExisting = $savedAlbum->exists;
-                $savedAlbum->fill([
-                    'spotify_uri' => $album['uri'] ?? 'spotify:album:'.$albumId,
-                    'spotify_url' => data_get($album, 'external_urls.spotify'),
-                    'name' => $album['name'] ?? 'Unknown album',
-                    'album_type' => $album['album_type'] ?? 'album',
-                    'total_tracks' => $album['total_tracks'] ?? null,
-                    'release_date' => $album['release_date'] ?? null,
-                    'release_date_precision' => $album['release_date_precision'] ?? null,
-                    'primary_artist_id' => data_get($album, 'artists.0.id'),
-                    'primary_artist_name' => data_get($album, 'artists.0.name'),
-                    'artists' => $album['artists'] ?? [],
-                    'tracks' => data_get($album, 'tracks.items', []),
-                    'cover_image_url' => data_get($album, 'images.0.url'),
-                    'saved_at' => $item['added_at'] ?? null,
+                $offset = $page['next_offset'];
+                $run->update([
+                    'next_offset' => $offset,
+                    'fetched_count' => $offset,
+                    'imported_count' => $imported,
+                    'updated_count' => $updated,
+                    'skipped_count' => $skipped,
                 ]);
-
-                if ($savedAlbum->isDirty() || ! $wasExisting) {
-                    $savedAlbum->last_synced_at = now();
-                    $savedAlbum->save();
-                    $wasExisting ? $updated++ : $imported++;
-                } else {
-                    $skipped++;
-                }
-            }
+            } while ($items !== [] && $offset < $page['total']);
 
             foreach ($client->artists(array_keys($artistIds)) as $artistData) {
                 $artist = Artist::query()->where('spotify_id', $artistData['id'])->first();
@@ -87,7 +120,7 @@ class ImportSpotifySavedAlbums implements ShouldQueue
 
             $run->update([
                 'status' => 'completed',
-                'fetched_count' => count($items),
+                'fetched_count' => $offset,
                 'imported_count' => $imported,
                 'updated_count' => $updated,
                 'skipped_count' => $skipped,

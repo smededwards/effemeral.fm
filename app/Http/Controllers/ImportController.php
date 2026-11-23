@@ -59,6 +59,20 @@ class ImportController extends Controller
             return back()->with('error', 'A Spotify album import is already in progress.');
         }
 
+        $run = SpotifyImportRun::query()
+            ->where('source', 'spotify')
+            ->where('status', 'failed')
+            ->where('next_offset', '>', 0)
+            ->latest()
+            ->first();
+
+        if ($run !== null) {
+            $run->update(['status' => 'queued', 'error' => null, 'completed_at' => null]);
+            ImportSpotifySavedAlbums::dispatch($run->id);
+
+            return back()->with('success', 'Spotify saved albums import resumed.');
+        }
+
         $run = SpotifyImportRun::query()->create([
             'source' => 'spotify',
             'status' => 'queued',
@@ -95,6 +109,20 @@ class ImportController extends Controller
 
         if (SpotifyPlaylistImportRun::query()->whereIn('status', ['queued', 'running'])->exists()) {
             return back()->with('error', 'A Spotify playlist import is already in progress.');
+        }
+
+        $run = SpotifyPlaylistImportRun::query()
+            ->where('source', 'spotify')
+            ->where('status', 'failed')
+            ->where('next_offset', '>', 0)
+            ->latest()
+            ->first();
+
+        if ($run !== null) {
+            $run->update(['status' => 'queued', 'error' => null, 'completed_at' => null]);
+            ImportSpotifyPlaylists::dispatch($run->id);
+
+            return back()->with('success', 'Spotify playlist import resumed.');
         }
 
         $run = SpotifyPlaylistImportRun::query()->create([
