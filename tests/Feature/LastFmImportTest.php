@@ -150,7 +150,7 @@ class LastFmImportTest extends TestCase
         $this->assertDatabaseHas('last_fm_import_runs', [
             'status' => 'queued',
             'requested_limit' => null,
-            'from_at' => '1970-01-02 00:00:00',
+            'from_at' => '2010-11-10 00:00:00',
         ]);
         Queue::assertPushed(ImportLastFmScrobbles::class);
     }

@@ -163,4 +163,53 @@ class CatalogueDiscoveryTest extends TestCase
         );
         $this->assertSame('Genre: post metal · Release year: 2024', $run->albumRecommendations->firstOrFail()->match_reason);
     }
+
+    public function test_discovery_can_use_catalogue_albums_without_spotify_collections(): void
+    {
+        $sourceArtist = Artist::query()->create([
+            'name' => 'Wayfarer',
+            'normalised_name' => 'wayfarer',
+        ]);
+        $sourceAlbum = Album::query()->create([
+            'title' => 'American Gothic',
+            'normalised_title' => 'american gothic',
+            'total_tracks' => 1,
+            'release_date' => '2026-01-01',
+        ]);
+        $sourceAlbum->artists()->attach($sourceArtist->id);
+        $genre = Genre::query()->create([
+            'name' => 'Atmospheric Black Metal',
+            'normalised_name' => 'atmospheric black metal',
+        ]);
+        $sourceArtist->genres()->attach($genre->id, ['source' => 'manual', 'suppressed' => false]);
+
+        $candidateArtist = Artist::query()->create([
+            'name' => 'Other Artist',
+            'normalised_name' => 'other artist',
+        ]);
+        $candidateArtist->genres()->attach($genre->id, ['source' => 'manual', 'suppressed' => false]);
+        $candidateAlbum = Album::query()->create([
+            'title' => 'Other 2026 Release',
+            'normalised_title' => 'other 2026 release',
+            'total_tracks' => 1,
+            'release_date' => '2026-06-01',
+        ]);
+        $candidateAlbum->artists()->attach($candidateArtist->id);
+        Track::query()->create([
+            'album_id' => $candidateAlbum->id,
+            'title' => 'Unheard Track',
+            'normalised_title' => 'unheard track',
+        ]);
+
+        $response = $this->post(route('catalogue.discover'), [
+            'artist_id' => $sourceArtist->id,
+            'genre' => 'atmospheric black metal',
+            'year' => 2026,
+        ]);
+
+        $run = RecommendationRun::query()->latest()->firstOrFail();
+        $response->assertRedirect(route('recommendations.review.page', $run));
+        $this->assertSame(['Other 2026 Release'], $run->albumRecommendations->map(fn ($recommendation) => $recommendation->album->title)->all());
+        $this->assertNull($run->albumRecommendations->firstOrFail()->spotify_saved_album_id);
+    }
 }

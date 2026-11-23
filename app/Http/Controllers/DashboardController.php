@@ -188,7 +188,6 @@ class DashboardController extends Controller
         $albums = Album::query()
             ->with(['artists.acceptedGenres', 'tracks'])
             ->where('release_date', 'like', $validated['year'].'%')
-            ->whereHas('spotifyCollections', fn ($query) => $query->whereIn('collection_type', ['saved', 'playlist']))
             ->get();
         $savedAlbums = SpotifySavedAlbum::query()
             ->whereIn('spotify_album_id', $albums->pluck('spotify_id')->filter())
@@ -236,7 +235,7 @@ class DashboardController extends Controller
             ->values();
 
         if ($candidates->isEmpty()) {
-            return back()->with('error', 'No incomplete albums from your saved albums or imported playlists matched that genre and year.');
+            return back()->with('error', 'No incomplete catalogue albums matched that style and year.');
         }
 
         $recommendationRun = DB::transaction(function () use ($candidates): RecommendationRun {

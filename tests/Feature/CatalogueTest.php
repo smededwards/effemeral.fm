@@ -99,7 +99,8 @@ class CatalogueTest extends TestCase
             ->assertSee('Matching Album')
             ->assertDontSee('Unmatched Album')
             ->assertDontSee('Unfiltered Artist')
-            ->assertSee('Clear filters');
+            ->assertSee('Clear filters')
+            ->assertSee('catalogue-select-all');
     }
 
     public function test_catalogue_styles_page_browses_accepted_genres(): void

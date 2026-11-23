@@ -11,6 +11,8 @@ use RuntimeException;
 
 class LastFmClient
 {
+    private float $lastRequestAt = 0.0;
+
     /**
      * @return list<array<string, mixed>>
      */
@@ -123,6 +125,7 @@ class LastFmClient
     private function getWithRateLimit(array $query): Response
     {
         for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $this->throttle();
             $response = $this->request()->get('', $query);
             $payload = $response->json();
             $rateLimited = $response->status() === 429 || (int) data_get($payload, 'error') === 29;
@@ -135,6 +138,18 @@ class LastFmClient
         }
 
         return $response;
+    }
+
+    private function throttle(): void
+    {
+        $minimumInterval = max(0, (int) config('services.lastfm.min_request_interval_ms', 250)) / 1000;
+        $wait = $minimumInterval - (microtime(true) - $this->lastRequestAt);
+
+        if ($wait > 0) {
+            usleep((int) round($wait * 1_000_000));
+        }
+
+        $this->lastRequestAt = microtime(true);
     }
 
     private function waitForRateLimit(Response $response): void
