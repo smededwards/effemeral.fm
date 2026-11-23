@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Album;
 use App\Models\AlbumPlaylist;
+use App\Models\Artist;
+use App\Models\Genre;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -67,6 +69,43 @@ class AlbumPlaylistTest extends TestCase
             ->assertSee(route('album-playlists.albums.store', $playlist, false), false);
 
         $this->assertDatabaseHas('albums', ['id' => $album->id]);
+    }
+
+    public function test_playlist_can_be_exported_as_csv_without_spotify(): void
+    {
+        $artist = Artist::query()->create([
+            'name' => 'Cult of Luna',
+            'normalised_name' => 'cult of luna',
+        ]);
+        $genre = Genre::query()->create([
+            'name' => 'Post-Metal',
+            'normalised_name' => 'post metal',
+        ]);
+        $artist->genres()->attach($genre->id, ['source' => 'manual', 'suppressed' => false]);
+        $album = $this->createAlbum('Mariner');
+        $album->update([
+            'release_date' => '2016-06-08',
+            'spotify_url' => 'https://open.spotify.com/album/mariner',
+        ]);
+        $album->artists()->attach($artist->id);
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Fossil Gardens']);
+        $playlist->albums()->attach($album->id, ['position' => 1]);
+
+        $response = $this->get(route('album-playlists.export', $playlist));
+
+        $response->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $rows = array_map('str_getcsv', explode("\n", trim($response->streamedContent())));
+
+        $this->assertSame(['Position', 'Album', 'Artist', 'Release date', 'Styles', 'Spotify URL'], $rows[0]);
+        $this->assertSame([
+            '1',
+            'Mariner',
+            'Cult of Luna',
+            '2016-06-08',
+            'post-metal',
+            'https://open.spotify.com/album/mariner',
+        ], $rows[1]);
     }
 
     private function createAlbum(string $title): Album
