@@ -4,6 +4,7 @@ namespace App\Services\Spotify;
 
 use App\Models\SpotifyConnection;
 use Carbon\CarbonImmutable;
+use Closure;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -27,7 +28,7 @@ class SpotifyClient
             ]);
 
             if ($response->failed()) {
-                throw new RuntimeException('Spotify returned HTTP '.$response->status().'.');
+                throw new RuntimeException($this->errorMessage($response));
             }
 
             $payload = $response->json();
@@ -66,7 +67,7 @@ class SpotifyClient
             $response = $this->get('/artists', ['ids' => implode(',', $chunk)]);
 
             if ($response->failed()) {
-                throw new RuntimeException('Spotify returned HTTP '.$response->status().'.');
+                throw new RuntimeException($this->errorMessage($response));
             }
 
             $artists = array_merge($artists, array_values(array_filter(
@@ -166,16 +167,9 @@ class SpotifyClient
                 $payload['snapshot_id'] = $snapshotId;
             }
 
-            for ($attempt = 1; $attempt <= 3; $attempt++) {
-                $response = $this->request()->send('DELETE', '/playlists/'.$playlistId.'/items', ['json' => $payload]);
-
-                if ($response->status() !== 429 || $attempt === 3) {
-                    break;
-                }
-
-                $headers = array_change_key_case($response->headers());
-                sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
-            }
+            $response = $this->sendWithRateLimit(
+                fn (): Response => $this->request()->send('DELETE', '/playlists/'.$playlistId.'/items', ['json' => $payload]),
+            );
 
             if ($response->failed()) {
                 throw new RuntimeException('Spotify playlist tracks could not be removed (HTTP '.$response->status().'). Recheck the preview and Spotify access before retrying.');
@@ -250,7 +244,7 @@ class SpotifyClient
             ]);
 
             if ($response->failed()) {
-                throw new RuntimeException('Spotify returned HTTP '.$response->status().'.');
+                throw new RuntimeException($this->errorMessage($response));
             }
 
             $payload = $response->json();
@@ -279,54 +273,52 @@ class SpotifyClient
     /** @param array<string, int|string> $query */
     private function get(string $path, array $query): Response
     {
-        for ($attempt = 1; $attempt <= 3; $attempt++) {
-            $response = $this->request()->get($path, $query);
-
-            if ($response->status() !== 429 || $attempt === 3) {
-                return $response;
-            }
-
-            $headers = array_change_key_case($response->headers());
-
-            sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
-        }
-
-        return $response;
+        return $this->sendWithRateLimit(fn (): Response => $this->request()->get($path, $query));
     }
 
     /** @param array<string, mixed> $payload */
     private function post(string $path, array $payload): Response
     {
-        for ($attempt = 1; $attempt <= 3; $attempt++) {
-            $response = $this->request()->post($path, $payload);
-
-            if ($response->status() !== 429 || $attempt === 3) {
-                return $response;
-            }
-
-            $headers = array_change_key_case($response->headers());
-
-            sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
-        }
-
-        return $response;
+        return $this->sendWithRateLimit(fn (): Response => $this->request()->post($path, $payload));
     }
 
     /** @param array<string, mixed> $payload */
     private function put(string $path, array $payload): Response
     {
-        for ($attempt = 1; $attempt <= 3; $attempt++) {
-            $response = $this->request()->put($path, $payload);
+        return $this->sendWithRateLimit(fn (): Response => $this->request()->put($path, $payload));
+    }
 
-            if ($response->status() !== 429 || $attempt === 3) {
+    /** @param Closure(): Response $request */
+    private function sendWithRateLimit(Closure $request): Response
+    {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $response = $request();
+
+            if ($response->status() !== 429) {
                 return $response;
             }
 
+            if ($response->json('error.reason') === 'QUOTA_EXCEEDED') {
+                throw new SpotifyRateLimitException('Spotify quota has been exceeded. Try again later.', false);
+            }
+
+            if ($attempt === 3) {
+                throw new SpotifyRateLimitException($this->errorMessage($response));
+            }
+
             $headers = array_change_key_case($response->headers());
-            sleep(max(0, (int) ($headers['retry-after'] ?? 1)));
+            $retryAfter = (int) ($headers['retry-after'] ?? 0);
+            sleep($retryAfter > 0 ? $retryAfter : 2 ** ($attempt - 1));
         }
 
-        return $response;
+        throw new SpotifyRateLimitException('Spotify rate limit could not be cleared.');
+    }
+
+    private function errorMessage(Response $response): string
+    {
+        return $response->status() === 429
+            ? 'Spotify rate limit reached. Try again later.'
+            : 'Spotify returned HTTP '.$response->status().'.';
     }
 
     private function accessToken(): string
