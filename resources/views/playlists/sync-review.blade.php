@@ -14,29 +14,29 @@
         <p class="border border-red-800 bg-ef-surface p-4 text-sm text-red-300" role="alert">{{ session('error') }}</p>
     @endif
 
-    <section class="grid gap-px border border-ef-line bg-ef-line sm:grid-cols-3" aria-label="Sync summary">
+    <dl class="grid gap-px border border-ef-line bg-ef-line sm:grid-cols-3">
         <div class="bg-ef-surface p-5">
-            <p class="text-xs font-semibold tracking-[0.16em] text-ef-muted uppercase">Effemeral Playlist</p>
-            <p class="mt-2 font-semibold">{{ $albumPlaylist->name }}</p>
+            <dt class="text-xs font-semibold tracking-[0.16em] text-ef-muted uppercase">Effemeral Playlist</dt>
+            <dd class="mt-2 font-semibold">{{ $albumPlaylist->name }}</dd>
         </div>
         <div class="bg-ef-surface p-5">
-            <p class="text-xs font-semibold tracking-[0.16em] text-ef-muted uppercase">Spotify Destination</p>
-            <p class="mt-2 font-semibold">{{ $preview['destination_name'] }}</p>
+            <dt class="text-xs font-semibold tracking-[0.16em] text-ef-muted uppercase">Spotify Destination</dt>
+            <dd class="mt-2 font-semibold">{{ $preview['destination_name'] }}</dd>
             @if ($preview['destination'] === 'new')
-                <p class="mt-1 text-xs text-ef-muted">A new private playlist will be created.</p>
+                <dd class="mt-1 text-xs text-ef-muted">A new private playlist will be created.</dd>
             @elseif ($preview['remote_name'] !== $albumPlaylist->name)
-                <p class="mt-1 text-xs text-ef-muted">Name change: {{ $preview['remote_name'] }} →
-                    {{ $albumPlaylist->name }}</p>
+                <dd class="mt-1 text-xs text-ef-muted">Name change: {{ $preview['remote_name'] }} →
+                    {{ $albumPlaylist->name }}</dd>
             @endif
         </div>
         <div class="bg-ef-surface p-5">
-            <p class="text-xs font-semibold tracking-[0.16em] text-ef-muted uppercase">Track Changes</p>
-            <p class="mt-2 font-semibold">{{ count($preview['add_tracks']) }} to add ·
-                {{ count($preview['remove_tracks']) }} to remove</p>
-            <p class="mt-1 text-xs text-ef-muted">{{ $preview['unmanaged_count'] }} existing Spotify tracks will be kept.
-            </p>
+            <dt class="text-xs font-semibold tracking-[0.16em] text-ef-muted uppercase">Track Changes</dt>
+            <dd class="mt-2 font-semibold">{{ count($preview['add_tracks']) }} to add ·
+                {{ count($preview['remove_tracks']) }} to remove</dd>
+            <dd class="mt-1 text-xs text-ef-muted">{{ $preview['unmanaged_count'] }} existing Spotify tracks will be kept.
+            </dd>
         </div>
-    </section>
+    </dl>
 
     <section class="border border-ef-line bg-ef-surface p-5 sm:p-6" aria-labelledby="album-order">
         <p class="text-xs font-semibold tracking-[0.16em] text-ef-accent-strong uppercase">Playlist Contents</p>
@@ -101,7 +101,7 @@
         </section>
     </div>
 
-    <footer class="flex flex-col-reverse gap-3 border-t border-ef-line pt-6 sm:flex-row sm:justify-end">
+    <div class="flex flex-col-reverse gap-3 border-t border-ef-line pt-6 sm:flex-row sm:justify-end">
         <a class="border border-ef-line px-5 py-3 text-center text-sm font-semibold text-ef-text hover:border-ef-accent"
             href="{{ route('album-playlists.show', $albumPlaylist, false) }}">Cancel</a>
         <form method="POST" action="{{ route('album-playlists.spotify.sync', $albumPlaylist, false) }}">
@@ -110,5 +110,5 @@
                 class="w-full bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover sm:w-auto"
                 type="submit">Confirm and Sync to Spotify</button>
         </form>
-    </footer>
+    </div>
 @endsection

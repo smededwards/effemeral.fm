@@ -12,11 +12,11 @@
             href="{{ route('recommendations.audit', [], false) }}">Audit Playlists →</a>
     </header>
 
-    <section class="border border-ef-line bg-ef-surface p-6 sm:p-8">
+    <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="incomplete-albums-heading">
         <div class="flex flex-col gap-4 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Next Listens</p>
-                <h2 class="mt-2 text-2xl font-semibold">Incomplete Albums</h2>
+                <h2 id="incomplete-albums-heading" class="mt-2 text-2xl font-semibold">Incomplete Albums</h2>
                 <p class="mt-2 text-sm text-ef-muted">{{ number_format($incompleteAlbums->count()) }} albums ready to
                     continue.</p>
             </div>
@@ -65,11 +65,11 @@
         </ol>
     </section>
 
-    <section class="border border-ef-line bg-ef-canvas p-6 sm:p-8">
+    <section class="border border-ef-line bg-ef-canvas p-6 sm:p-8" aria-labelledby="latest-draft-heading">
         <div class="flex flex-col gap-3 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Latest work</p>
-                <h2 class="mt-2 text-2xl font-semibold">Latest Draft</h2>
+                <h2 id="latest-draft-heading" class="mt-2 text-2xl font-semibold">Latest Draft</h2>
             </div>
             @if ($latestRecommendation)
                 <span class="text-sm  text-ef-muted">{{ ucfirst($latestRecommendation->status) }}</span>

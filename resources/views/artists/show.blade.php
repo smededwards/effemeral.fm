@@ -93,19 +93,21 @@
                 {{ $artist->albums->count() === 1 ? 'album' : 'albums' }}</span>
         </div>
         @if ($artist->albums->isNotEmpty())
-            <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($artist->albums as $album)
-                    <a class="border border-ef-line bg-ef-surface p-5 transition hover:border-ef-accent"
-                        href="{{ route('albums.show', $album, false) }}">
-                        <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
-                        <p class="mt-2 text-sm text-ef-muted">{{ $album->release_date ?: 'Release date unknown' }} ·
-                            {{ $album->tracks_count }}
-                            tracks{{ $album->spotify_id ? ($album->tracks_count === 0 ? ' · Spotify tracks unavailable' : '') : ' · No Spotify match' }}
-                        </p>
-                        <span class="mt-4 inline-block text-sm font-semibold text-ef-accent-strong">View Album →</span>
-                    </a>
+                    <li>
+                        <a class="block border border-ef-line bg-ef-surface p-5 transition hover:border-ef-accent"
+                            href="{{ route('albums.show', $album, false) }}">
+                            <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
+                            <p class="mt-2 text-sm text-ef-muted">{{ $album->release_date ?: 'Release date unknown' }} ·
+                                {{ $album->tracks_count }}
+                                tracks{{ $album->spotify_id ? ($album->tracks_count === 0 ? ' · Spotify tracks unavailable' : '') : ' · No Spotify match' }}
+                            </p>
+                            <span class="mt-4 inline-block text-sm font-semibold text-ef-accent-strong">View Album →</span>
+                        </a>
+                    </li>
                 @endforeach
-            </div>
+            </ul>
         @else
             <p class="mt-5 text-sm text-ef-muted">No canonical albums are linked to this artist yet.</p>
         @endif

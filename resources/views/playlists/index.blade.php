@@ -89,9 +89,9 @@
                 </div>
                 <span class="text-sm text-ef-muted">{{ $failedPlaylists->count() }} recorded</span>
             </div>
-            <div class="mt-6 divide-y divide-ef-line">
+            <ul class="mt-6 divide-y divide-ef-line">
                 @foreach ($failedPlaylists as $playlist)
-                    <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div class="min-w-0">
                             <h3 class="truncate font-semibold">{{ $playlist->name }}</h3>
                             <p class="mt-1 truncate text-sm text-ef-muted">{{ $playlist->last_import_error }}</p>
@@ -102,9 +102,9 @@
                                 class="shrink-0 border border-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash"
                                 type="submit">Retry playlist</button>
                         </form>
-                    </div>
+                    </li>
                 @endforeach
-            </div>
+            </ul>
         </section>
     @endif
 
@@ -130,46 +130,49 @@
                     href="{{ route('playlists.index', [], false) }}">Clear</a>
             @endif
         </form>
-        <div class="mt-6 divide-y divide-ef-line">
+        <ul class="mt-6 divide-y divide-ef-line">
             @forelse ($playlists as $playlist)
-                <article class="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-3">
-                            <h3 class="truncate font-semibold">{{ $playlist->name }}</h3>
-                            @if ($playlist->public === true)
-                                <span class="border border-ef-line px-2 py-1 text-xs text-ef-muted">Public</span>
-                            @endif
-                            @if ($playlist->collaborative)
-                                <span class="border border-ef-line px-2 py-1 text-xs text-ef-muted">Collaborative</span>
-                            @endif
+                <li>
+                    <article class="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <h3 class="truncate font-semibold">{{ $playlist->name }}</h3>
+                                @if ($playlist->public === true)
+                                    <span class="border border-ef-line px-2 py-1 text-xs text-ef-muted">Public</span>
+                                @endif
+                                @if ($playlist->collaborative)
+                                    <span class="border border-ef-line px-2 py-1 text-xs text-ef-muted">Collaborative</span>
+                                @endif
+                            </div>
+                            <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-ef-muted">
+                                <span>{{ number_format($playlist->items_count) }} imported tracks ·
+                                    {{ number_format($playlist->tracks_total) }} Spotify tracks</span>
+                                <span
+                                    class="border px-2 py-1 text-xs {{ $playlist->import_status === 'failed' ? 'border-red-800 text-red-300' : ($playlist->import_status === 'partial' ? 'border-ef-accent-strong text-ef-accent-strong' : 'border-ef-line text-ef-muted') }}">{{ ucfirst($playlist->import_status) }}</span>
+                                <span
+                                    class="border px-2 py-1 text-xs {{ $playlist->album_status === 'complete' ? 'border-ef-accent text-ef-accent-strong' : ($playlist->album_status === 'partial' ? 'border-ef-accent-strong text-ef-accent-strong' : 'border-ef-line text-ef-muted') }}">{{ $playlist->album_status === 'none' ? 'No album detected' : $playlist->complete_album_count . ' complete album' . ($playlist->complete_album_count === 1 ? '' : 's') }}</span>
+                            </div>
+                            <p class="mt-1 text-xs text-ef-muted">Last synced
+                                {{ $playlist->last_synced_at?->format('Y.m.d H:i') ?? 'not yet' }}</p>
                         </div>
-                        <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-ef-muted">
-                            <span>{{ number_format($playlist->items_count) }} imported tracks ·
-                                {{ number_format($playlist->tracks_total) }} Spotify tracks</span>
-                            <span
-                                class="border px-2 py-1 text-xs {{ $playlist->import_status === 'failed' ? 'border-red-800 text-red-300' : ($playlist->import_status === 'partial' ? 'border-ef-accent-strong text-ef-accent-strong' : 'border-ef-line text-ef-muted') }}">{{ ucfirst($playlist->import_status) }}</span>
-                            <span
-                                class="border px-2 py-1 text-xs {{ $playlist->album_status === 'complete' ? 'border-ef-accent text-ef-accent-strong' : ($playlist->album_status === 'partial' ? 'border-ef-accent-strong text-ef-accent-strong' : 'border-ef-line text-ef-muted') }}">{{ $playlist->album_status === 'none' ? 'No album detected' : $playlist->complete_album_count . ' complete album' . ($playlist->complete_album_count === 1 ? '' : 's') }}</span>
-                        </div>
-                        <p class="mt-1 text-xs text-ef-muted">Last synced
-                            {{ $playlist->last_synced_at?->format('Y.m.d H:i') ?? 'not yet' }}</p>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-4 text-sm">
-                        <a class="font-semibold text-ef-accent-strong hover:underline"
-                            href="{{ route('spotify-playlists.show', $playlist, false) }}">View Playlist</a>
-                        <a class="font-semibold text-ef-accent-strong hover:underline"
-                            href="{{ route('recommendations.audit', ['playlist' => $playlist->id], false) }}">Audit
-                            Coverage</a>
-                        @if ($playlist->spotify_url)
+                        <div class="flex flex-wrap items-center gap-4 text-sm">
                             <a class="font-semibold text-ef-accent-strong hover:underline"
-                                href="{{ $playlist->spotify_url }}" target="_blank" rel="noreferrer">Open Spotify</a>
-                        @endif
-                    </div>
-                </article>
+                                href="{{ route('spotify-playlists.show', $playlist, false) }}">View Playlist</a>
+                            <a class="font-semibold text-ef-accent-strong hover:underline"
+                                href="{{ route('recommendations.audit', ['playlist' => $playlist->id], false) }}">Audit
+                                Coverage</a>
+                            @if ($playlist->spotify_url)
+                                <a class="font-semibold text-ef-accent-strong hover:underline"
+                                    href="{{ $playlist->spotify_url }}" target="_blank" rel="noreferrer">Open
+                                    Spotify</a>
+                            @endif
+                        </div>
+                    </article>
+                </li>
             @empty
-                <p class="py-6 text-sm text-ef-muted">No Spotify playlists have been imported yet.</p>
+                <li class="py-6 text-sm text-ef-muted">No Spotify playlists have been imported yet.</li>
             @endforelse
-        </div>
+        </ul>
         @if ($playlists->hasPages())
             <div class="mt-6 border-t border-ef-line pt-5">{{ $playlists->links() }}</div>
         @endif

@@ -40,23 +40,23 @@
     </form>
 
     @if ($selectedRun)
-        <section class="grid gap-4 sm:grid-cols-3">
+        <dl class="grid gap-4 sm:grid-cols-3">
             <div class="rounded-xl border border-ef-line bg-ef-surface p-5">
-                <p class="text-sm text-ef-muted">Complete albums</p>
-                <p class="mt-2 text-3xl font-semibold text-ef-accent-strong">{{ $completeAlbums }}</p>
+                <dt class="text-sm text-ef-muted">Complete albums</dt>
+                <dd class="mt-2 text-3xl font-semibold text-ef-accent-strong">{{ $completeAlbums }}</dd>
             </div>
             <div class="rounded-xl border border-ef-line bg-ef-surface p-5">
-                <p class="text-sm text-ef-muted">Partial albums</p>
-                <p class="mt-2 text-3xl font-semibold text-ef-accent-strong">{{ $partialAlbums }}</p>
+                <dt class="text-sm text-ef-muted">Partial albums</dt>
+                <dd class="mt-2 text-3xl font-semibold text-ef-accent-strong">{{ $partialAlbums }}</dd>
             </div>
             <div class="rounded-xl border border-ef-line bg-ef-surface p-5">
-                <p class="text-sm text-ef-muted">Missing albums</p>
-                <p class="mt-2 text-3xl font-semibold text-red-300">{{ $missingAlbums }}</p>
+                <dt class="text-sm text-ef-muted">Missing albums</dt>
+                <dd class="mt-2 text-3xl font-semibold text-red-300">{{ $missingAlbums }}</dd>
             </div>
-        </section>
+        </dl>
 
-        <section class="rounded-xl border border-ef-line bg-ef-surface p-6">
-            <h2 class="text-xl font-medium">Album Coverage</h2>
+        <section class="rounded-xl border border-ef-line bg-ef-surface p-6" aria-labelledby="album-coverage-heading">
+            <h2 id="album-coverage-heading" class="text-xl font-medium">Album Coverage</h2>
             <div class="mt-6 space-y-3">
                 @forelse ($auditAlbums as $item)
                     @php($recommendation = $item['recommendation'])
@@ -76,20 +76,24 @@
                         <p class="mt-3 text-sm text-ef-muted">{{ $item['covered_tracks'] }} /
                             {{ $item['expected_tracks'] }} tracks found in imported playlists</p>
                         @if ($item['playlists']->isNotEmpty())
-                            <div class="mt-3 flex flex-wrap gap-2">
+                            <ul class="mt-3 flex flex-wrap gap-2">
                                 @foreach ($item['playlists'] as $playlist)
                                     @if ($playlist['url'])
-                                        <a class="rounded bg-ef-surface-raised px-2 py-1 text-xs text-ef-accent-soft hover:text-ef-accent-strong"
-                                            href="{{ $playlist['url'] }}" target="_blank"
-                                            rel="noreferrer">{{ $playlist['name'] }} · {{ $playlist['tracks'] }}
-                                            tracks</a>
+                                        <li>
+                                            <a class="rounded bg-ef-surface-raised px-2 py-1 text-xs text-ef-accent-soft hover:text-ef-accent-strong"
+                                                href="{{ $playlist['url'] }}" target="_blank"
+                                                rel="noreferrer">{{ $playlist['name'] }} · {{ $playlist['tracks'] }}
+                                                tracks</a>
+                                        </li>
                                     @else
-                                        <span
-                                            class="rounded bg-ef-surface-raised px-2 py-1 text-xs text-ef-muted">{{ $playlist['name'] }}
-                                            · {{ $playlist['tracks'] }} tracks</span>
+                                        <li>
+                                            <span
+                                                class="rounded bg-ef-surface-raised px-2 py-1 text-xs text-ef-muted">{{ $playlist['name'] }}
+                                                · {{ $playlist['tracks'] }} tracks</span>
+                                        </li>
                                     @endif
                                 @endforeach
-                            </div>
+                            </ul>
                         @elseif ($item['status'] === 'missing')
                             <p class="mt-3 text-xs text-ef-muted">No matching tracks found in the imported playlists.</p>
                         @endif

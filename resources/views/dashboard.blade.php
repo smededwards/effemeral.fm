@@ -21,19 +21,19 @@
         <p class="border border-red-700 bg-ef-surface p-4 text-sm text-ef-text" role="alert">{{ session('error') }}</p>
     @endif
 
-    <section class="grid border-y border-ef-line bg-ef-surface sm:grid-cols-2" aria-label="Playlist Summary">
+    <dl class="grid border-y border-ef-line bg-ef-surface sm:grid-cols-2">
         <div class="border-b border-ef-line p-5 sm:border-r sm:border-b-0">
-            <p class="text-xs font-semibold tracking-[0.18em] text-ef-muted uppercase">Effemeral Playlists</p>
-            <p class="mt-3 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($playlistCount) }}</p>
-            <p class="mt-1 text-sm text-ef-muted">Saved playlists you can manage here</p>
+            <dt class="text-xs font-semibold tracking-[0.18em] text-ef-muted uppercase">Effemeral Playlists</dt>
+            <dd class="mt-3 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($playlistCount) }}</dd>
+            <dd class="mt-1 text-sm text-ef-muted">Saved playlists you can manage here</dd>
         </div>
         <div class="p-5">
-            <p class="text-xs font-semibold tracking-[0.18em] text-ef-muted uppercase">Albums Arranged</p>
-            <p class="mt-3 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($playlistAlbumCount) }}
-            </p>
-            <p class="mt-1 text-sm text-ef-muted">Album placements across your playlists</p>
+            <dt class="text-xs font-semibold tracking-[0.18em] text-ef-muted uppercase">Albums Arranged</dt>
+            <dd class="mt-3 text-4xl font-semibold tabular-nums tracking-[-0.04em]">{{ number_format($playlistAlbumCount) }}
+            </dd>
+            <dd class="mt-1 text-sm text-ef-muted">Album placements across your playlists</dd>
         </div>
-    </section>
+    </dl>
 
     <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="saved-playlists-heading">
         <div class="flex flex-col gap-5 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">

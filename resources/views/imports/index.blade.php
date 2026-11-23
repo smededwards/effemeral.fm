@@ -11,10 +11,10 @@
         <span class="text-xs tracking-[0.16em] text-ef-muted">Manual sync</span>
     </header>
 
-    <section class="grid gap-px border border-ef-line bg-ef-line lg:grid-cols-2">
-        <div class="bg-ef-canvas p-6 sm:p-8">
+    <div class="grid gap-px border border-ef-line bg-ef-line lg:grid-cols-2">
+        <section class="bg-ef-canvas p-6 sm:p-8" aria-labelledby="lastfm-history-heading">
             <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Source 01</p>
-            <h2 class="mt-3 text-2xl font-semibold">Last.fm History</h2>
+            <h2 id="lastfm-history-heading" class="mt-3 text-2xl font-semibold">Last.fm History</h2>
             <p class="mt-2 text-sm leading-6 text-ef-muted">Import a bounded range while testing, or queue your complete
                 Last.fm history.</p>
             <form class="mt-8 space-y-5" method="POST" action="{{ route('imports.lastfm', [], false) }}">
@@ -35,10 +35,10 @@
                         type="submit" formaction="{{ route('imports.lastfm.full', [], false) }}">Queue full import</button>
                 </div>
             </form>
-        </div>
-        <div class="bg-ef-surface p-6 sm:p-8">
+        </section>
+        <section class="bg-ef-surface p-6 sm:p-8" aria-labelledby="spotify-library-heading">
             <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Source 02</p>
-            <h2 class="mt-3 text-2xl font-semibold">Spotify Library</h2>
+            <h2 id="spotify-library-heading" class="mt-3 text-2xl font-semibold">Spotify Library</h2>
             <p class="mt-2 text-sm leading-6 text-ef-muted">Connect once, then refresh saved albums, liked songs, and
                 playlists whenever you choose.</p>
             <p class="mt-8 border-y border-ef-line py-4 text-sm text-ef-accent-soft">
@@ -57,14 +57,14 @@
                 <a class="mt-6 inline-block bg-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                     href="{{ route('auth.spotify', [], false) }}">Connect Spotify</a>
             @endif
-        </div>
-    </section>
+        </section>
+    </div>
 
-    <section class="border border-ef-line bg-ef-surface p-6 sm:p-8">
+    <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="library-imports-heading">
         <div class="flex flex-col gap-4 border-b border-ef-line pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">Spotify</p>
-                <h2 class="mt-2 text-2xl font-semibold">Library Imports</h2>
+                <h2 id="library-imports-heading" class="mt-2 text-2xl font-semibold">Library Imports</h2>
             </div><span class="text-xs text-ef-muted">Supporting catalogue data</span>
         </div>
         <div class="mt-6 grid gap-3 sm:grid-cols-3">
@@ -88,16 +88,16 @@
                     · {{ number_format($latestSpotifyPlaylistImport->fetched_count) }} tracks.</p>
             @endif
     </section>
-    <section class="border border-ef-line bg-ef-canvas p-6 sm:p-8">
+    <section class="border border-ef-line bg-ef-canvas p-6 sm:p-8" aria-labelledby="lastfm-imports-heading">
         <div class="flex items-end justify-between gap-4 border-b border-ef-line pb-5">
             <div>
                 <p class="text-xs font-semibold tracking-[0.18em] text-ef-muted">History</p>
-                <h2 class="mt-2 text-2xl font-semibold">Recent Last.fm Imports</h2>
+                <h2 id="lastfm-imports-heading" class="mt-2 text-2xl font-semibold">Recent Last.fm Imports</h2>
             </div><span class="text-sm tabular-nums text-ef-muted">{{ number_format($scrobbleCount) }} scrobbles</span>
         </div>
-        <div class="divide-y divide-ef-line">
+        <ul class="divide-y divide-ef-line">
             @forelse ($recentImports as $import)
-                <div class="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <li class="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p class="text-sm text-ef-text">{{ $import->created_at?->format('Y.m.d H:i') }}</p>
                         <p class="mt-1 text-xs text-ef-muted">
@@ -113,8 +113,10 @@
                                     type="submit">Retry</button></form>
                         @endif
                     </div>
-            </div>@empty<p class="py-6 text-sm text-ef-muted">No import history yet.</p>
+                </li>
+            @empty
+                <li class="py-6 text-sm text-ef-muted">No import history yet.</li>
             @endforelse
-        </div>
+        </ul>
     </section>
 @endsection

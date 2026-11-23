@@ -69,8 +69,9 @@
                                 <a href="https://laravel.com/docs" target="_blank"
                                     class="inline-flex items-center space-x-1 font-medium underline underline-offset-4 text-[#f53003] dark:text-[#FF4433] ml-1">
                                     <span>Documentation</span>
-                                    <svg width="10" height="11" viewBox="0 0 10 11" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5">
+                                    <svg aria-hidden="true" focusable="false" width="10" height="11"
+                                        viewBox="0 0 10 11" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                        class="w-2.5 h-2.5">
                                         <path d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
                                             stroke="currentColor" stroke-linecap="square" />
                                     </svg>
@@ -90,8 +91,9 @@
                                 <a href="https://laracasts.com" target="_blank"
                                     class="inline-flex items-center space-x-1 font-medium underline underline-offset-4 text-[#f53003] dark:text-[#FF4433] ml-1">
                                     <span>Laracasts</span>
-                                    <svg width="10" height="11" viewBox="0 0 10 11" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5">
+                                    <svg aria-hidden="true" focusable="false" width="10" height="11"
+                                        viewBox="0 0 10 11" fill="none" xmlns="http://www.w3.org/2000/svg"
+                                        class="w-2.5 h-2.5">
                                         <path d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
                                             stroke="currentColor" stroke-linecap="square" />
                                     </svg>
@@ -113,8 +115,8 @@
                         <a href="https://github.com/laravel/framework/blob/13.x/CHANGELOG.md" target="_blank"
                             class="inline-flex items-center space-x-1 font-medium underline underline-offset-4 text-[#f53003] dark:text-[#FF4433] ml-1">
                             <span>View changelog</span>
-                            <svg width="10" height="11" viewBox="0 0 10 11" fill="none"
-                                xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5">
+                            <svg aria-hidden="true" focusable="false" width="10" height="11" viewBox="0 0 10 11"
+                                fill="none" xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5">
                                 <path d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001" stroke="currentColor"
                                     stroke-linecap="square" />
                             </svg>
@@ -124,7 +126,8 @@
                 <div
                     class="bg-[#fff2f2] dark:bg-[#1D0002] relative lg:-ml-px -mb-px lg:mb-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg aspect-[335/364] lg:aspect-auto w-full lg:w-[438px] shrink-0 overflow-hidden">
                     {{-- Laravel Logo --}}
-                    <svg class="w-full text-[#F53003] dark:text-[#F61500] transition-all translate-y-0 opacity-100 max-w-none duration-750 starting:opacity-0 motion-safe:starting:translate-y-6"
+                    <svg aria-hidden="true" focusable="false"
+                        class="w-full text-[#F53003] dark:text-[#F61500] transition-all translate-y-0 opacity-100 max-w-none duration-750 starting:opacity-0 motion-safe:starting:translate-y-6"
                         viewBox="0 0 438 104" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M17.2036 -3H0V102.197H49.5189V86.7187H17.2036V-3Z" fill="currentColor" />
                         <path
@@ -144,7 +147,8 @@
                     </svg>
 
                     {{-- 13 --}}
-                    <svg class="w-[438px] max-w-none relative -mt-[6.6rem] -ml-8 lg:ml-0 [--stroke-color:#1B1B18] dark:[--stroke-color:#FF750F]"
+                    <svg aria-hidden="true" focusable="false"
+                        class="w-[438px] max-w-none relative -mt-[6.6rem] -ml-8 lg:ml-0 [--stroke-color:#1B1B18] dark:[--stroke-color:#FF750F]"
                         viewBox="0 0 440 392" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <g
                             class="mix-blend-darken dark:mix-blend-normal transition-all delay-300 opacity-100 duration-750 starting:opacity-0 text-[#1B1B18] dark:text-black">

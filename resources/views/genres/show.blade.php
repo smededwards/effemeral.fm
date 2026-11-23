@@ -15,16 +15,18 @@
             <span class="text-sm text-ef-muted">{{ number_format($artists->total()) }}</span>
         </div>
         @if ($artists->isNotEmpty())
-            <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($artists as $artist)
-                    <a class="border border-ef-line bg-ef-canvas p-5 hover:border-ef-accent"
-                        href="{{ route('artists.show', $artist, false) }}">
-                        <h3 class="font-semibold">{{ $artist->name }}</h3>
-                        <p class="mt-2 text-sm text-ef-muted">{{ $artist->albums_count }}
-                            {{ $artist->albums_count === 1 ? 'album' : 'albums' }}</p>
-                    </a>
+                    <li>
+                        <a class="block border border-ef-line bg-ef-canvas p-5 hover:border-ef-accent"
+                            href="{{ route('artists.show', $artist, false) }}">
+                            <h3 class="font-semibold">{{ $artist->name }}</h3>
+                            <p class="mt-2 text-sm text-ef-muted">{{ $artist->albums_count }}
+                                {{ $artist->albums_count === 1 ? 'album' : 'albums' }}</p>
+                        </a>
+                    </li>
                 @endforeach
-            </div>
+            </ul>
             <div class="mt-5">{{ $artists->links() }}</div>
         @else
             <p class="mt-5 text-sm text-ef-muted">No artists are linked to this genre yet.</p>
@@ -37,17 +39,19 @@
             <span class="text-sm text-ef-muted">{{ number_format($albums->total()) }}</span>
         </div>
         @if ($albums->isNotEmpty())
-            <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($albums as $album)
-                    <a class="border border-ef-line bg-ef-surface p-5 hover:border-ef-accent"
-                        href="{{ route('albums.show', $album, false) }}">
-                        <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
-                        <p class="mt-2 text-sm text-ef-muted">
-                            {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
-                        <p class="mt-2 text-sm text-ef-muted">{{ $album->tracks_count }} tracks</p>
-                    </a>
+                    <li>
+                        <a class="block border border-ef-line bg-ef-surface p-5 hover:border-ef-accent"
+                            href="{{ route('albums.show', $album, false) }}">
+                            <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
+                            <p class="mt-2 text-sm text-ef-muted">
+                                {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
+                            <p class="mt-2 text-sm text-ef-muted">{{ $album->tracks_count }} tracks</p>
+                        </a>
+                    </li>
                 @endforeach
-            </div>
+            </ul>
             <div class="mt-5">{{ $albums->links() }}</div>
         @else
             <p class="mt-5 text-sm text-ef-muted">No albums are linked to this genre yet.</p>

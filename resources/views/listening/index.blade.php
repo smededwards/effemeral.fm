@@ -12,26 +12,35 @@
             href="{{ route('recommendations.index', [], false) }}">Albums to Complete →</a>
     </header>
 
-    <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <section class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]" aria-labelledby="listening-results-heading">
         <div class="min-w-0 border border-ef-line bg-ef-surface p-5 sm:p-8">
-            <nav class="flex flex-wrap gap-2 border-b border-ef-line" aria-label="Listening Views">
-                @foreach ($types as $viewType => $label)
-                    <a class="border-b-2 px-4 py-3 text-sm font-semibold transition {{ $type === $viewType ? 'border-ef-accent text-ef-text' : 'border-transparent text-ef-muted hover:border-ef-accent hover:text-ef-text' }}"
-                        href="{{ route('listening.index', ['type' => $viewType, 'period' => $period], false) }}"
-                        @if ($type === $viewType) aria-current="page" @endif>{{ $label }}</a>
-                @endforeach
+            <nav aria-label="Listening Views">
+                <ul class="flex flex-wrap gap-2 border-b border-ef-line">
+                    @foreach ($types as $viewType => $label)
+                        <li>
+                            <a class="block border-b-2 px-4 py-3 text-sm font-semibold transition {{ $type === $viewType ? 'border-ef-accent text-ef-text' : 'border-transparent text-ef-muted hover:border-ef-accent hover:text-ef-text' }}"
+                                href="{{ route('listening.index', ['type' => $viewType, 'period' => $period], false) }}"
+                                @if ($type === $viewType) aria-current="page" @endif>{{ $label }}</a>
+                        </li>
+                    @endforeach
+                </ul>
             </nav>
 
-            <nav class="mt-5 flex flex-wrap gap-2" aria-label="Time Period">
-                @foreach ($periods as $periodKey => $label)
-                    <a class="min-h-11 border px-3 py-2 text-sm transition {{ $period === $periodKey ? 'border-ef-accent bg-ef-accent text-ef-accent-ink' : 'border-ef-line text-ef-muted hover:border-ef-accent hover:text-ef-text' }}"
-                        href="{{ route('listening.index', ['type' => $type, 'period' => $periodKey], false) }}"
-                        @if ($period === $periodKey) aria-current="page" @endif>{{ $label }}</a>
-                @endforeach
+            <nav class="mt-5" aria-label="Time Period">
+                <ul class="flex flex-wrap gap-2">
+                    @foreach ($periods as $periodKey => $label)
+                        <li>
+                            <a class="block min-h-11 border px-3 py-2 text-sm transition {{ $period === $periodKey ? 'border-ef-accent bg-ef-accent text-ef-accent-ink' : 'border-ef-line text-ef-muted hover:border-ef-accent hover:text-ef-text' }}"
+                                href="{{ route('listening.index', ['type' => $type, 'period' => $periodKey], false) }}"
+                                @if ($period === $periodKey) aria-current="page" @endif>{{ $label }}</a>
+                        </li>
+                    @endforeach
+                </ul>
             </nav>
 
             <div class="mt-6 flex flex-wrap items-baseline justify-between gap-2 border-b border-ef-line pb-4">
-                <h2 class="text-2xl font-semibold">{{ $types[$type] }} · {{ $periods[$period] }}</h2>
+                <h2 id="listening-results-heading" class="text-2xl font-semibold">{{ $types[$type] }} ·
+                    {{ $periods[$period] }}</h2>
                 <p class="text-sm tabular-nums text-ef-muted">{{ number_format($scrobbleCount) }} scrobbles</p>
             </div>
 

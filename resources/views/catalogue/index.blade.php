@@ -111,10 +111,9 @@
                     </div>
                     <p class="mb-3 text-sm text-ef-muted">Select up to 50 albums on this page. Adding them updates the
                         Effemeral draft; Spotify is changed only after you review and confirm a sync.</p>
-                    <div class="space-y-3">
+                    <ul class="space-y-3">
                         @foreach ($filteredAlbums as $album)
-                            <div
-                                class="flex gap-4 rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent">
+                            <li class="flex gap-4 rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent">
                                 <input class="mt-1" id="catalogue-album-{{ $album->id }}" type="checkbox"
                                     name="album_ids[]" value="{{ $album->id }}">
                                 <label class="min-w-0 flex-1 cursor-pointer" for="catalogue-album-{{ $album->id }}">
@@ -130,9 +129,9 @@
                                 </label>
                                 <a class="self-center text-sm font-semibold text-ef-accent-strong hover:underline"
                                     href="{{ route('albums.show', $album, false) }}">View album</a>
-                            </div>
+                            </li>
                         @endforeach
-                    </div>
+                    </ul>
                     <button
                         class="mt-5 rounded-md bg-ef-accent px-4 py-2 font-medium text-ef-accent-ink hover:bg-ef-accent-hover"
                         type="submit">Add selected albums</button>
@@ -146,20 +145,23 @@
     @endif
 
     @if ($selectedArtist)
-        <section class="rounded-xl border border-ef-accent-line bg-ef-accent-wash/30 p-6">
+        <section class="rounded-xl border border-ef-accent-line bg-ef-accent-wash/30 p-6"
+            aria-labelledby="selected-artist-heading">
             <p class="text-xs tracking-[0.2em] text-ef-accent-strong uppercase">Selected artist</p>
-            <h2 class="mt-2 text-2xl font-semibold">{{ $selectedArtist->name }}</h2>
+            <h2 id="selected-artist-heading" class="mt-2 text-2xl font-semibold">{{ $selectedArtist->name }}</h2>
             <p class="mt-2 text-sm text-ef-muted">{{ $selectedArtist->albums->count() }} canonical albums</p>
             @if ($selectedArtist->albums->isNotEmpty())
-                <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <ul class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ($selectedArtist->albums as $album)
-                        <a class="rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent"
-                            href="{{ route('albums.show', $album, false) }}">
-                            <h3 class="font-medium">{{ $album->displayTitle() }}</h3>
-                            <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks_count }} tracks</p>
-                        </a>
+                        <li>
+                            <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent"
+                                href="{{ route('albums.show', $album, false) }}">
+                                <h3 class="font-medium">{{ $album->displayTitle() }}</h3>
+                                <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks_count }} tracks</p>
+                            </a>
+                        </li>
                     @endforeach
-                </div>
+                </ul>
             @else
                 <p class="mt-5 text-sm text-ef-muted">No canonical albums are linked to this artist yet.</p>
             @endif
@@ -200,9 +202,10 @@
     @endif
 
     @if ($selectedAlbum)
-        <section class="rounded-xl border border-ef-accent-line bg-ef-accent-wash/30 p-6">
+        <section class="rounded-xl border border-ef-accent-line bg-ef-accent-wash/30 p-6"
+            aria-labelledby="selected-album-heading">
             <p class="text-xs tracking-[0.2em] text-ef-accent-strong uppercase">Selected album</p>
-            <h2 class="mt-2 text-2xl font-semibold">{{ $selectedAlbum->displayTitle() }}</h2>
+            <h2 id="selected-album-heading" class="mt-2 text-2xl font-semibold">{{ $selectedAlbum->displayTitle() }}</h2>
             <p class="mt-2 flex flex-wrap gap-x-2 text-ef-muted">
                 @forelse ($selectedAlbum->artists as $artist)
                     @if (!$loop->first)
@@ -246,37 +249,42 @@
 
     @if ($search !== '')
         <div class="grid gap-6 md:grid-cols-2">
-            <section class="rounded-xl border border-ef-line bg-ef-surface p-6">
-                <h2 class="text-xl font-medium">Artists</h2>
+            <section class="rounded-xl border border-ef-line bg-ef-surface p-6"
+                aria-labelledby="catalogue-search-artists">
+                <h2 id="catalogue-search-artists" class="text-xl font-medium">Artists</h2>
                 @if ($artists->isNotEmpty())
-                    <div class="mt-5 space-y-3">
+                    <ul class="mt-5 space-y-3">
                         @foreach ($artists as $artist)
-                            <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent"
-                                href="{{ route('artists.show', $artist, false) }}">
-                                <h3 class="font-medium">{{ $artist->name }}</h3>
-                                <p class="mt-1 text-sm text-ef-muted">{{ $artist->albums_count }} canonical albums</p>
-                            </a>
+                            <li>
+                                <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent"
+                                    href="{{ route('artists.show', $artist, false) }}">
+                                    <h3 class="font-medium">{{ $artist->name }}</h3>
+                                    <p class="mt-1 text-sm text-ef-muted">{{ $artist->albums_count }} canonical albums</p>
+                                </a>
+                            </li>
                         @endforeach
-                    </div>
+                    </ul>
                 @else
                     <p class="mt-5 text-sm text-ef-muted">No matching artists.</p>
                 @endif
             </section>
 
-            <section class="rounded-xl border border-ef-line bg-ef-surface p-6">
-                <h2 class="text-xl font-medium">Albums</h2>
+            <section class="rounded-xl border border-ef-line bg-ef-surface p-6" aria-labelledby="catalogue-search-albums">
+                <h2 id="catalogue-search-albums" class="text-xl font-medium">Albums</h2>
                 @if ($albums->isNotEmpty())
-                    <div class="mt-5 space-y-3">
+                    <ul class="mt-5 space-y-3">
                         @foreach ($albums as $album)
-                            <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent"
-                                href="{{ route('albums.show', $album, false) }}">
-                                <h3 class="font-medium">{{ $album->displayTitle() }}</h3>
-                                <p class="mt-1 text-sm text-ef-muted">
-                                    {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
-                                <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks_count }} canonical tracks</p>
-                            </a>
+                            <li>
+                                <a class="block rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent"
+                                    href="{{ route('albums.show', $album, false) }}">
+                                    <h3 class="font-medium">{{ $album->displayTitle() }}</h3>
+                                    <p class="mt-1 text-sm text-ef-muted">
+                                        {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
+                                    <p class="mt-1 text-sm text-ef-muted">{{ $album->tracks_count }} canonical tracks</p>
+                                </a>
+                            </li>
                         @endforeach
-                    </div>
+                    </ul>
                 @else
                     <p class="mt-5 text-sm text-ef-muted">No matching albums.</p>
                 @endif
@@ -293,16 +301,18 @@
                     {{ $artists->total() === 1 ? 'artist' : 'artists' }}</span>
             </div>
             @if ($artists->isNotEmpty())
-                <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <ul class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ($artists as $artist)
-                        <a class="border border-ef-line bg-ef-canvas p-5 transition hover:border-ef-accent"
-                            href="{{ route('artists.show', $artist, false) }}">
-                            <h3 class="font-semibold">{{ $artist->name }}</h3>
-                            <p class="mt-2 text-sm text-ef-muted">{{ $artist->albums_count }}
-                                {{ $artist->albums_count === 1 ? 'album' : 'albums' }}</p>
-                        </a>
+                        <li>
+                            <a class="block border border-ef-line bg-ef-canvas p-5 transition hover:border-ef-accent"
+                                href="{{ route('artists.show', $artist, false) }}">
+                                <h3 class="font-semibold">{{ $artist->name }}</h3>
+                                <p class="mt-2 text-sm text-ef-muted">{{ $artist->albums_count }}
+                                    {{ $artist->albums_count === 1 ? 'album' : 'albums' }}</p>
+                            </a>
+                        </li>
                     @endforeach
-                </div>
+                </ul>
                 <div class="mt-5">{{ $artists->links() }}</div>
             @else
                 <p class="mt-5 text-sm text-ef-muted">No artists have been added to the catalogue yet.</p>

@@ -14,33 +14,34 @@
     </header>
 
     @if (session('success'))
-        <div class="rounded-lg border border-ef-accent-line bg-ef-accent-wash/60 p-4 text-ef-accent-soft">
+        <div class="rounded-lg border border-ef-accent-line bg-ef-accent-wash/60 p-4 text-ef-accent-soft" role="status">
             {{ session('success') }}</div>
     @endif
 
     @if (session('error'))
-        <div class="rounded-lg border border-red-800 bg-red-950/60 p-4 text-red-200">{{ session('error') }}</div>
+        <div class="rounded-lg border border-red-800 bg-red-950/60 p-4 text-red-200" role="alert">{{ session('error') }}
+        </div>
     @endif
 
-    <section class="grid gap-4 sm:grid-cols-3">
+    <dl class="grid gap-4 sm:grid-cols-3">
         <div class="rounded-xl border border-ef-line bg-ef-surface p-5">
-            <p class="text-sm text-ef-muted">Included albums</p>
-            <p class="mt-2 text-3xl font-semibold">{{ $includedAlbums }}</p>
+            <dt class="text-sm text-ef-muted">Included albums</dt>
+            <dd class="mt-2 text-3xl font-semibold">{{ $includedAlbums }}</dd>
         </div>
         <div class="rounded-xl border border-ef-line bg-ef-surface p-5">
-            <p class="text-sm text-ef-muted">Excluded albums</p>
-            <p class="mt-2 text-3xl font-semibold">{{ $excludedAlbums }}</p>
+            <dt class="text-sm text-ef-muted">Excluded albums</dt>
+            <dd class="mt-2 text-3xl font-semibold">{{ $excludedAlbums }}</dd>
         </div>
         <div class="rounded-xl border border-ef-line bg-ef-surface p-5">
-            <p class="text-sm text-ef-muted">Spotify tracks to sync</p>
-            <p class="mt-2 text-3xl font-semibold">{{ $includedTracks }}</p>
+            <dt class="text-sm text-ef-muted">Spotify tracks to sync</dt>
+            <dd class="mt-2 text-3xl font-semibold">{{ $includedTracks }}</dd>
         </div>
-    </section>
+    </dl>
 
-    <section class="rounded-xl border border-ef-line bg-ef-surface p-6">
+    <section class="rounded-xl border border-ef-line bg-ef-surface p-6" aria-labelledby="album-order-heading">
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
-                <h2 class="text-xl font-medium">Album Order</h2>
+                <h2 id="album-order-heading" class="text-xl font-medium">Album Order</h2>
                 <p class="mt-1 text-sm text-ef-muted">Included albums will be synced in this order.</p>
             </div>
             <span class="text-sm text-ef-muted">{{ ucfirst($recommendationRun->status) }}</span>
@@ -81,7 +82,7 @@
         </ol>
     </section>
 
-    <section class="border border-ef-accent-line bg-ef-accent-wash p-6">
+    <section class="border border-ef-accent-line bg-ef-accent-wash p-6" aria-label="Sync draft to Spotify">
         <div>
             <p class="text-sm text-ef-accent-soft">Syncing will append {{ $includedTracks }} reviewed tracks to Spotify.
                 Existing tracks are preserved.</p>
