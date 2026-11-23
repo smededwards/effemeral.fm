@@ -2,11 +2,8 @@
 
 namespace App\Services\Spotify;
 
-use App\Models\Album;
 use App\Models\AlbumPlaylist;
 use App\Models\SpotifyPlaylist;
-use App\Models\Track;
-use Illuminate\Support\Collection;
 use RuntimeException;
 
 /**
@@ -14,7 +11,10 @@ use RuntimeException;
  */
 class AlbumPlaylistSyncService
 {
-    public function __construct(private SpotifyClient $client) {}
+    public function __construct(
+        private SpotifyClient $client,
+        private AlbumPlaylistTrackResolver $trackResolver,
+    ) {}
 
     /**
      * Compare the local album playlist with Spotify without changing either side.
@@ -75,7 +75,7 @@ class AlbumPlaylistSyncService
             $currentUris,
             fn (string $uri): bool => ! in_array($uri, $managedUris, true),
         ));
-        $desired = $this->desiredTracks($albumPlaylist);
+        $desired = $this->trackResolver->resolve($albumPlaylist);
         // Never remove a managed track merely because the local album order changed.
         // A failed add after a destructive remove would otherwise make a reorder
         // appear as lost tracks in Spotify.
@@ -135,7 +135,7 @@ class AlbumPlaylistSyncService
     {
         $destination = (string) ($preview['destination'] ?? '');
         $targetPlaylistId = $preview['target_playlist_id'] ?? null;
-        $desired = $this->desiredTracks($albumPlaylist);
+        $desired = $this->trackResolver->resolve($albumPlaylist);
 
         if ($this->playlistHash(
             $albumPlaylist,
@@ -270,78 +270,11 @@ class AlbumPlaylistSyncService
      */
     private function assertPreviewStillCurrent(AlbumPlaylist $albumPlaylist, array $preview, string $destination, ?string $targetPlaylistId): void
     {
-        $desired = $this->desiredTracks($albumPlaylist);
+        $desired = $this->trackResolver->resolve($albumPlaylist);
 
         if ($this->playlistHash($albumPlaylist, $destination, $targetPlaylistId, $desired['uris']) !== ($preview['local_hash'] ?? null)) {
             throw new RuntimeException('This Effemeral playlist changed after the preview. Review the Spotify changes again before syncing.');
         }
-    }
-
-    /**
-     * @return array{uris: list<string>, tracks: list<array{uri: string, title: string, album: string, artist: string}>, albums: list<array<string, mixed>>} The desired Spotify content.
-     */
-    private function desiredTracks(AlbumPlaylist $albumPlaylist): array
-    {
-        /**
-         * @var Collection<int, Album> $albums
-         */
-        $albums = $albumPlaylist->albums()
-            ->with([
-                'artists',
-                'tracks' => fn ($query) => $query->orderBy('disc_number')->orderBy('track_number')->orderBy('id'),
-            ])
-            ->get();
-        $uris = [];
-        $tracksByUri = [];
-        $albumSummaries = [];
-
-        foreach ($albums as $album) {
-            /**
-             * @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks
-             */
-            $tracks = $album->tracks;
-            $albumTracks = $tracks
-                ->map(function (Track $track): ?array {
-                    $uri = $track->spotify_uri;
-
-                    if (! is_string($uri) || ! str_starts_with($uri, 'spotify:track:')) {
-                        $uri = is_string($track->spotify_id) && $track->spotify_id !== ''
-                            ? 'spotify:track:'.$track->spotify_id
-                            : null;
-                    }
-
-                    return $uri === null ? null : ['uri' => $uri, 'title' => $track->title];
-                })
-                ->filter(fn (?array $track): bool => $track !== null)
-                ->values()
-                ->all();
-            $albumUris = [];
-
-            foreach ($albumTracks as $albumTrack) {
-                $uri = $albumTrack['uri'];
-                $albumUris[] = $uri;
-                $tracksByUri[$uri] ??= [
-                    'uri' => $uri,
-                    'title' => $albumTrack['title'],
-                    'album' => $album->title,
-                    'artist' => $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist',
-                ];
-            }
-            $uris = [...$uris, ...$albumUris];
-            $expectedTrackCount = max((int) ($album->total_tracks ?? 0), $tracks->count());
-            $albumSummaries[] = [
-                'title' => $album->title,
-                'artist' => $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist',
-                'available_tracks' => count($albumUris),
-                'total_tracks' => $expectedTrackCount,
-            ];
-        }
-
-        return [
-            'uris' => array_values(array_unique($uris)),
-            'tracks' => array_values($tracksByUri),
-            'albums' => $albumSummaries,
-        ];
     }
 
     /**
