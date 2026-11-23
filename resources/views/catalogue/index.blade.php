@@ -157,7 +157,7 @@
                                 <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="number" name="year" value="{{ old('year', now()->year) }}" min="1900" max="2100" required>
                             </label>
                         </div>
-                        <button class="mt-4 rounded-md bg-ef-accent px-4 py-2 font-medium text-ef-accent-ink hover:bg-ef-accent-soft" type="submit">Generate suggestions</button>
+                        <button class="mt-4 rounded-md bg-ef-accent px-4 py-2 font-medium text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Generate suggestions</button>
                     </form>
                     <form class="mt-4" method="POST" action="{{ route('catalogue.discography', [], false) }}">
                         @csrf
@@ -197,7 +197,7 @@
                                 <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" type="number" name="year" value="{{ old('year', substr((string) $selectedAlbum->release_date, 0, 4) ?: now()->year) }}" min="1900" max="2100" required>
                             </label>
                         </div>
-                        <button class="mt-4 rounded-md bg-ef-accent px-4 py-2 font-medium text-ef-accent-ink hover:bg-ef-accent-soft" type="submit">Generate suggestions</button>
+                        <button class="mt-4 rounded-md bg-ef-accent px-4 py-2 font-medium text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Generate suggestions</button>
                     </form>
                 </section>
             @endif

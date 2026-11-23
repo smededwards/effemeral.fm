@@ -100,7 +100,7 @@
         </div>
         <form class="mt-6 flex flex-col gap-3 sm:flex-row" method="GET" action="{{ route('playlists.index', [], false) }}">
             <label class="sr-only" for="playlist-search">Search playlists</label>
-            <input id="playlist-search" class="min-w-0 flex-1 border border-ef-line bg-ef-surface px-4 py-3 text-sm text-ef-text placeholder:text-ef-muted focus:border-ef-accent focus:outline-none focus:ring-2 focus:ring-ef-accent-strong" type="search" name="playlist_search" value="{{ $playlistSearch }}" placeholder="Search imported playlists">
+            <input id="playlist-search" class="min-w-0 flex-1 border border-ef-line bg-ef-surface px-4 py-3 text-sm text-ef-text placeholder:text-ef-muted focus:border-ef-accent" type="search" name="playlist_search" value="{{ $playlistSearch }}" placeholder="Search imported playlists">
             <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover" type="submit">Search</button>
             @if ($playlistSearch !== '')
                 <a class="border border-ef-line px-5 py-3 text-center text-sm font-semibold text-ef-accent-soft hover:border-ef-accent" href="{{ route('playlists.index', [], false) }}">Clear</a>
