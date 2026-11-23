@@ -270,7 +270,9 @@ class SpotifyClient
             ->acceptJson()
             ->timeout(15)
             ->retry(3, 1000, function (Throwable $exception): bool {
-                return !($exception instanceof RequestException && $exception->response?->status() === 429);
+                return $exception instanceof RequestException
+                    ? $exception->response?->status() !== 429
+                    : true;
             }, throw: false);
     }
 
