@@ -15,6 +15,8 @@
             <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ $albumPlaylist->spotify_playlist_url }}"
                 target="_blank" rel="noreferrer">Open in Spotify</a>
         @endif
+        <a class="font-semibold text-ef-accent-strong hover:underline"
+            href="{{ route('album-playlists.export', $albumPlaylist, false) }}">Export CSV</a>
     </header>
 
     @if (session('success'))
