@@ -178,6 +178,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Use Conventional Commits and labels limited to Conventional Commit types.
 - Before handoff, run the narrowest relevant tests plus Pint and PHPStan. Report any skipped verification and remaining risks.
 - Before opening a pull request, run the Ponytail review against the complete proposed change, fix its actionable findings, and include the review outcome in the handoff. The user reviews and merges the PR.
+- Before handoff, format Blade templates with `npx --yes blade-formatter@1.44.6 --write --indent-inner-html 'resources/views/**/*.blade.php'` and verify with the same command using `--check-formatted` instead of `--write`. Keep nested HTML and Blade directives indented to show their hierarchy, put nested elements and control directives on separate lines, and avoid compressed multi-element lines. Preserve generated or whitespace-sensitive content when reformatting would alter its output.
 
 ## Development principles
 

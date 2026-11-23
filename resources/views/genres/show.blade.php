@@ -1,8 +1,9 @@
-@extends('layouts.app', ['title' => $genre->name.' · Genre · Effemeral'])
+@extends('layouts.app', ['title' => $genre->name . ' · Genre · Effemeral'])
 
 @section('content')
     <header class="border-b border-ef-line pb-8">
-        <a class="text-sm font-semibold text-ef-accent-strong hover:underline" href="{{ route('catalogue.index', [], false) }}">← Catalogue</a>
+        <a class="text-sm font-semibold text-ef-accent-strong hover:underline"
+            href="{{ route('catalogue.index', [], false) }}">← Catalogue</a>
         <p class="mt-5 text-xs font-semibold tracking-[0.2em] text-ef-accent-strong uppercase">Genre</p>
         <h1 class="mt-2 font-serif text-4xl font-semibold sm:text-5xl">{{ $genre->name }}</h1>
         <p class="mt-3 text-sm text-ef-muted">Artists and albums in your catalogue tagged with this genre.</p>
@@ -16,9 +17,11 @@
         @if ($artists->isNotEmpty())
             <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($artists as $artist)
-                    <a class="border border-ef-line bg-ef-canvas p-5 hover:border-ef-accent" href="{{ route('artists.show', $artist, false) }}">
+                    <a class="border border-ef-line bg-ef-canvas p-5 hover:border-ef-accent"
+                        href="{{ route('artists.show', $artist, false) }}">
                         <h3 class="font-semibold">{{ $artist->name }}</h3>
-                        <p class="mt-2 text-sm text-ef-muted">{{ $artist->albums_count }} {{ $artist->albums_count === 1 ? 'album' : 'albums' }}</p>
+                        <p class="mt-2 text-sm text-ef-muted">{{ $artist->albums_count }}
+                            {{ $artist->albums_count === 1 ? 'album' : 'albums' }}</p>
                     </a>
                 @endforeach
             </div>
@@ -36,9 +39,11 @@
         @if ($albums->isNotEmpty())
             <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($albums as $album)
-                    <a class="border border-ef-line bg-ef-surface p-5 hover:border-ef-accent" href="{{ route('albums.show', $album, false) }}">
+                    <a class="border border-ef-line bg-ef-surface p-5 hover:border-ef-accent"
+                        href="{{ route('albums.show', $album, false) }}">
                         <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
-                        <p class="mt-2 text-sm text-ef-muted">{{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
+                        <p class="mt-2 text-sm text-ef-muted">
+                            {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
                         <p class="mt-2 text-sm text-ef-muted">{{ $album->tracks_count }} tracks</p>
                     </a>
                 @endforeach
