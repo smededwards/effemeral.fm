@@ -81,7 +81,11 @@
                     </p>
                     <h2 id="filtered-albums-heading" class="mt-2 text-2xl font-semibold">Matching albums</h2>
                 </div>
-                <span class="text-sm text-ef-muted">{{ number_format($filteredAlbums->total()) }} matches</span>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-ef-muted">{{ number_format($filteredAlbums->total()) }} matches</span>
+                    <a class="text-sm font-semibold text-ef-accent-strong hover:underline"
+                        href="{{ route('catalogue.index', $search === '' ? [] : ['q' => $search], false) }}">{{ 'Clear filters' }}</a>
+                </div>
             </div>
             @if ($filteredAlbums->isNotEmpty())
                 <form class="mt-5" method="POST" action="{{ route('album-playlists.albums.bulk-store', [], false) }}">
@@ -290,7 +294,7 @@
                 @endif
             </section>
         </div>
-    @else
+    @elseif (!($filteredAlbums instanceof \Illuminate\Pagination\LengthAwarePaginator))
         <section class="rounded-xl border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="catalogue-artists">
             <div class="flex flex-wrap items-end justify-between gap-3 border-b border-ef-line pb-5">
                 <div>

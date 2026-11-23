@@ -75,6 +75,32 @@ class CatalogueDiscoveryTest extends TestCase
             'saved_at' => now(),
         ]);
 
+        $playlistArtist = Artist::query()->create([
+            'name' => 'A Playlist Artist',
+            'normalised_name' => 'a playlist artist',
+        ]);
+        $playlistArtist->genres()->attach($genre->id, ['source' => 'spotify']);
+        $playlistAlbum = Album::query()->create([
+            'title' => 'A Playlist Album',
+            'normalised_title' => 'a playlist album',
+            'spotify_id' => 'playlist-album',
+            'total_tracks' => 1,
+            'release_date' => '2024-08-01',
+        ]);
+        $playlistAlbum->artists()->attach($playlistArtist->id);
+        Track::query()->create([
+            'album_id' => $playlistAlbum->id,
+            'title' => 'Playlist Track',
+            'normalised_title' => 'playlist track',
+            'spotify_id' => 'playlist-track',
+            'spotify_uri' => 'spotify:track:playlist-track',
+        ]);
+        SpotifyAlbumCollection::query()->create([
+            'album_id' => $playlistAlbum->id,
+            'collection_type' => 'playlist',
+            'spotify_playlist_id' => 'imported-playlist-id',
+        ]);
+
         $completedArtist = Artist::query()->create([
             'name' => 'Completed Artist',
             'normalised_name' => 'completed artist',
@@ -127,7 +153,14 @@ class CatalogueDiscoveryTest extends TestCase
         $run = RecommendationRun::query()->latest()->firstOrFail();
         $response->assertRedirect(route('recommendations.review.page', $run));
         $this->assertSame('catalogue_discovery', $run->source);
-        $this->assertSame([$savedAlbum->id], $run->albumRecommendations->pluck('spotify_saved_album_id')->all());
+        $this->assertSame(
+            [null, $savedAlbum->id],
+            $run->albumRecommendations->pluck('spotify_saved_album_id')->all(),
+        );
+        $this->assertSame(
+            ['A Playlist Album', 'A Similar Album'],
+            $run->albumRecommendations->map(fn ($recommendation) => $recommendation->album->title)->all(),
+        );
         $this->assertSame('Genre: post metal · Release year: 2024', $run->albumRecommendations->firstOrFail()->match_reason);
     }
 }
