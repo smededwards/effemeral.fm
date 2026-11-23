@@ -6,6 +6,8 @@ use App\Models\Album;
 use App\Models\AlbumPlaylist;
 use App\Models\Artist;
 use App\Models\Genre;
+use App\Services\Spotify\AlbumPlaylistSyncService;
+use App\Services\Spotify\SpotifyClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -71,6 +73,21 @@ class AlbumPlaylistTest extends TestCase
         $this->assertDatabaseHas('albums', ['id' => $album->id]);
     }
 
+    public function test_bulk_album_add_generates_a_name_for_an_unnamed_new_playlist(): void
+    {
+        $album = $this->createAlbum('Mariner');
+
+        $this->post(route('album-playlists.albums.bulk-store'), [
+            'album_ids' => [$album->id],
+            'destination' => 'new',
+            'playlist_name' => '   ',
+        ])->assertRedirect();
+
+        $playlist = AlbumPlaylist::query()->firstOrFail();
+        $this->assertMatchesRegularExpression('/^Album Draft · \d{4}\.\d{2}\.\d{2}$/', $playlist->name);
+        $this->assertSame([$album->id], $playlist->albums->pluck('id')->all());
+    }
+
     public function test_playlist_can_be_exported_as_csv_without_spotify(): void
     {
         $artist = Artist::query()->create([
@@ -108,6 +125,44 @@ class AlbumPlaylistTest extends TestCase
         ], $rows[1]);
     }
 
+    public function test_reordering_a_playlist_does_not_remove_its_spotify_tracks(): void
+    {
+        $first = $this->createAlbumWithTrack('First Album', 'spotify:track:first');
+        $second = $this->createAlbumWithTrack('Second Album', 'spotify:track:second');
+        $playlist = AlbumPlaylist::query()->create([
+            'name' => 'Mourning Earth',
+            'spotify_playlist_id' => 'spotify-playlist-id',
+            'spotify_managed_track_uris' => ['spotify:track:first', 'spotify:track:second'],
+            'spotify_sync_status' => 'synced',
+        ]);
+        $playlist->albums()->attach($second->id, ['position' => 1]);
+        $playlist->albums()->attach($first->id, ['position' => 2]);
+
+        $this->mock(SpotifyClient::class, function ($mock): void {
+            $mock->shouldReceive('playlistDetails')
+                ->once()
+                ->with('spotify-playlist-id')
+                ->andReturn([
+                    'id' => 'spotify-playlist-id',
+                    'name' => 'Mourning Earth',
+                    'snapshot_id' => 'snapshot-id',
+                    'external_urls' => ['spotify' => 'https://open.spotify.com/playlist/spotify-playlist-id'],
+                ]);
+            $mock->shouldReceive('playlistItems')
+                ->once()
+                ->with('spotify-playlist-id')
+                ->andReturn([
+                    ['track' => ['uri' => 'spotify:track:first', 'name' => 'First track', 'album' => ['name' => 'First Album']]],
+                    ['track' => ['uri' => 'spotify:track:second', 'name' => 'Second track', 'album' => ['name' => 'Second Album']]],
+                ]);
+        });
+
+        $preview = app(AlbumPlaylistSyncService::class)->preview($playlist, 'linked');
+
+        $this->assertSame([], $preview['remove_uris']);
+        $this->assertSame([], $preview['add_uris']);
+    }
+
     private function createAlbum(string $title): Album
     {
         return Album::query()->create([
@@ -115,5 +170,19 @@ class AlbumPlaylistTest extends TestCase
             'normalised_title' => strtolower($title),
             'total_tracks' => 8,
         ]);
+    }
+
+    private function createAlbumWithTrack(string $title, string $spotifyUri): Album
+    {
+        $album = $this->createAlbum($title);
+        $album->tracks()->create([
+            'title' => $title.' track',
+            'normalised_title' => strtolower($title).' track',
+            'spotify_uri' => $spotifyUri,
+            'disc_number' => 1,
+            'track_number' => 1,
+        ]);
+
+        return $album;
     }
 }

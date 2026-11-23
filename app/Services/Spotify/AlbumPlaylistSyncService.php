@@ -57,13 +57,20 @@ class AlbumPlaylistSyncService
             }
         }
 
-        $removeUris = array_values(array_intersect($currentUris, $managedUris));
+        $managedCurrentUris = array_values(array_filter(
+            $currentUris,
+            fn (string $uri): bool => in_array($uri, $managedUris, true),
+        ));
         $unmanagedUris = array_values(array_filter(
             $currentUris,
-            fn (string $uri): bool => ! in_array($uri, $removeUris, true),
+            fn (string $uri): bool => ! in_array($uri, $managedUris, true),
         ));
         $desired = $this->desiredTracks($albumPlaylist);
-        $addUris = array_values(array_diff($desired['uris'], $unmanagedUris));
+        // Never remove a managed track merely because the local album order changed.
+        // A failed add after a destructive remove would otherwise make a reorder
+        // appear as lost tracks in Spotify.
+        $removeUris = array_values(array_diff($managedCurrentUris, $desired['uris']));
+        $addUris = array_values(array_diff($desired['uris'], $currentUris));
         $removeUriSet = array_flip($removeUris);
         $addUriSet = array_flip($addUris);
 

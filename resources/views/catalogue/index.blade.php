@@ -117,10 +117,14 @@
                     </div>
                     <p class="mb-3 text-sm text-ef-muted">Select up to 50 albums on this page. Adding them updates the
                         Effemeral draft; Spotify is changed only after you review and confirm a sync.</p>
+                    <label class="mb-4 flex items-center gap-2 text-sm font-semibold text-ef-text" for="catalogue-select-all">
+                        <input id="catalogue-select-all" type="checkbox">
+                        <span>Select all albums on this page</span>
+                    </label>
                     <ul class="space-y-3">
                         @foreach ($filteredAlbums as $album)
                             <li class="flex gap-4 rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent">
-                                <input class="mt-1" id="catalogue-album-{{ $album->id }}" type="checkbox"
+                                <input class="catalogue-album-checkbox mt-1" id="catalogue-album-{{ $album->id }}" type="checkbox"
                                     name="album_ids[]" value="{{ $album->id }}">
                                 <label class="min-w-0 flex-1 cursor-pointer" for="catalogue-album-{{ $album->id }}">
                                     <span class="block font-semibold">{{ $album->displayTitle() }}</span>
@@ -178,10 +182,14 @@
                 <p class="text-sm font-medium text-ef-text">Find incomplete albums in this style</p>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                     <label class="block text-sm text-ef-muted">Genre
-                        <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
-                            type="text" name="genre"
-                            value="{{ old('genre', $selectedArtist->acceptedGenres->first()?->name) }}"
-                            placeholder="post-metal" required>
+                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="genre"
+                            required>
+                            <option value="">Choose a style</option>
+                            @foreach ($catalogueGenres as $genre)
+                                <option value="{{ $genre->normalised_name }}" @selected(old('genre', $selectedArtist->acceptedGenres->first()?->normalised_name) === $genre->normalised_name)>
+                                    {{ $genre->name }}</option>
+                            @endforeach
+                        </select>
                     </label>
                     <label class="block text-sm text-ef-muted">Release year
                         <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
@@ -234,10 +242,14 @@
                 <p class="text-sm font-medium text-ef-text">Find incomplete albums in this style</p>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                     <label class="block text-sm text-ef-muted">Genre
-                        <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
-                            type="text" name="genre"
-                            value="{{ old('genre', $selectedAlbum->artists->flatMap->acceptedGenres->first()?->name) }}"
-                            placeholder="post-metal" required>
+                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="genre"
+                            required>
+                            <option value="">Choose a style</option>
+                            @foreach ($catalogueGenres as $genre)
+                                <option value="{{ $genre->normalised_name }}" @selected(old('genre', $selectedAlbum->artists->flatMap->acceptedGenres->first()?->normalised_name) === $genre->normalised_name)>
+                                    {{ $genre->name }}</option>
+                            @endforeach
+                        </select>
                     </label>
                     <label class="block text-sm text-ef-muted">Release year
                         <input class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
@@ -326,3 +338,29 @@
         </section>
     @endif
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectAll = document.querySelector('#catalogue-select-all');
+            const albums = [...document.querySelectorAll('.catalogue-album-checkbox')];
+
+            if (!selectAll || albums.length === 0) {
+                return;
+            }
+
+            const updateSelectAll = () => {
+                const selected = albums.filter((album) => album.checked).length;
+                selectAll.checked = selected === albums.length;
+                selectAll.indeterminate = selected > 0 && selected < albums.length;
+            };
+
+            selectAll.addEventListener('change', () => {
+                albums.forEach((album) => {
+                    album.checked = selectAll.checked;
+                });
+            });
+            albums.forEach((album) => album.addEventListener('change', updateSelectAll));
+        });
+    </script>
+@endpush

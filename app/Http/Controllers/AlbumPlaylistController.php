@@ -183,7 +183,7 @@ class AlbumPlaylistController extends Controller
             'album_ids.*' => ['required', 'integer', 'distinct', 'exists:albums,id'],
             'destination' => ['required', 'in:existing,new'],
             'playlist_id' => ['required_if:destination,existing', 'nullable', 'integer', 'exists:album_playlists,id'],
-            'playlist_name' => ['required_if:destination,new', 'nullable', 'string', 'max:100'],
+            'playlist_name' => ['nullable', 'string', 'max:100'],
         ]);
 
         $playlist = null;
@@ -196,7 +196,9 @@ class AlbumPlaylistController extends Controller
         }
 
         [$playlist, $addedCount] = DB::transaction(function () use ($playlist, $validated): array {
-            $playlist ??= AlbumPlaylist::query()->create(['name' => trim($validated['playlist_name'])]);
+            $playlist ??= AlbumPlaylist::query()->create([
+                'name' => trim((string) ($validated['playlist_name'] ?? '')) ?: 'Album Draft · '.now()->format('Y.m.d'),
+            ]);
             $existingIds = $playlist->albums()->whereKey($validated['album_ids'])->pluck('albums.id')->all();
             $newIds = array_values(array_diff($validated['album_ids'], $existingIds));
             $position = (int) ($playlist->albums()->max('album_playlist_items.position') ?? 0);
