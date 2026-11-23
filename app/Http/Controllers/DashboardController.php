@@ -25,13 +25,27 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
+/**
+ * Serves the main discovery, catalogue, import, library, and playlist views.
+ */
 class DashboardController extends Controller
 {
+    /**
+     * Show the accepted style catalogue.
+     *
+     * @return View The style catalogue page.
+     */
     public function styles(): View
     {
         return view('catalogue.styles', ['genres' => $this->catalogueGenres()]);
     }
 
+    /**
+     * Search and filter canonical artists and albums.
+     *
+     * @param  Request  $request  The search and filter request.
+     * @return View The catalogue page.
+     */
     public function catalogue(Request $request): View
     {
         $search = trim((string) $request->query('q'));
@@ -148,7 +162,9 @@ class DashboardController extends Controller
         ]);
     }
 
-    /** @return Collection<int, Genre> */
+    /**
+     * @return Collection<int, Genre> The filterable catalogue genres.
+     */
     private function catalogueGenres(): Collection
     {
         return Genre::query()
@@ -159,6 +175,12 @@ class DashboardController extends Controller
             ->get();
     }
 
+    /**
+     * Create a reviewable draft from matching incomplete catalogue albums.
+     *
+     * @param  Request  $request  The discovery criteria.
+     * @return RedirectResponse The recommendation review redirect.
+     */
     public function discoverRecommendations(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -184,7 +206,9 @@ class DashboardController extends Controller
             ->whereNotNull('track_id')
             ->pluck('track_id')
             ->flip();
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums */
+        /**
+         * @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums
+         */
         $albums = Album::query()
             ->with(['artists.acceptedGenres', 'tracks'])
             ->where('release_date', 'like', $validated['year'].'%')
@@ -196,9 +220,13 @@ class DashboardController extends Controller
 
         $candidates = $albums
             ->map(function (Album $album) use ($contextArtistIds, $genre, $heardTrackIds, $savedAlbums, $validated): ?array {
-                /** @var \Illuminate\Database\Eloquent\Collection<int, Artist> $artists */
+                /**
+                 * @var \Illuminate\Database\Eloquent\Collection<int, Artist> $artists
+                 */
                 $artists = $album->artists;
-                /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+                /**
+                 * @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks
+                 */
                 $tracks = $album->tracks;
 
                 if ($artists->pluck('id')->intersect($contextArtistIds)->isNotEmpty()) {
@@ -264,6 +292,12 @@ class DashboardController extends Controller
         return redirect()->route('recommendations.review.page', $recommendationRun);
     }
 
+    /**
+     * Create a reviewable album draft from an artist's selected discography.
+     *
+     * @param  Request  $request  The selected artist and release options.
+     * @return RedirectResponse The recommendation review redirect.
+     */
     public function discographyRecommendations(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -272,7 +306,9 @@ class DashboardController extends Controller
         ]);
         $artist = Artist::query()->findOrFail($validated['artist_id']);
         $includeNonAlbums = (bool) ($validated['include_non_albums'] ?? false);
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums */
+        /**
+         * @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums
+         */
         $albums = $artist->albums()
             ->with('tracks')
             ->when(! $includeNonAlbums, fn ($query) => $query->whereIn('album_type', ['album', 'ep']))
@@ -336,9 +372,13 @@ class DashboardController extends Controller
             ]);
 
             foreach ($candidates as $position => $candidate) {
-                /** @var Album|null $album */
+                /**
+                 * @var Album|null $album
+                 */
                 $album = $candidate['album'];
-                /** @var SpotifySavedAlbum|null $savedAlbum */
+                /**
+                 * @var SpotifySavedAlbum|null $savedAlbum
+                 */
                 $savedAlbum = $candidate['saved_album'];
                 $tracks = $album === null ? collect() : $album->tracks;
                 $trackUris = $tracks->pluck('spotify_uri')
@@ -386,6 +426,11 @@ class DashboardController extends Controller
         };
     }
 
+    /**
+     * Show the playlist-first application overview.
+     *
+     * @return View The dashboard page.
+     */
     public function index(): View
     {
         $albumPlaylists = AlbumPlaylist::query()
@@ -400,16 +445,31 @@ class DashboardController extends Controller
         ]);
     }
 
+    /**
+     * Show import status and retry controls.
+     *
+     * @return View The imports page.
+     */
     public function imports(): View
     {
         return view('imports.index', $this->importsData());
     }
 
+    /**
+     * Show the imported saved-album library.
+     *
+     * @return View The library page.
+     */
     public function library(): View
     {
         return view('library.index', $this->libraryData());
     }
 
+    /**
+     * Show imported Spotify playlists and Effemeral album playlists.
+     *
+     * @return View The playlist overview page.
+     */
     public function playlists(): View
     {
         $search = trim((string) request('playlist_search'));
@@ -441,10 +501,14 @@ class DashboardController extends Controller
         ]);
     }
 
-    /** @return array{import_status: string, album_status: string, complete_album_count: int} */
+    /**
+     * @return array{import_status: string, album_status: string, complete_album_count: int} The playlist overview status.
+     */
     private function playlistOverviewData(SpotifyPlaylist $playlist): array
     {
-        /** @var \Illuminate\Database\Eloquent\Collection<int, SpotifyPlaylistItem> $items */
+        /**
+         * @var \Illuminate\Database\Eloquent\Collection<int, SpotifyPlaylistItem> $items
+         */
         $items = $playlist->items;
         $albumGroups = $items
             ->filter(fn (SpotifyPlaylistItem $item): bool => $item->album !== null)
@@ -456,7 +520,9 @@ class DashboardController extends Controller
                 return false;
             }
 
-            /** @var Album|null $album */
+            /**
+             * @var Album|null $album
+             */
             $album = $firstItem->album;
 
             if ($album === null || $album->total_tracks === null) {
@@ -485,12 +551,19 @@ class DashboardController extends Controller
         ];
     }
 
+    /**
+     * Show incomplete albums and recommendation controls.
+     *
+     * @return View The recommendation page.
+     */
     public function recommendations(): View
     {
         return view('recommendations.index', $this->recommendationsData());
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @return array<string, mixed> The import status data.
+     */
     private function importsData(): array
     {
         return [
@@ -505,7 +578,9 @@ class DashboardController extends Controller
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @return array<string, mixed> The library data.
+     */
     private function libraryData(): array
     {
         $librarySearch = trim((string) request('library_search'));
@@ -541,7 +616,9 @@ class DashboardController extends Controller
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @return array<string, mixed> The recommendation data.
+     */
     private function recommendationsData(): array
     {
         return [
@@ -574,12 +651,18 @@ class DashboardController extends Controller
             ->get();
 
         if ($canonicalAlbums->isNotEmpty()) {
-            /** @var Collection<int, array<string, mixed>> $incompleteAlbums */
+            /**
+             * @var Collection<int, array<string, mixed>> $incompleteAlbums
+             */
             $incompleteAlbums = $canonicalAlbums
                 ->map(function (Album $album) use ($heardTrackIds, $legacyAlbums): ?array {
-                    /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+                    /**
+                     * @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks
+                     */
                     $tracks = $album->getRelation('tracks');
-                    /** @var \Illuminate\Database\Eloquent\Collection<int, Artist> $artists */
+                    /**
+                     * @var \Illuminate\Database\Eloquent\Collection<int, Artist> $artists
+                     */
                     $artists = $album->getRelation('artists');
                     $legacyAlbum = $legacyAlbums->get($album->spotify_id);
                     $manualOverride = $legacyAlbum?->completion_override;
@@ -621,7 +704,9 @@ class DashboardController extends Controller
             $heardTracks[$albumKey][$this->normalise($scrobble->track_name)] = true;
         }
 
-        /** @var Collection<int, array<string, mixed>> $incompleteAlbums */
+        /**
+         * @var Collection<int, array<string, mixed>> $incompleteAlbums
+         */
         $incompleteAlbums = SpotifySavedAlbum::query()
             ->latest('saved_at')
             ->get()
@@ -677,7 +762,9 @@ class DashboardController extends Controller
                 ->whereNotNull('track_id')
                 ->pluck('track_id')
                 ->flip();
-            /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+            /**
+             * @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks
+             */
             $tracks = $canonicalAlbum->getRelation('tracks');
             $total = $tracks->count();
             $heard = $tracks->filter(fn (Track $track): bool => $heardTrackIds->has($track->id))->count();
@@ -710,6 +797,11 @@ class DashboardController extends Controller
         ];
     }
 
+    /**
+     * Create a recommendation draft from the current incomplete catalogue.
+     *
+     * @return RedirectResponse The recommendation review redirect.
+     */
     public function generateRecommendations(): RedirectResponse
     {
         $albums = $this->incompleteAlbums();
@@ -739,6 +831,14 @@ class DashboardController extends Controller
         return back()->with('success', 'Draft album recommendations generated.');
     }
 
+    /**
+     * Apply a manual genre override to an artist.
+     *
+     * @param  Request  $request  The submitted genre values.
+     * @param  Artist  $artist  The artist being edited.
+     * @param  GenreWriter  $genreWriter  The genre persistence service.
+     * @return RedirectResponse The artist page redirect.
+     */
     public function updateArtistGenres(Request $request, Artist $artist, GenreWriter $genreWriter): RedirectResponse
     {
         $validated = $request->validate(['genres' => ['nullable', 'string', 'max:2000']]);
@@ -749,6 +849,12 @@ class DashboardController extends Controller
         return back()->with('success', 'Artist genres updated.');
     }
 
+    /**
+     * Create a draft from albums selected by the user.
+     *
+     * @param  Request  $request  The selected album IDs.
+     * @return RedirectResponse The recommendation review redirect.
+     */
     public function createManualRecommendations(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -780,6 +886,13 @@ class DashboardController extends Controller
         return back()->with('success', 'Manual album playlist draft created.');
     }
 
+    /**
+     * Append selected albums to an existing unsynced recommendation draft.
+     *
+     * @param  Request  $request  The selected album IDs.
+     * @param  RecommendationRun  $recommendationRun  The draft being extended.
+     * @return RedirectResponse The recommendation review redirect.
+     */
     public function addAlbumsToRecommendations(Request $request, RecommendationRun $recommendationRun): RedirectResponse
     {
         if ($recommendationRun->spotify_playlist_id !== null || $recommendationRun->status === 'synced') {
@@ -821,6 +934,13 @@ class DashboardController extends Controller
         return back()->with('success', 'Albums added to the recommendation draft.');
     }
 
+    /**
+     * Remove an album from an unsynced recommendation draft.
+     *
+     * @param  RecommendationRun  $recommendationRun  The draft being edited.
+     * @param  AlbumRecommendation  $albumRecommendation  The recommendation to remove.
+     * @return RedirectResponse The recommendation review redirect.
+     */
     public function removeAlbumFromRecommendations(RecommendationRun $recommendationRun, AlbumRecommendation $albumRecommendation): RedirectResponse
     {
         if ($recommendationRun->spotify_playlist_id !== null || $recommendationRun->status === 'synced') {
@@ -831,7 +951,9 @@ class DashboardController extends Controller
 
         DB::transaction(function () use ($albumRecommendation, $recommendationRun): void {
             $albumRecommendation->delete();
-            /** @var \Illuminate\Database\Eloquent\Collection<int, AlbumRecommendation> $remaining */
+            /**
+             * @var \Illuminate\Database\Eloquent\Collection<int, AlbumRecommendation> $remaining
+             */
             $remaining = $recommendationRun->albumRecommendations()->get();
             $offset = $remaining->count();
 
@@ -847,6 +969,13 @@ class DashboardController extends Controller
         return back()->with('success', 'Album removed from the recommendation draft.');
     }
 
+    /**
+     * Save the reviewed order and playlist name for a recommendation draft.
+     *
+     * @param  Request  $request  The reviewed order and playlist name.
+     * @param  RecommendationRun  $recommendationRun  The draft being reviewed.
+     * @return RedirectResponse The recommendation review redirect.
+     */
     public function reviewRecommendations(Request $request, RecommendationRun $recommendationRun): RedirectResponse
     {
         $validated = $request->validate([
@@ -855,7 +984,9 @@ class DashboardController extends Controller
             'included' => ['array'],
             'included.*' => ['integer'],
         ]);
-        /** @var Collection<int, AlbumRecommendation> $recommendations */
+        /**
+         * @var Collection<int, AlbumRecommendation> $recommendations
+         */
         $recommendations = $recommendationRun->albumRecommendations()->get();
         $positions = collect($validated['positions'])->mapWithKeys(fn (mixed $position, string $id): array => [(int) $id => (int) $position]);
         $recommendationIds = $recommendations->pluck('id')->map(fn (int|string $id): int => (int) $id)->all();
@@ -892,6 +1023,12 @@ class DashboardController extends Controller
         return back()->with('success', 'Recommendation draft review saved.');
     }
 
+    /**
+     * Manually mark a saved album as complete.
+     *
+     * @param  SpotifySavedAlbum  $album  The saved album being overridden.
+     * @return RedirectResponse The recommendations redirect.
+     */
     public function markAlbumComplete(SpotifySavedAlbum $album): RedirectResponse
     {
         $album->update(['completion_override' => true]);
@@ -899,6 +1036,12 @@ class DashboardController extends Controller
         return back()->with('success', 'Album marked as heard.');
     }
 
+    /**
+     * Manually mark a saved album as incomplete.
+     *
+     * @param  SpotifySavedAlbum  $album  The saved album being overridden.
+     * @return RedirectResponse The recommendations redirect.
+     */
     public function markAlbumIncomplete(SpotifySavedAlbum $album): RedirectResponse
     {
         $album->update(['completion_override' => false]);
@@ -906,6 +1049,12 @@ class DashboardController extends Controller
         return back()->with('success', 'Album marked as incomplete.');
     }
 
+    /**
+     * Remove a manual completion override and return to imported evidence.
+     *
+     * @param  SpotifySavedAlbum  $album  The saved album being reset.
+     * @return RedirectResponse The recommendations redirect.
+     */
     public function clearAlbumCompletionOverride(SpotifySavedAlbum $album): RedirectResponse
     {
         $album->update(['completion_override' => null]);

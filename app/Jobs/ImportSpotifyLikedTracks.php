@@ -13,12 +13,25 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
+/**
+ * Imports Spotify liked tracks into the canonical catalogue.
+ */
 class ImportSpotifyLikedTracks implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * @param  int  $importRunId  The persisted import run to update.
+     */
     public function __construct(public int $importRunId) {}
 
+    /**
+     * Import liked tracks idempotently and update the run counters.
+     *
+     * @param  SpotifyClient  $client  The Spotify API client.
+     * @param  CatalogWriter|null  $catalog  The canonical catalogue writer.
+     * @param  GenreWriter|null  $genreWriter  The genre persistence service.
+     */
     public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
     {
         $catalog ??= app(CatalogWriter::class);
@@ -49,7 +62,9 @@ class ImportSpotifyLikedTracks implements ShouldQueue
                     }
                 }
 
-                /** @var Track|null $canonicalTrack */
+                /**
+                 * @var Track|null $canonicalTrack
+                 */
                 $canonicalTrack = $album->tracks()->where('spotify_id', $track['id'])->first();
                 $likedTrack = SpotifyLikedTrack::query()->firstOrNew(['spotify_track_id' => $track['id']]);
                 $wasExisting = $likedTrack->exists;

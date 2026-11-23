@@ -9,11 +9,21 @@ use App\Models\Track;
 use Illuminate\Support\Collection;
 use RuntimeException;
 
+/**
+ * Builds reviewable album-level Spotify changes and applies approved syncs.
+ */
 class AlbumPlaylistSyncService
 {
     public function __construct(private SpotifyClient $client) {}
 
-    /** @return array<string, mixed> */
+    /**
+     * Compare the local album playlist with Spotify without changing either side.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The local playlist to compare.
+     * @param  string  $destination  The requested Spotify destination mode.
+     * @param  SpotifyPlaylist|null  $selectedPlaylist  The existing destination, if selected.
+     * @return array<string, mixed> The reviewable sync preview.
+     */
     public function preview(AlbumPlaylist $albumPlaylist, string $destination, ?SpotifyPlaylist $selectedPlaylist = null): array
     {
         $targetPlaylistId = match ($destination) {
@@ -115,7 +125,12 @@ class AlbumPlaylistSyncService
         ];
     }
 
-    /** @param array<string, mixed> $preview */
+    /**
+     * Apply a previously reviewed and still-current preview to Spotify.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The local playlist to sync.
+     * @param  array<string, mixed>  $preview  The previously reviewed preview.
+     */
     public function sync(AlbumPlaylist $albumPlaylist, array $preview): void
     {
         $destination = (string) ($preview['destination'] ?? '');
@@ -229,7 +244,9 @@ class AlbumPlaylistSyncService
         }
     }
 
-    /** @param list<string> $desiredUris */
+    /**
+     * @param  list<string>  $desiredUris  The desired managed track URIs.
+     */
     private function claimSync(AlbumPlaylist $albumPlaylist, array $desiredUris): void
     {
         $claimed = $albumPlaylist->newQuery()
@@ -248,7 +265,9 @@ class AlbumPlaylistSyncService
         $albumPlaylist->refresh();
     }
 
-    /** @param array<string, mixed> $preview */
+    /**
+     * @param  array<string, mixed>  $preview  The previously generated preview.
+     */
     private function assertPreviewStillCurrent(AlbumPlaylist $albumPlaylist, array $preview, string $destination, ?string $targetPlaylistId): void
     {
         $desired = $this->desiredTracks($albumPlaylist);
@@ -258,10 +277,14 @@ class AlbumPlaylistSyncService
         }
     }
 
-    /** @return array{uris: list<string>, tracks: list<array{uri: string, title: string, album: string, artist: string}>, albums: list<array<string, mixed>>} */
+    /**
+     * @return array{uris: list<string>, tracks: list<array{uri: string, title: string, album: string, artist: string}>, albums: list<array<string, mixed>>} The desired Spotify content.
+     */
     private function desiredTracks(AlbumPlaylist $albumPlaylist): array
     {
-        /** @var Collection<int, Album> $albums */
+        /**
+         * @var Collection<int, Album> $albums
+         */
         $albums = $albumPlaylist->albums()
             ->with([
                 'artists',
@@ -273,7 +296,9 @@ class AlbumPlaylistSyncService
         $albumSummaries = [];
 
         foreach ($albums as $album) {
-            /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
+            /**
+             * @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks
+             */
             $tracks = $album->tracks;
             $albumTracks = $tracks
                 ->map(function (Track $track): ?array {
@@ -319,7 +344,9 @@ class AlbumPlaylistSyncService
         ];
     }
 
-    /** @param list<string> $uris */
+    /**
+     * @param  list<string>  $uris  The track URIs used to calculate the hash.
+     */
     private function playlistHash(AlbumPlaylist $albumPlaylist, string $destination, ?string $targetPlaylistId, array $uris): string
     {
         return hash('sha256', json_encode([

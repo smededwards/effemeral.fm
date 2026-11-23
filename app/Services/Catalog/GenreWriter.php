@@ -7,15 +7,28 @@ use App\Models\Genre;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Normalises, filters, and persists provider and manual genre values.
+ */
 class GenreWriter
 {
-    /** @param list<string> $genres */
+    /**
+     * Replace imported Spotify genres while preserving manual overrides.
+     *
+     * @param  Artist  $artist  The artist being updated.
+     * @param  list<string>  $genres  The imported Spotify genre values.
+     */
     public function syncSpotify(Artist $artist, array $genres): void
     {
         $this->syncImported($artist, $genres, 'spotify');
     }
 
-    /** @param list<string> $genres */
+    /**
+     * Replace imported Last.fm genres while preserving manual overrides.
+     *
+     * @param  Artist  $artist  The artist being updated.
+     * @param  list<string>  $genres  The imported Last.fm genre values.
+     */
     public function syncLastFm(Artist $artist, array $genres): void
     {
         $allowlist = config('services.lastfm.genre_allowlist', []);
@@ -27,7 +40,10 @@ class GenreWriter
         $this->syncImported($artist, $genres, 'lastfm');
     }
 
-    /** @param list<string> $genres */
+    /**
+     * @param  Artist  $artist  The artist being updated.
+     * @param  list<string>  $genres  The requested manual genre values.
+     */
     private function syncImported(Artist $artist, array $genres, string $source): void
     {
         foreach ($this->filterAllowedGenres($genres) as $normalisedName => $name) {
@@ -54,11 +70,18 @@ class GenreWriter
         }
     }
 
-    /** @param list<string> $genres */
+    /**
+     * Replace all genres with an explicit manual override.
+     *
+     * @param  Artist  $artist  The artist being updated.
+     * @param  list<string>  $genres  The requested manual genre values.
+     */
     public function applyManualOverride(Artist $artist, array $genres): void
     {
         $normalisedGenres = $this->filterAllowedGenres($genres);
-        /** @var Collection<int, Genre> $existingGenres */
+        /**
+         * @var Collection<int, Genre> $existingGenres
+         */
         $existingGenres = $artist->genres()->get();
         $existing = $existingGenres->keyBy('normalised_name');
 
@@ -106,7 +129,10 @@ class GenreWriter
         }
     }
 
-    /** @param array<mixed> $genres */
+    /**
+     * @param  array<mixed>  $genres  The raw genre values.
+     * @return array<string, string> Normalised names keyed by their slug.
+     */
     private function normalisedGenres(array $genres): array
     {
         $normalisedGenres = [];
@@ -128,7 +154,8 @@ class GenreWriter
         return $normalisedGenres;
     }
 
-    /** @param list<string> $genres
+    /**
+     * @param  list<string>  $genres
      * @return array<string, string>
      */
     private function filterAllowedGenres(array $genres): array

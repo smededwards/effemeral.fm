@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Encrypted single-user Spotify OAuth tokens and expiry state.
+ */
 class SpotifyConnection extends Model
 {
     protected $fillable = [

@@ -11,8 +11,17 @@ use Illuminate\Support\Facades\Cache;
 
 #[Signature('artists:import-musicbrainz {--refresh : Check all artists again, including previously checked artists} {--limit=0 : Stop after this many artists (0 means all)}')]
 #[Description('Import artist country and locality from MusicBrainz')]
+/**
+ * Imports MusicBrainz origins for artists that already exist locally.
+ */
 class ImportMusicBrainzArtistMetadata extends Command
 {
+    /**
+     * Run the metadata enrichment command.
+     *
+     * @param  MusicBrainzClient  $client  The MusicBrainz API client.
+     * @return int The command exit status.
+     */
     public function handle(MusicBrainzClient $client): int
     {
         $lock = Cache::lock('musicbrainz-artist-metadata-import', 86400);

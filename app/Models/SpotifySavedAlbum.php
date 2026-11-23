@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
+/**
+ * Spotify saved-album membership and manual completion state.
+ */
 class SpotifySavedAlbum extends Model
 {
     protected $fillable = [
@@ -15,6 +18,11 @@ class SpotifySavedAlbum extends Model
         'last_synced_at', 'completion_override',
     ];
 
+    /**
+     * Return the saved album title in the application presentation style.
+     *
+     * @return string The display-ready album title.
+     */
     public function displayTitle(): string
     {
         return Str::title($this->name);
@@ -31,6 +39,9 @@ class SpotifySavedAlbum extends Model
         ];
     }
 
+    /**
+     * Return recommendation entries sourced from this saved album.
+     */
     public function recommendations(): HasMany
     {
         return $this->hasMany(AlbumRecommendation::class);

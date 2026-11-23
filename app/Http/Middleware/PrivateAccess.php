@@ -6,8 +6,18 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Protects the single-user application with the configured access password.
+ */
 class PrivateAccess
 {
+    /**
+     * Allow configured public paths or validate the private access cookie.
+     *
+     * @param  Request  $request  The incoming request.
+     * @param  Closure  $next  The next middleware callback.
+     * @return Response The downstream response or access form.
+     */
     public function handle(Request $request, Closure $next): Response
     {
         $password = config('services.effemeral.access_password');

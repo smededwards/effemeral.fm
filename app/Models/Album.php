@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
+/**
+ * Canonical album record shared by Last.fm, Spotify, and MusicBrainz.
+ */
 class Album extends Model
 {
     protected $fillable = [
@@ -15,31 +18,51 @@ class Album extends Model
         'release_date_precision', 'cover_image_url',
     ];
 
+    /**
+     * Return the presentation title without changing the stored source value.
+     *
+     * @return string The display-ready album title.
+     */
     public function displayTitle(): string
     {
         return Str::title($this->title);
     }
 
+    /**
+     * Return the artists credited on the album.
+     */
     public function artists(): BelongsToMany
     {
         return $this->belongsToMany(Artist::class)->withPivot('artist_position');
     }
 
+    /**
+     * Return the canonical tracks belonging to the album.
+     */
     public function tracks(): HasMany
     {
         return $this->hasMany(Track::class);
     }
 
+    /**
+     * Return saved-album and playlist collection memberships.
+     */
     public function spotifyCollections(): HasMany
     {
         return $this->hasMany(SpotifyAlbumCollection::class);
     }
 
+    /**
+     * Return imported Spotify playlist item references.
+     */
     public function spotifyPlaylistItems(): HasMany
     {
         return $this->hasMany(SpotifyPlaylistItem::class);
     }
 
+    /**
+     * Return Effemeral playlists containing the album.
+     */
     public function playlists(): BelongsToMany
     {
         return $this->belongsToMany(AlbumPlaylist::class, 'album_playlist_items')

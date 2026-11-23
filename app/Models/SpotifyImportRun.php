@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Persisted saved-album or liked-track import progress.
+ */
 class SpotifyImportRun extends Model
 {
     protected $table = 'spotify_album_import_runs';

@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Persisted Last.fm import range, progress, and retry state.
+ */
 class LastFmImportRun extends Model
 {
     protected $fillable = [
@@ -23,6 +26,9 @@ class LastFmImportRun extends Model
         ];
     }
 
+    /**
+     * Return the previous failed run when this import was retried.
+     */
     public function retryOf(): BelongsTo
     {
         return $this->belongsTo(self::class, 'retry_of_id');

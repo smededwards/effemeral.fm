@@ -8,8 +8,17 @@ use App\Models\MusicBrainzDiscographyImportRun;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Starts MusicBrainz enrichment for an existing artist.
+ */
 class MusicBrainzDiscographyController extends Controller
 {
+    /**
+     * Queue a discography refresh for an artist with a MusicBrainz identity.
+     *
+     * @param  Artist  $artist  The existing artist to enrich.
+     * @return RedirectResponse The artist page redirect.
+     */
     public function store(Artist $artist): RedirectResponse
     {
         if ($artist->musicbrainz_mbid === null) {

@@ -14,8 +14,17 @@ use App\Models\SpotifyPlaylistImportRun;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 
+/**
+ * Coordinates user-triggered Last.fm and Spotify import jobs.
+ */
 class ImportController extends Controller
 {
+    /**
+     * Queue a bounded Last.fm import for the requested date range.
+     *
+     * @param  StartLastFmImportRequest  $request  The validated import request.
+     * @return RedirectResponse The import status redirect.
+     */
     public function lastFm(StartLastFmImportRequest $request): RedirectResponse
     {
         return $this->queueLastFmImport(
@@ -26,6 +35,11 @@ class ImportController extends Controller
         );
     }
 
+    /**
+     * Queue the complete Last.fm history import from the configured start date.
+     *
+     * @return RedirectResponse The import status redirect.
+     */
     public function fullLastFm(): RedirectResponse
     {
         return $this->queueLastFmImport(
@@ -36,6 +50,12 @@ class ImportController extends Controller
         );
     }
 
+    /**
+     * Retry a failed Last.fm import using its original range and limit.
+     *
+     * @param  LastFmImportRun  $importRun  The failed import to retry.
+     * @return RedirectResponse The import status redirect.
+     */
     public function retryLastFm(LastFmImportRun $importRun): RedirectResponse
     {
         if ($importRun->status !== 'failed') {
@@ -51,6 +71,11 @@ class ImportController extends Controller
         );
     }
 
+    /**
+     * Queue or resume the Spotify saved-album import.
+     *
+     * @return RedirectResponse The import status redirect.
+     */
     public function spotifyAlbums(): RedirectResponse
     {
         $this->clearStaleImportRuns();
@@ -84,6 +109,11 @@ class ImportController extends Controller
         return back()->with('success', 'Spotify saved albums import queued.');
     }
 
+    /**
+     * Queue the Spotify liked-track import.
+     *
+     * @return RedirectResponse The import status redirect.
+     */
     public function spotifyLikedTracks(): RedirectResponse
     {
         $this->clearStaleImportRuns();
@@ -103,6 +133,11 @@ class ImportController extends Controller
         return back()->with('success', 'Spotify liked songs import queued.');
     }
 
+    /**
+     * Queue or resume the Spotify playlist import.
+     *
+     * @return RedirectResponse The import status redirect.
+     */
     public function spotifyPlaylists(): RedirectResponse
     {
         $this->clearStaleImportRuns();
@@ -136,6 +171,12 @@ class ImportController extends Controller
         return back()->with('success', 'Spotify playlists import queued.');
     }
 
+    /**
+     * Retry importing one failed Spotify playlist.
+     *
+     * @param  SpotifyPlaylist  $playlist  The failed playlist to retry.
+     * @return RedirectResponse The import status redirect.
+     */
     public function retrySpotifyPlaylist(SpotifyPlaylist $playlist): RedirectResponse
     {
         $this->clearStaleImportRuns();

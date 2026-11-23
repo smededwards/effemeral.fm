@@ -12,10 +12,19 @@ use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Throwable;
 
+/**
+ * Wraps the Spotify Web API with authentication, pagination, and rate limits.
+ */
 class SpotifyClient
 {
     /**
      * @return list<array<string, mixed>>
+     */
+    /**
+     * Fetch saved albums, optionally capped at the requested item count.
+     *
+     * @param  int|null  $limit  The maximum number of albums to return.
+     * @return list<array<string, mixed>> The Spotify saved-album payloads.
      */
     public function savedAlbums(?int $limit = null): array
     {
@@ -44,7 +53,13 @@ class SpotifyClient
         return $limit === null ? $albums : array_slice($albums, 0, $limit);
     }
 
-    /** @return array{items: list<array<string, mixed>>, next_offset: int, total: int} */
+    /**
+     * Fetch one resumable saved-album page and its next offset.
+     *
+     * @param  int  $offset  The first Spotify item to request.
+     * @param  int  $limit  The maximum page size.
+     * @return array{items: list<array<string, mixed>>, next_offset: int, total: int} The page and progress values.
+     */
     public function savedAlbumsPage(int $offset = 0, int $limit = 50): array
     {
         $response = $this->get('/me/albums', [
@@ -67,7 +82,12 @@ class SpotifyClient
         ];
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * Fetch liked tracks, optionally capped at the requested item count.
+     *
+     * @param  int|null  $limit  The maximum number of tracks to return.
+     * @return list<array<string, mixed>> The Spotify liked-track payloads.
+     */
     public function likedTracks(?int $limit = null): array
     {
         return $this->paginate(
@@ -77,13 +97,24 @@ class SpotifyClient
         );
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * Fetch imported Spotify playlists, optionally capped at the requested count.
+     *
+     * @param  int|null  $limit  The maximum number of playlists to return.
+     * @return list<array<string, mixed>> The Spotify playlist payloads.
+     */
     public function playlists(?int $limit = null): array
     {
         return $this->paginate('/me/playlists', $limit, fn (array $item): bool => isset($item['id']));
     }
 
-    /** @return array{items: list<array<string, mixed>>, next_offset: int, total: int} */
+    /**
+     * Fetch one resumable playlist page and its next offset.
+     *
+     * @param  int  $offset  The first Spotify playlist to request.
+     * @param  int  $limit  The maximum page size.
+     * @return array{items: list<array<string, mixed>>, next_offset: int, total: int} The page and progress values.
+     */
     public function playlistsPage(int $offset = 0, int $limit = 50): array
     {
         $response = $this->get('/me/playlists', [
@@ -106,7 +137,12 @@ class SpotifyClient
         ];
     }
 
-    /** @param list<string> $ids */
+    /**
+     * Fetch Spotify artist metadata for the supplied IDs.
+     *
+     * @param  list<string>  $ids  The Spotify artist IDs.
+     * @return list<array<string, mixed>> The artist payloads.
+     */
     public function artists(array $ids): array
     {
         $artists = [];
@@ -127,7 +163,13 @@ class SpotifyClient
         return $artists;
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * Search Spotify for a likely album edition match.
+     *
+     * @param  string  $artistName  The canonical artist name.
+     * @param  string  $albumTitle  The canonical album title.
+     * @return list<array<string, mixed>> The matching album payloads.
+     */
     public function searchAlbums(string $artistName, string $albumTitle): array
     {
         $response = $this->get('/search', [
@@ -145,7 +187,12 @@ class SpotifyClient
         return is_array($items) ? array_values(array_filter($items, 'is_array')) : [];
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * Fetch every track from a Spotify album.
+     *
+     * @param  string  $albumId  The Spotify album ID.
+     * @return list<array<string, mixed>> The album track payloads.
+     */
     public function albumTracks(string $albumId): array
     {
         return $this->paginate(
@@ -155,7 +202,12 @@ class SpotifyClient
         );
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * Fetch every item from a Spotify playlist.
+     *
+     * @param  string  $playlistId  The Spotify playlist ID.
+     * @return list<array<string, mixed>> The playlist item payloads.
+     */
     public function playlistItems(string $playlistId): array
     {
         $items = $this->paginate(
@@ -169,7 +221,12 @@ class SpotifyClient
             : $item, $items);
     }
 
-    /** @return array{id: string, name: string, snapshot_id: string|null, public: bool|null, external_urls: array<string, mixed>} */
+    /**
+     * Fetch the metadata and snapshot used to audit a playlist.
+     *
+     * @param  string  $playlistId  The Spotify playlist ID.
+     * @return array{id: string, name: string, snapshot_id: string|null, public: bool|null, external_urls: array<string, mixed>} The playlist metadata.
+     */
     public function playlistDetails(string $playlistId): array
     {
         $response = $this->get('/playlists/'.$playlistId, []);
@@ -197,6 +254,12 @@ class SpotifyClient
         ];
     }
 
+    /**
+     * Rename an existing Spotify playlist.
+     *
+     * @param  string  $playlistId  The Spotify playlist ID.
+     * @param  string  $name  The new playlist name.
+     */
     public function updatePlaylistName(string $playlistId, string $name): void
     {
         $response = $this->put('/playlists/'.$playlistId, ['name' => $name]);
@@ -206,7 +269,14 @@ class SpotifyClient
         }
     }
 
-    /** @param list<string> $uris */
+    /**
+     * Remove managed track URIs from a Spotify playlist.
+     *
+     * @param  string  $playlistId  The Spotify playlist ID.
+     * @param  list<string>  $uris  The track URIs to remove.
+     * @param  string|null  $snapshotId  The current Spotify snapshot.
+     * @return string|null The new snapshot ID, when Spotify returns one.
+     */
     public function removePlaylistItems(string $playlistId, array $uris, ?string $snapshotId): ?string
     {
         foreach (array_chunk($uris, 100) as $chunk) {
@@ -231,6 +301,13 @@ class SpotifyClient
 
     /**
      * @return array{id: string, external_urls: array<string, string>}
+     */
+    /**
+     * Create a private Spotify playlist for an approved Effemeral draft.
+     *
+     * @param  string  $name  The playlist name.
+     * @param  string  $description  The playlist description.
+     * @return array<string, mixed> The created playlist payload.
      */
     public function createPrivatePlaylist(string $name, string $description): array
     {
@@ -259,7 +336,12 @@ class SpotifyClient
         ];
     }
 
-    /** @param list<string> $uris */
+    /**
+     * Append track URIs to a Spotify playlist in API-sized batches.
+     *
+     * @param  string  $playlistId  The Spotify playlist ID.
+     * @param  list<string>  $uris  The track URIs to append.
+     */
     public function addPlaylistItems(string $playlistId, array $uris): void
     {
         foreach (array_chunk($uris, 100) as $chunk) {
@@ -322,25 +404,33 @@ class SpotifyClient
             }, throw: false);
     }
 
-    /** @param array<string, int|string> $query */
+    /**
+     * @param  array<string, int|string>  $query  The Spotify request parameters.
+     */
     private function get(string $path, array $query): Response
     {
         return $this->sendWithRateLimit(fn (): Response => $this->request()->get($path, $query));
     }
 
-    /** @param array<string, mixed> $payload */
+    /**
+     * @param  array<string, mixed>  $payload  The Spotify request body.
+     */
     private function post(string $path, array $payload): Response
     {
         return $this->sendWithRateLimit(fn (): Response => $this->request()->post($path, $payload));
     }
 
-    /** @param array<string, mixed> $payload */
+    /**
+     * @param  array<string, mixed>  $payload  The Spotify request body.
+     */
     private function put(string $path, array $payload): Response
     {
         return $this->sendWithRateLimit(fn (): Response => $this->request()->put($path, $payload));
     }
 
-    /** @param Closure(): Response $request */
+    /**
+     * @param  Closure(): Response  $request  The API request callback.
+     */
     private function sendWithRateLimit(Closure $request): Response
     {
         for ($attempt = 1; $attempt <= 3; $attempt++) {

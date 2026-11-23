@@ -179,7 +179,9 @@ class MusicBrainzDiscographyTest extends TestCase
         }
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @return array<string, mixed>
+     */
     private function spotifyAlbum(string $id, string $title): array
     {
         return [

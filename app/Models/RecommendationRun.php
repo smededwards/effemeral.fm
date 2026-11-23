@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Reviewable album recommendation draft before Spotify sync.
+ */
 class RecommendationRun extends Model
 {
     protected $fillable = [
@@ -22,9 +25,14 @@ class RecommendationRun extends Model
         ];
     }
 
-    /** @use HasFactory<RecommendationRunFactory> */
+    /**
+     * @use HasFactory<RecommendationRunFactory>
+     */
     use HasFactory;
 
+    /**
+     * Return the ordered album recommendations in this draft.
+     */
     public function albumRecommendations(): HasMany
     {
         return $this->hasMany(AlbumRecommendation::class)->orderBy('position');

@@ -9,6 +9,9 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use stdClass;
 
+/**
+ * Presents Last.fm listening history as ranked artists, albums, and tracks.
+ */
 class ListeningArchiveController extends Controller
 {
     private const PERIODS = [
@@ -26,6 +29,12 @@ class ListeningArchiveController extends Controller
         'tracks' => 'Tracks',
     ];
 
+    /**
+     * Show the listening archive for the selected date range and filters.
+     *
+     * @param  Request  $request  The archive filters.
+     * @return View The listening archive page.
+     */
     public function index(Request $request): View
     {
         $filters = $request->validate([

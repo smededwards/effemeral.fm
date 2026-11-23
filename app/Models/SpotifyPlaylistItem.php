@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Imported Spotify playlist item and its canonical album or track match.
+ */
 class SpotifyPlaylistItem extends Model
 {
     protected $fillable = [
@@ -20,16 +23,25 @@ class SpotifyPlaylistItem extends Model
         ];
     }
 
+    /**
+     * Return the imported Spotify playlist containing the item.
+     */
     public function playlist(): BelongsTo
     {
         return $this->belongsTo(SpotifyPlaylist::class, 'spotify_playlist_id');
     }
 
+    /**
+     * Return the canonical album matched to the item, when available.
+     */
     public function album(): BelongsTo
     {
         return $this->belongsTo(Album::class);
     }
 
+    /**
+     * Return the canonical track matched to the item, when available.
+     */
     public function track(): BelongsTo
     {
         return $this->belongsTo(Track::class);

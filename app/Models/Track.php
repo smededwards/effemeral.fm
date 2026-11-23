@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Canonical track record linked to an album and source identifiers.
+ */
 class Track extends Model
 {
     protected $fillable = [
@@ -12,6 +15,9 @@ class Track extends Model
         'spotify_uri', 'disc_number', 'track_number', 'duration_ms',
     ];
 
+    /**
+     * Return the album containing the track.
+     */
     public function album(): BelongsTo
     {
         return $this->belongsTo(Album::class);

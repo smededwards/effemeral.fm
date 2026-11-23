@@ -14,8 +14,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Handles album-first playlist creation, review, ordering, and Spotify sync.
+ */
 class AlbumPlaylistController extends Controller
 {
+    /**
+     * Show a playlist and the optional catalogue search results.
+     *
+     * @param  Request  $request  The current search request.
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being viewed.
+     * @return View The playlist page.
+     */
     public function show(Request $request, AlbumPlaylist $albumPlaylist): View
     {
         $search = trim((string) $request->query('q', ''));
@@ -41,10 +51,18 @@ class AlbumPlaylistController extends Controller
         ]);
     }
 
+    /**
+     * Stream the playlist as a portable CSV export.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being exported.
+     * @return StreamedResponse The CSV response.
+     */
     public function export(AlbumPlaylist $albumPlaylist): StreamedResponse
     {
         $albumPlaylist->load('albums.artists.acceptedGenres');
-        /** @var Collection<int, Album> $albums */
+        /**
+         * @var Collection<int, Album> $albums
+         */
         $albums = $albumPlaylist->albums;
 
         return response()->streamDownload(function () use ($albums): void {
@@ -52,7 +70,9 @@ class AlbumPlaylistController extends Controller
             fputcsv($output, ['Position', 'Album', 'Artist', 'Release date', 'Styles', 'Spotify URL']);
 
             foreach ($albums as $position => $album) {
-                /** @var Collection<int, Artist> $artists */
+                /**
+                 * @var Collection<int, Artist> $artists
+                 */
                 $artists = $album->artists;
                 fputcsv($output, [
                     $position + 1,
@@ -68,6 +88,14 @@ class AlbumPlaylistController extends Controller
         }, str()->slug($albumPlaylist->name).'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
+    /**
+     * Build a reviewable Spotify sync preview without changing Spotify.
+     *
+     * @param  Request  $request  The requested Spotify destination.
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist to preview.
+     * @param  AlbumPlaylistSyncService  $syncService  The sync preview service.
+     * @return View|RedirectResponse The preview or an error redirect.
+     */
     public function previewSpotifySync(Request $request, AlbumPlaylist $albumPlaylist, AlbumPlaylistSyncService $syncService): View|RedirectResponse
     {
         if ($response = $this->syncInProgress($albumPlaylist)) {
@@ -107,6 +135,14 @@ class AlbumPlaylistController extends Controller
         ]);
     }
 
+    /**
+     * Apply an approved playlist sync to Spotify.
+     *
+     * @param  Request  $request  The submitted preview confirmation.
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist to sync.
+     * @param  AlbumPlaylistSyncService  $syncService  The sync service.
+     * @return RedirectResponse The post-sync redirect.
+     */
     public function syncSpotify(Request $request, AlbumPlaylist $albumPlaylist, AlbumPlaylistSyncService $syncService): RedirectResponse
     {
         $preview = session()->get($this->syncPreviewSessionKey($albumPlaylist));
@@ -135,6 +171,12 @@ class AlbumPlaylistController extends Controller
         return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Effemeral playlist synced to Spotify.');
     }
 
+    /**
+     * Create a named Effemeral album playlist.
+     *
+     * @param  Request  $request  The submitted playlist name.
+     * @return RedirectResponse The playlist index redirect.
+     */
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate(['name' => ['required', 'string', 'max:100']]);
@@ -143,6 +185,13 @@ class AlbumPlaylistController extends Controller
         return to_route('album-playlists.show', $playlist)->with('success', 'Album playlist created.');
     }
 
+    /**
+     * Rename an existing Effemeral album playlist.
+     *
+     * @param  Request  $request  The submitted replacement name.
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being renamed.
+     * @return RedirectResponse The playlist detail redirect.
+     */
     public function update(Request $request, AlbumPlaylist $albumPlaylist): RedirectResponse
     {
         if ($response = $this->syncInProgress($albumPlaylist)) {
@@ -156,6 +205,13 @@ class AlbumPlaylistController extends Controller
         return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Playlist name updated.');
     }
 
+    /**
+     * Add one album to a playlist and mark its Spotify sync as pending.
+     *
+     * @param  Request  $request  The submitted album ID.
+     * @param  AlbumPlaylist  $albumPlaylist  The destination playlist.
+     * @return RedirectResponse The playlist detail redirect.
+     */
     public function addAlbum(Request $request, AlbumPlaylist $albumPlaylist): RedirectResponse
     {
         if ($response = $this->syncInProgress($albumPlaylist)) {
@@ -176,6 +232,12 @@ class AlbumPlaylistController extends Controller
         return back()->with('success', 'Album added to playlist.');
     }
 
+    /**
+     * Add selected albums to an existing or newly named playlist.
+     *
+     * @param  Request  $request  The selected albums and destination.
+     * @return RedirectResponse The destination playlist redirect.
+     */
     public function addAlbums(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -217,6 +279,13 @@ class AlbumPlaylistController extends Controller
         return to_route('album-playlists.show', $playlist)->with('success', $addedCount.' album'.($addedCount === 1 ? '' : 's').' added to playlist.');
     }
 
+    /**
+     * Remove one album from a playlist without deleting the album itself.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being edited.
+     * @param  Album  $album  The album being removed.
+     * @return RedirectResponse The playlist detail redirect.
+     */
     public function removeAlbum(AlbumPlaylist $albumPlaylist, Album $album): RedirectResponse
     {
         if ($response = $this->syncInProgress($albumPlaylist)) {
@@ -234,6 +303,14 @@ class AlbumPlaylistController extends Controller
         return back()->with('success', 'Album removed from playlist.');
     }
 
+    /**
+     * Move one album up or down while preserving playlist order.
+     *
+     * @param  Request  $request  The requested movement direction.
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being edited.
+     * @param  Album  $album  The album being moved.
+     * @return RedirectResponse The playlist detail redirect.
+     */
     public function moveAlbum(Request $request, AlbumPlaylist $albumPlaylist, Album $album): RedirectResponse
     {
         if ($response = $this->syncInProgress($albumPlaylist)) {
@@ -241,7 +318,9 @@ class AlbumPlaylistController extends Controller
         }
 
         $validated = $request->validate(['direction' => ['required', 'in:up,down']]);
-        /** @var Collection<int, Album> $albums */
+        /**
+         * @var Collection<int, Album> $albums
+         */
         $albums = $albumPlaylist->albums()->get();
         $currentIndex = $albums->search(fn (Album $item): bool => $item->id === $album->id);
 
@@ -268,7 +347,9 @@ class AlbumPlaylistController extends Controller
 
     private function saveOrder(AlbumPlaylist $albumPlaylist): void
     {
-        /** @var Collection<int, Album> $albums */
+        /**
+         * @var Collection<int, Album> $albums
+         */
         $albums = $albumPlaylist->albums()->get();
 
         foreach ($albums->values() as $index => $album) {

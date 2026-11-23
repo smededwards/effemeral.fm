@@ -12,12 +12,25 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
+/**
+ * Imports Spotify saved albums in resumable pages.
+ */
 class ImportSpotifySavedAlbums implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * @param  int  $importRunId  The persisted import run to update.
+     */
     public function __construct(public int $importRunId) {}
 
+    /**
+     * Process the next saved-album page and persist its offset.
+     *
+     * @param  SpotifyClient  $client  The Spotify API client.
+     * @param  CatalogWriter|null  $catalog  The canonical catalogue writer.
+     * @param  GenreWriter|null  $genreWriter  The genre persistence service.
+     */
     public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
     {
         $catalog ??= app(CatalogWriter::class);
