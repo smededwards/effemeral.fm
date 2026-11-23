@@ -17,6 +17,7 @@ Route::middleware('private')->group(function (): void {
     Route::get('/playlists', [DashboardController::class, 'playlists'])->name('playlists.index');
     Route::post('/playlists', [AlbumPlaylistController::class, 'store'])->name('album-playlists.store');
     Route::get('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'show'])->name('album-playlists.show');
+    Route::get('/playlists/{albumPlaylist}/export.csv', [AlbumPlaylistController::class, 'export'])->name('album-playlists.export');
     Route::patch('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'update'])->name('album-playlists.update');
     Route::post('/playlists/{albumPlaylist}/spotify/preview', [AlbumPlaylistController::class, 'previewSpotifySync'])->name('album-playlists.spotify.preview');
     Route::post('/playlists/{albumPlaylist}/spotify/sync', [AlbumPlaylistController::class, 'syncSpotify'])->name('album-playlists.spotify.sync');
@@ -25,6 +26,7 @@ Route::middleware('private')->group(function (): void {
     Route::post('/playlists/{albumPlaylist}/albums/{album}/move', [AlbumPlaylistController::class, 'moveAlbum'])->name('album-playlists.albums.move');
     Route::get('/listening', [ListeningArchiveController::class, 'index'])->name('listening.index');
     Route::get('/recommendations', [DashboardController::class, 'recommendations'])->name('recommendations.index');
+    Route::get('/catalogue/styles', [DashboardController::class, 'styles'])->name('catalogue.styles');
     Route::get('/catalogue', [DashboardController::class, 'catalogue'])->name('catalogue.index');
     Route::get('/genres/{genre}', [MusicPageController::class, 'genre'])->name('genres.show');
     Route::get('/artists/{artist}', [MusicPageController::class, 'artist'])->name('artists.show');

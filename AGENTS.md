@@ -172,6 +172,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Effemeral delivery workflow
 
+- Make routine changes in the primary repository checkout so the user can run and review them locally before merging. Use Git worktrees only to develop separate changes for separate pull requests; when each pull request is merged or closed, remove its clean worktree and return to the primary checkout.
 - Work from the latest dev branch using a feature branch without codex in its name.
 - Open pull requests into dev; do not merge them without the user's review.
 - Every pull request must include a non-empty description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
