@@ -7,6 +7,7 @@ use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -269,7 +270,9 @@ class SpotifyClient
             ->withToken($this->accessToken())
             ->acceptJson()
             ->timeout(15)
-            ->retry(3, 1000, fn (Throwable $exception): bool => $exception instanceof ConnectionException, throw: false);
+            ->retry(3, 1000, function (Throwable $exception): bool {
+                return ! ($exception instanceof RequestException && $exception->response?->status() === 429);
+            }, throw: false);
     }
 
     /** @param array<string, int|string> $query */
