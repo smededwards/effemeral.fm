@@ -130,7 +130,7 @@ class DashboardController extends Controller
             'artists' => $artists,
             'albums' => $albums,
             'filteredAlbums' => $filteredAlbums,
-            'catalogueGenres' => Genre::query()->filterable()->whereHas('artists')->orderBy('normalised_name')->get(),
+            'catalogueGenres' => Genre::query()->filterable()->whereHas('artists.acceptedGenres')->orderBy('normalised_name')->get(),
             'catalogueCountries' => Artist::query()->whereNotNull('country_code')->distinct()->orderBy('country_code')->pluck('country_code'),
             'albumPlaylists' => AlbumPlaylist::query()->orderBy('name')->get(['id', 'name']),
             'filters' => $filters,
@@ -172,7 +172,7 @@ class DashboardController extends Controller
         $albums = Album::query()
             ->with(['artists.acceptedGenres', 'tracks'])
             ->where('release_date', 'like', $validated['year'].'%')
-            ->whereHas('spotifyCollections', fn ($query) => $query->where('collection_type', 'saved'))
+            ->whereHas('spotifyCollections', fn ($query) => $query->whereIn('collection_type', ['saved', 'playlist']))
             ->get();
         $savedAlbums = SpotifySavedAlbum::query()
             ->whereIn('spotify_album_id', $albums->pluck('spotify_id')->filter())
@@ -195,13 +195,13 @@ class DashboardController extends Controller
                     ->contains($genre);
                 $savedAlbum = $savedAlbums->get($album->spotify_id);
 
-                if (! $hasGenre || $savedAlbum === null || $savedAlbum->completion_override === true
+                if (! $hasGenre || $savedAlbum?->completion_override === true
                     || $tracks->isEmpty() || ($album->total_tracks !== null && $tracks->count() !== $album->total_tracks)) {
                     return null;
                 }
 
                 $heard = $tracks->filter(fn (Track $track): bool => $heardTrackIds->has($track->id))->count();
-                if ($savedAlbum->completion_override !== false && $heard === $tracks->count()) {
+                if ($savedAlbum?->completion_override !== false && $heard === $tracks->count()) {
                     return null;
                 }
 
@@ -211,7 +211,7 @@ class DashboardController extends Controller
                     'heard' => $heard,
                     'total' => $tracks->count(),
                     'percentage' => (int) floor(($heard / $tracks->count()) * 100),
-                    'match_reason' => 'Genre: '.$validated['genre'].' · Release year: '.$validated['year'].($savedAlbum->completion_override === false ? ' · Manual incomplete override' : ''),
+                    'match_reason' => 'Genre: '.$validated['genre'].' · Release year: '.$validated['year'].($savedAlbum?->completion_override === false ? ' · Manual incomplete override' : ''),
                 ];
             })
             ->filter()
@@ -220,7 +220,7 @@ class DashboardController extends Controller
             ->values();
 
         if ($candidates->isEmpty()) {
-            return back()->with('error', 'No incomplete saved albums matched that genre and year.');
+            return back()->with('error', 'No incomplete albums from your saved albums or imported playlists matched that genre and year.');
         }
 
         $recommendationRun = DB::transaction(function () use ($candidates): RecommendationRun {
@@ -234,7 +234,7 @@ class DashboardController extends Controller
                 AlbumRecommendation::query()->create([
                     'recommendation_run_id' => $run->id,
                     'album_id' => $candidate['album']->id,
-                    'spotify_saved_album_id' => $candidate['saved_album']->id,
+                    'spotify_saved_album_id' => $candidate['saved_album']?->id,
                     'position' => $position + 1,
                     'heard_tracks' => $candidate['heard'],
                     'total_tracks' => $candidate['total'],
