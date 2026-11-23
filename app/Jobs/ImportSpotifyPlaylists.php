@@ -2,12 +2,14 @@
 
 namespace App\Jobs;
 
+use App\Models\Album;
 use App\Models\Artist;
 use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
 use App\Services\Catalog\CatalogWriter;
 use App\Services\Catalog\GenreWriter;
 use App\Services\Spotify\SpotifyClient;
+use App\Services\Spotify\SpotifyRateLimitException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,12 @@ class ImportSpotifyPlaylists implements ShouldQueue
     public int $timeout = 3600;
 
     public function __construct(public int $importRunId, public ?string $playlistId = null) {}
+
+    /** @return list<int> */
+    public function backoff(): array
+    {
+        return [60, 300, 900];
+    }
 
     public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
     {
@@ -67,6 +75,19 @@ class ImportSpotifyPlaylists implements ShouldQueue
                 ]);
                 $playlist->save();
 
+                $snapshotUnchanged = $this->playlistId === null
+                    && $wasExisting
+                    && $playlist->last_synced_at !== null
+                    && is_string($playlistData['snapshot_id'] ?? null)
+                    && $playlist->snapshot_id === $playlistData['snapshot_id'];
+
+                if ($snapshotUnchanged) {
+                    $fetched += $playlist->items()->count();
+                    $updated++;
+
+                    continue;
+                }
+
                 try {
                     $items = $client->playlistItems($playlistId);
                     $playlistFetched = 0;
@@ -112,6 +133,22 @@ class ImportSpotifyPlaylists implements ShouldQueue
                         }
                     });
 
+                    $albumIds = collect($items)
+                        ->map(fn (array $item): mixed => data_get($item, 'track.album.id'))
+                        ->filter(fn (mixed $albumId): bool => is_string($albumId) && $albumId !== '')
+                        ->unique()
+                        ->values();
+
+                    foreach ($albumIds as $albumId) {
+                        $album = Album::query()->where('spotify_id', $albumId)->first();
+                        if ($album === null || ($album->total_tracks !== null
+                            && $album->tracks()->whereNotNull('spotify_uri')->count() === $album->total_tracks)) {
+                            continue;
+                        }
+
+                        $catalog->spotifyAlbumTracks($album, $client->albumTracks($albumId));
+                    }
+
                     $playlist->update([
                         'last_synced_at' => now(),
                         'last_import_error' => null,
@@ -124,6 +161,8 @@ class ImportSpotifyPlaylists implements ShouldQueue
                         'updated_count' => $updated,
                         'skipped_count' => $skipped,
                     ]);
+                } catch (SpotifyRateLimitException $exception) {
+                    throw $exception;
                 } catch (Throwable $exception) {
                     $playlist->update(['last_import_error' => $exception->getMessage()]);
                     $errors[] = $playlist->name.': '.$exception->getMessage();
@@ -153,6 +192,16 @@ class ImportSpotifyPlaylists implements ShouldQueue
                 'error' => $errors === [] ? null : implode("\n", $errors),
                 'completed_at' => now(),
             ]);
+        } catch (SpotifyRateLimitException $exception) {
+            $run->update([
+                'status' => 'failed',
+                'error' => $exception->getMessage(),
+                'completed_at' => now(),
+            ]);
+
+            if ($exception->retryable) {
+                throw $exception;
+            }
         } catch (Throwable $exception) {
             $run->update([
                 'status' => 'failed',
