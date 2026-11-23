@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class SpotifyPlaylistImportRun extends Model
 {
     protected $fillable = [
-        'source', 'status', 'requested_limit', 'fetched_count', 'imported_count',
+        'source', 'status', 'requested_limit', 'next_offset', 'total_count', 'fetched_count', 'imported_count',
         'updated_count', 'skipped_count', 'error', 'started_at', 'completed_at',
     ];
 

@@ -8,6 +8,7 @@ use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
 use App\Models\SpotifyPlaylistItem;
 use App\Services\Spotify\SpotifyClient;
+use App\Services\Spotify\SpotifyRateLimitException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -32,10 +33,51 @@ class SpotifyPlaylistImportTest extends TestCase
         Queue::assertPushed(ImportSpotifyPlaylists::class);
     }
 
+    public function test_a_failed_playlist_import_resumes_from_its_saved_offset(): void
+    {
+        Queue::fake();
+        $run = SpotifyPlaylistImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'failed',
+            'next_offset' => 500,
+            'total_count' => 1025,
+            'error' => 'Spotify quota has been exceeded. Try again later.',
+        ]);
+
+        $this->post(route('imports.spotify.playlists'))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Spotify playlist import resumed.');
+
+        $this->assertDatabaseHas('spotify_playlist_import_runs', [
+            'id' => $run->id,
+            'status' => 'queued',
+            'next_offset' => 500,
+            'error' => null,
+        ]);
+        Queue::assertPushed(ImportSpotifyPlaylists::class, fn (ImportSpotifyPlaylists $job): bool => $job->importRunId === $run->id);
+    }
+
     public function test_playlists_and_items_are_imported_idempotently(): void
     {
         config()->set('services.spotify.access_token', 'test-token');
-        Http::fake(function ($request) {
+        $playlistItemRequests = 0;
+        Http::fake(function ($request) use (&$playlistItemRequests) {
+            if (str_contains($request->url(), '/albums/album-id/tracks')) {
+                return Http::response([
+                    'items' => [[
+                        'id' => 'track-id',
+                        'uri' => 'spotify:track:track-id',
+                        'name' => 'A Track',
+                        'track_number' => 1,
+                    ]],
+                    'next' => null,
+                ]);
+            }
+
+            if (str_contains($request->url(), '/playlists/playlist-id/items')) {
+                $playlistItemRequests++;
+            }
+
             if (str_ends_with($request->url(), '/me/playlists?limit=50&offset=0')) {
                 return Http::response([
                     'next' => null,
@@ -94,6 +136,10 @@ class SpotifyPlaylistImportTest extends TestCase
             'spotify_track_id' => 'track-id',
             'position' => 0,
         ]);
+        $this->assertDatabaseHas('tracks', [
+            'spotify_id' => 'track-id',
+            'spotify_uri' => 'spotify:track:track-id',
+        ]);
         $this->assertDatabaseHas('spotify_album_collections', [
             'collection_type' => 'playlist',
             'spotify_playlist_id' => 'playlist-id',
@@ -105,6 +151,58 @@ class SpotifyPlaylistImportTest extends TestCase
             'fetched_count' => 1,
             'updated_count' => 1,
         ]);
+        $this->assertSame(1, $playlistItemRequests);
+    }
+
+    public function test_playlist_import_persists_the_next_page_after_a_quota_failure(): void
+    {
+        config()->set('services.spotify.access_token', 'test-token');
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/me/playlists')) {
+                return str_contains($request->url(), 'offset=0')
+                    ? Http::response([
+                        'total' => 2,
+                        'items' => [['id' => 'first-playlist', 'name' => 'First playlist', 'tracks' => ['total' => 0]]],
+                    ])
+                    : Http::response(['error' => ['reason' => 'QUOTA_EXCEEDED']], 429);
+            }
+
+            return Http::response(['items' => [], 'next' => null]);
+        });
+
+        $run = SpotifyPlaylistImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'queued',
+            'requested_limit' => null,
+        ]);
+
+        (new ImportSpotifyPlaylists($run->id))->handle(app(SpotifyClient::class));
+
+        $this->assertDatabaseHas('spotify_playlist_import_runs', [
+            'id' => $run->id,
+            'status' => 'failed',
+            'next_offset' => 1,
+            'total_count' => 2,
+        ]);
+    }
+
+    public function test_spotify_quota_errors_are_not_retried(): void
+    {
+        $attempts = 0;
+        config()->set('services.spotify.access_token', 'test-token');
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+
+            return Http::response(['error' => ['reason' => 'QUOTA_EXCEEDED']], 429);
+        });
+
+        try {
+            app(SpotifyClient::class)->savedAlbums(1);
+            $this->fail('Expected Spotify quota exhaustion to stop the request.');
+        } catch (SpotifyRateLimitException $exception) {
+            $this->assertSame('Spotify quota has been exceeded. Try again later.', $exception->getMessage());
+        }
+        $this->assertSame(1, $attempts);
     }
 
     public function test_failed_item_refresh_preserves_the_previous_playlist_items(): void
