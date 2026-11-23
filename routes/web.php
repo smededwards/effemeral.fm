@@ -25,6 +25,7 @@ Route::middleware('private')->group(function (): void {
     Route::post('/playlists/{albumPlaylist}/albums/{album}/move', [AlbumPlaylistController::class, 'moveAlbum'])->name('album-playlists.albums.move');
     Route::get('/listening', [ListeningArchiveController::class, 'index'])->name('listening.index');
     Route::get('/recommendations', [DashboardController::class, 'recommendations'])->name('recommendations.index');
+    Route::get('/catalogue/styles', [DashboardController::class, 'styles'])->name('catalogue.styles');
     Route::get('/catalogue', [DashboardController::class, 'catalogue'])->name('catalogue.index');
     Route::get('/genres/{genre}', [MusicPageController::class, 'genre'])->name('genres.show');
     Route::get('/artists/{artist}', [MusicPageController::class, 'artist'])->name('artists.show');
