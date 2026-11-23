@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Album;
 use App\Models\AlbumPlaylist;
-use App\Models\Artist;
 use App\Models\SpotifyPlaylist;
+use App\Services\Playlists\AlbumPlaylistExporter;
 use App\Services\Spotify\AlbumPlaylistSyncService;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -57,35 +57,9 @@ class AlbumPlaylistController extends Controller
      * @param  AlbumPlaylist  $albumPlaylist  The playlist being exported.
      * @return StreamedResponse The CSV response.
      */
-    public function export(AlbumPlaylist $albumPlaylist): StreamedResponse
+    public function export(AlbumPlaylist $albumPlaylist, AlbumPlaylistExporter $exporter): StreamedResponse
     {
-        $albumPlaylist->load('albums.artists.acceptedGenres');
-        /**
-         * @var Collection<int, Album> $albums
-         */
-        $albums = $albumPlaylist->albums;
-
-        return response()->streamDownload(function () use ($albums): void {
-            $output = fopen('php://output', 'w');
-            fputcsv($output, ['Position', 'Album', 'Artist', 'Release date', 'Styles', 'Spotify URL']);
-
-            foreach ($albums as $position => $album) {
-                /**
-                 * @var Collection<int, Artist> $artists
-                 */
-                $artists = $album->artists;
-                fputcsv($output, [
-                    $position + 1,
-                    $album->displayTitle(),
-                    $artists->pluck('name')->implode(', ') ?: 'Unknown artist',
-                    $album->release_date ?: '',
-                    $artists->flatMap(fn (Artist $artist) => $artist->acceptedGenres->pluck('name'))->unique()->sort()->implode(', '),
-                    $album->spotify_url ?: '',
-                ]);
-            }
-
-            fclose($output);
-        }, str()->slug($albumPlaylist->name).'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        return $exporter->download($albumPlaylist);
     }
 
     /**
