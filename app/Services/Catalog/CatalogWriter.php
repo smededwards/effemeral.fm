@@ -116,7 +116,25 @@ class CatalogWriter
                 : null;
 
             if ($track === null) {
-                $track = Track::query()->firstOrNew([
+                $track = Track::query()
+                    ->where('album_id', $album->id)
+                    ->where('normalised_title', $normalisedTitle)
+                    ->when(
+                        $discNumber !== null,
+                        fn ($query) => $query->where(function ($query) use ($discNumber): void {
+                            $query->where('disc_number', $discNumber)->orWhereNull('disc_number');
+                        }),
+                    )
+                    ->when(
+                        $trackNumber !== null,
+                        fn ($query) => $query->where(function ($query) use ($trackNumber): void {
+                            $query->where('track_number', $trackNumber)->orWhereNull('track_number');
+                        }),
+                    )
+                    ->orderByRaw('CASE WHEN spotify_id IS NULL THEN 0 ELSE 1 END')
+                    ->first();
+
+                $track ??= Track::query()->firstOrNew([
                     'album_id' => $album->id,
                     'normalised_title' => $normalisedTitle,
                     'disc_number' => $discNumber,
