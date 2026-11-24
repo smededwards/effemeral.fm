@@ -20,13 +20,9 @@
                 <p class="mt-2 text-sm text-ef-muted">Add albums in Effemeral, review the order, then sync when it is ready.
                 </p>
             </div>
-            <form class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row" method="POST"
+            <form class="flex w-full sm:w-auto" method="POST"
                 action="{{ route('album-playlists.store', [], false) }}">
                 @csrf
-                <label class="sr-only" for="new-album-playlist-name">New playlist name</label>
-                <input id="new-album-playlist-name"
-                    class="min-w-0 border border-ef-line bg-ef-canvas px-4 py-3 text-sm text-ef-text" type="text"
-                    name="name" maxlength="100" placeholder="Optional name">
                 <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                     type="submit">Create Playlist</button>
             </form>
@@ -62,7 +58,7 @@
                                 {{ ucfirst(str_replace('_', ' ', $albumPlaylist->spotify_sync_status)) }}</p>
                         </div>
                         <a class="font-semibold text-ef-accent-strong hover:underline"
-                            href="{{ route('album-playlists.show', $albumPlaylist, false) }}">Manage Playlist →</a>
+                            href="{{ route('album-playlists.show', $albumPlaylist, false) }}">Manage</a>
                     </li>
                 @endforeach
             </ul>

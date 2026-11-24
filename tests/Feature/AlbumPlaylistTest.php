@@ -31,6 +31,34 @@ class AlbumPlaylistTest extends TestCase
         $this->assertSame('New Releases', $playlist->fresh()->name);
     }
 
+    public function test_user_can_delete_a_playlist_without_deleting_the_spotify_destination(): void
+    {
+        $playlist = AlbumPlaylist::query()->create([
+            'name' => 'Accidental Playlist',
+            'spotify_playlist_id' => 'spotify-playlist-id',
+        ]);
+
+        $this->delete(route('album-playlists.destroy', $playlist))
+            ->assertRedirect(route('playlists.index'))
+            ->assertSessionHas('success', 'Accidental Playlist was deleted from Effemeral. Any Spotify playlist remains unchanged.');
+
+        $this->assertDatabaseMissing('album_playlists', ['id' => $playlist->id]);
+    }
+
+    public function test_a_playlist_cannot_be_deleted_while_it_is_syncing(): void
+    {
+        $playlist = AlbumPlaylist::query()->create([
+            'name' => 'Syncing Playlist',
+            'spotify_sync_status' => 'syncing',
+        ]);
+
+        $this->delete(route('album-playlists.destroy', $playlist))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Wait for the Spotify sync to finish before changing this playlist.');
+
+        $this->assertDatabaseHas('album_playlists', ['id' => $playlist->id]);
+    }
+
     public function test_unnamed_playlist_creation_generates_a_two_word_draft_name(): void
     {
         $this->post(route('album-playlists.store'), ['name' => '   '])
@@ -80,9 +108,9 @@ class AlbumPlaylistTest extends TestCase
 
     public function test_user_can_add_remove_and_reorder_albums_independently_of_other_playlists(): void
     {
-        $first = $this->createAlbum('First Album');
-        $second = $this->createAlbum('Second Album');
-        $third = $this->createAlbum('Third Album');
+        $first = $this->createAlbumWithTrack('First Album', 'spotify:track:first');
+        $second = $this->createAlbumWithTrack('Second Album', 'spotify:track:second');
+        $third = $this->createAlbumWithTrack('Third Album', 'spotify:track:third');
         $playlist = AlbumPlaylist::query()->create(['name' => 'Doom']);
         $otherPlaylist = AlbumPlaylist::query()->create(['name' => 'Post Metal']);
 
@@ -104,6 +132,21 @@ class AlbumPlaylistTest extends TestCase
         $this->assertNull($playlist->fresh()->spotify_playlist_id);
     }
 
+    public function test_empty_albums_cannot_be_added_to_a_playlist(): void
+    {
+        $album = $this->createAlbum('Empty Album');
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Doom']);
+
+        $this->post(route('album-playlists.albums.store', $playlist), ['album_id' => $album->id])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Only albums with Spotify tracks can be added to a playlist.');
+
+        $this->assertDatabaseMissing('album_playlist_items', [
+            'album_playlist_id' => $playlist->id,
+            'album_id' => $album->id,
+        ]);
+    }
+
     public function test_playlist_page_searches_canonical_albums_and_lists_saved_playlists(): void
     {
         $album = $this->createAlbumWithTrack('Mariner', 'spotify:track:mariner');
@@ -123,6 +166,8 @@ class AlbumPlaylistTest extends TestCase
             ->assertOk()
             ->assertSee('Effemeral Album Playlists')
             ->assertSee('Listening Queue')
+            ->assertSee('Manage')
+            ->assertDontSee('Delete')
             ->assertSee(route('album-playlists.show', $playlist, false), false);
 
         $this->get(route('album-playlists.show', [$playlist, 'q' => 'Mariner']))
@@ -213,7 +258,7 @@ class AlbumPlaylistTest extends TestCase
 
     public function test_playlist_name_can_be_saved_or_refreshed_from_album_contents(): void
     {
-        $album = $this->createAlbum('Mourning Earth');
+        $album = $this->createAlbum('Sun Estuary');
         $playlist = AlbumPlaylist::query()->create(['name' => 'Old Name']);
         $playlist->albums()->attach($album->id, ['position' => 1]);
 
@@ -221,15 +266,25 @@ class AlbumPlaylistTest extends TestCase
             ->assertRedirect();
         $this->assertSame('New Name', $playlist->fresh()->name);
 
+        $this->patch(route('album-playlists.update', $playlist), ['name' => 'Sun Estuary'])
+            ->assertRedirect();
+
         $this->post(route('album-playlists.name.refresh', $playlist))
             ->assertRedirect()
             ->assertSessionHas('success', 'Playlist name refreshed.');
-        $this->assertSame('Mourning Earth', $playlist->fresh()->name);
+        $firstSuggestion = $playlist->fresh()->name;
+        $this->assertNotSame('Sun Estuary', $firstSuggestion);
+        $this->assertStringNotContainsString('Sun Estuary 2', $firstSuggestion);
+
+        $this->post(route('album-playlists.name.refresh', $playlist))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Playlist name refreshed.');
+        $this->assertNotSame($firstSuggestion, $playlist->fresh()->name);
     }
 
     public function test_bulk_album_add_generates_a_name_for_an_unnamed_new_playlist(): void
     {
-        $album = $this->createAlbum('Mariner');
+        $album = $this->createAlbumWithTrack('Mariner', 'spotify:track:mariner');
 
         $this->post(route('album-playlists.albums.bulk-store'), [
             'album_ids' => [$album->id],
@@ -244,8 +299,8 @@ class AlbumPlaylistTest extends TestCase
 
     public function test_selected_albums_can_be_added_to_an_existing_playlist(): void
     {
-        $first = $this->createAlbum('Mariner');
-        $second = $this->createAlbum('The Silent Life');
+        $first = $this->createAlbumWithTrack('Mariner', 'spotify:track:mariner');
+        $second = $this->createAlbumWithTrack('The Silent Life', 'spotify:track:the-silent-life');
         $playlist = AlbumPlaylist::query()->create(['name' => 'Fossil Gardens']);
 
         $this->post(route('album-playlists.albums.bulk-store'), [
@@ -342,7 +397,7 @@ class AlbumPlaylistTest extends TestCase
         $preview = app(AlbumPlaylistSyncService::class)->preview($playlist, 'new');
 
         $this->assertFalse($preview['sync_allowed']);
-        $this->assertSame([['title' => 'Incomplete Album', 'artist' => 'Unknown artist', 'available_tracks' => 1, 'total_tracks' => 2]], $preview['incomplete_albums']);
+        $this->assertSame([['album_id' => $album->id, 'title' => 'Incomplete Album', 'artist' => 'Unknown artist', 'available_tracks' => 1, 'total_tracks' => 2]], $preview['incomplete_albums']);
     }
 
     public function test_spotify_sync_rechecks_incomplete_albums_without_trusting_the_preview(): void

@@ -48,6 +48,12 @@
             @endif
             <a class="font-semibold text-ef-accent-strong hover:underline"
                 href="{{ route('album-playlists.export', $albumPlaylist, false) }}">Export CSV</a>
+            <form method="POST" action="{{ route('album-playlists.destroy', $albumPlaylist, false) }}"
+                data-confirm="Delete this Effemeral playlist? Any Spotify playlist will remain unchanged.">
+                @csrf
+                @method('DELETE')
+                <button class="font-semibold text-red-300 hover:text-red-200" type="submit">Delete</button>
+            </form>
         </div>
     </header>
 

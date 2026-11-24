@@ -15,7 +15,8 @@
         <label class="block text-sm font-medium text-ef-text" for="catalogue-search">Search artists and albums</label>
         <div class="mt-3 flex flex-col gap-3 sm:flex-row">
             <input id="catalogue-search" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
-                type="search" name="q" value="{{ $search }}" placeholder="Cult of Luna, Mariner..." autofocus>
+                type="search" name="q" value="{{ $search }}"
+                placeholder="Search by artist or album" autofocus>
             <button class="rounded-md bg-ef-accent px-4 py-2 font-medium text-ef-accent-ink hover:bg-ef-accent-hover"
                 type="submit">Search</button>
         </div>

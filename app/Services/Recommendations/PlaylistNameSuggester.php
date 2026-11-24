@@ -34,10 +34,15 @@ class PlaylistNameSuggester
      * Suggest a unique two-word playlist name from album titles or a curated fallback list.
      *
      * @param  iterable<string>  $titles  The album titles available to name the playlist.
+     * @param  string|null  $excludedName  The current playlist name, when refreshing it.
+     * @param  list<string>  $excludedSuggestions  Recent suggestions to avoid repeating.
      * @return string The suggested playlist name.
      */
-    public function suggestFromTitles(iterable $titles): string
-    {
+    public function suggestFromTitles(
+        iterable $titles,
+        ?string $excludedName = null,
+        array $excludedSuggestions = [],
+    ): string {
         $this->syncSpotifyPlaylistWords();
         $words = $this->extractWords($titles);
         $counts = array_count_values($words);
@@ -48,11 +53,21 @@ class PlaylistNameSuggester
             $selected = $this->fallbackWords($selected);
         }
 
-        $suggestion = implode(' ', array_map(fn (string $word): string => mb_convert_case($word, MB_CASE_TITLE), $selected));
-        $existingNames = SpotifyPlaylist::query()->pluck('name')
-            ->merge(AlbumPlaylist::query()->pluck('name'))
+        $suggestion = $this->formatSuggestion($selected);
+        $excludedNames = collect([$excludedName, ...$excludedSuggestions])
+            ->filter()
             ->map(fn (string $name): string => mb_strtolower($name))
             ->all();
+        $existingNames = SpotifyPlaylist::query()->pluck('name')
+            ->merge(AlbumPlaylist::query()->pluck('name'))
+            ->reject(fn (string $name): bool => $excludedName !== null && mb_strtolower($name) === mb_strtolower($excludedName))
+            ->map(fn (string $name): string => mb_strtolower($name))
+            ->all();
+
+        while (in_array(mb_strtolower($suggestion), $excludedNames, true)) {
+            $suggestion = $this->formatSuggestion($this->fallbackWords([]));
+        }
+
         $uniqueSuggestion = $suggestion;
         $suffix = 2;
 
@@ -61,6 +76,17 @@ class PlaylistNameSuggester
         }
 
         return $uniqueSuggestion;
+    }
+
+    /**
+     * Format selected words as a title-cased playlist name.
+     *
+     * @param  list<string>  $words  The words selected for the name.
+     * @return string The formatted playlist name.
+     */
+    private function formatSuggestion(array $words): string
+    {
+        return implode(' ', array_map(fn (string $word): string => mb_convert_case($word, MB_CASE_TITLE), $words));
     }
 
     /**

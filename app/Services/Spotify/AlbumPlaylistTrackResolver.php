@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 class AlbumPlaylistTrackResolver
 {
     /**
-     * @return array{uris: list<string>, tracks: list<array{uri: string, title: string, album: string, artist: string}>, albums: list<array<string, mixed>>} The desired Spotify content.
+     * @return array{uris: list<string>, tracks: list<array{uri: string, title: string, album: string, artist: string, album_id: int}>, albums: list<array<string, mixed>>} The desired Spotify content.
      */
     public function resolve(AlbumPlaylist $albumPlaylist): array
     {
@@ -56,12 +56,14 @@ class AlbumPlaylistTrackResolver
                     'title' => $albumTrack['title'],
                     'album' => $album->title,
                     'artist' => $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist',
+                    'album_id' => $album->id,
                 ];
             }
 
             $uris = [...$uris, ...$albumUris];
             $expectedTrackCount = max((int) ($album->total_tracks ?? 0), $tracks->count());
             $albumSummaries[] = [
+                'album_id' => $album->id,
                 'title' => $album->title,
                 'artist' => $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist',
                 'available_tracks' => count($albumUris),

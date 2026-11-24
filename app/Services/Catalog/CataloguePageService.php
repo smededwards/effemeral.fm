@@ -88,6 +88,7 @@ class CataloguePageService
         if ($request->hasAny(['filter', 'genre', 'country', 'year', 'completion', 'include_completed', 'include_non_albums'])) {
             $catalogueQuery = Album::query()
                 ->withCount('tracks')
+                ->whereHas('tracks')
                 ->selectSub(Scrobble::query()->selectRaw('COUNT(DISTINCT track_id)')
                     ->whereColumn('scrobbles.album_id', 'albums.id')
                     ->where('source', 'lastfm')->whereNotNull('track_id'), 'heard_tracks')
