@@ -44,6 +44,11 @@ class PageRoutingTest extends TestCase
         $this->get(route('dashboard'))
             ->assertOk()
             ->assertSee('aria-hidden="true">♪</span>', false)
+            ->assertSee('>Home</a>', false)
+            ->assertSee('>Playlists</a>', false)
+            ->assertSee('>Explore</a>', false)
+            ->assertSee('>Listening</a>', false)
+            ->assertSee('>Sources</a>', false)
             ->assertSee('<link rel="manifest" href="/site.webmanifest">', false)
             ->assertSee('href="/favicon-32x32.png"', false);
     }

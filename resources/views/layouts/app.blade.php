@@ -43,12 +43,37 @@
                             <span class="mt-1 block text-sm text-ef-muted">Listening archive</span>
                         </span>
                     </a>
+                    @php
+                        $primaryNavigation = [
+                            ['route' => 'dashboard', 'active' => ['dashboard'], 'label' => 'Home'],
+                            ['route' => 'playlists.index', 'active' => ['playlists.*', 'album-playlists.*', 'spotify-playlists.*'], 'label' => 'Playlists'],
+                            ['route' => 'catalogue.index', 'active' => ['catalogue.*', 'artists.show', 'albums.show', 'genres.show'], 'label' => 'Explore'],
+                            ['route' => 'listening.index', 'active' => ['listening.*'], 'label' => 'Listening'],
+                        ];
+                        $secondaryNavigation = [
+                            ['route' => 'library.index', 'active' => ['library.*'], 'label' => 'Library'],
+                            ['route' => 'recommendations.index', 'active' => ['recommendations.*'], 'label' => 'To Complete'],
+                            ['route' => 'imports.index', 'active' => ['imports.*'], 'label' => 'Sources'],
+                        ];
+                    @endphp
                     <nav class="w-full lg:w-auto" aria-label="Main Navigation">
-                        <ul class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end lg:gap-1">
-                            @foreach ([['route' => 'dashboard', 'active' => ['dashboard'], 'label' => 'Overview'], ['route' => 'playlists.index', 'active' => ['playlists.*', 'album-playlists.*', 'spotify-playlists.*'], 'label' => 'Playlists'], ['route' => 'catalogue.index', 'active' => ['catalogue.*', 'artists.show', 'albums.show'], 'label' => 'Catalogue'], ['route' => 'recommendations.index', 'active' => ['recommendations.*'], 'label' => 'To Complete'], ['route' => 'library.index', 'active' => ['library.*'], 'label' => 'Library'], ['route' => 'listening.index', 'active' => ['listening.*'], 'label' => 'Listening'], ['route' => 'imports.index', 'active' => ['imports.*'], 'label' => 'Imports']] as $item)
+                        <ul class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:justify-end lg:gap-1">
+                            @foreach ($primaryNavigation as $item)
                                 @php($isActive = request()->routeIs(...$item['active']))
                                 <li>
                                     <a class="flex min-h-11 items-center border-l-2 px-4 py-2 text-sm font-semibold transition-colors lg:justify-center lg:border-l-0 lg:border-b-2 lg:px-3 {{ $isActive ? 'border-ef-accent bg-ef-accent text-ef-accent-ink lg:bg-ef-accent-wash lg:text-ef-text' : 'border-ef-line bg-ef-surface text-ef-muted hover:border-ef-accent hover:text-ef-text lg:border-transparent lg:bg-transparent lg:hover:bg-ef-surface' }}"
+                                        href="{{ route($item['route'], [], false) }}"
+                                        @if ($isActive) aria-current="page" @endif>{{ $item['label'] }}</a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </nav>
+                    <nav class="border-t border-ef-line pt-3 lg:ml-auto lg:border-t-0 lg:pt-0" aria-label="Supporting Navigation">
+                        <ul class="flex flex-wrap justify-end gap-x-4 gap-y-2 text-xs font-semibold">
+                            @foreach ($secondaryNavigation as $item)
+                                @php($isActive = request()->routeIs(...$item['active']))
+                                <li>
+                                    <a class="{{ $isActive ? 'text-ef-accent-strong' : 'text-ef-muted hover:text-ef-text' }}"
                                         href="{{ route($item['route'], [], false) }}"
                                         @if ($isActive) aria-current="page" @endif>{{ $item['label'] }}</a>
                                 </li>
