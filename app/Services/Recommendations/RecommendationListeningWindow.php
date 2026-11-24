@@ -9,6 +9,7 @@ use Carbon\CarbonImmutable;
  */
 class RecommendationListeningWindow
 {
+    /** The default recommendation listening window. */
     public const DEFAULT = '1_year';
 
     /**
@@ -37,10 +38,10 @@ class RecommendationListeningWindow
     {
         return match ($window) {
             '7_days' => now()->subDays(7)->toImmutable(),
-            '1_month' => now()->subMonth()->toImmutable(),
+            '1_month' => now()->subDays(30)->toImmutable(),
             'this_year' => now()->startOfYear()->toImmutable(),
             'all_time' => null,
-            default => now()->subYear()->toImmutable(),
+            default => now()->subDays(365)->toImmutable(),
         };
     }
 }

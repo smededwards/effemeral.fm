@@ -37,6 +37,16 @@ class RecommendationListeningWindowTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_month_and_year_windows_use_fixed_day_ranges(): void
+    {
+        Carbon::setTestNow('2026-11-24 18:00:00');
+        $service = app(RecommendationListeningWindow::class);
+
+        $this->assertSame('2026-10-25 18:00:00', $service->cutoff('1_month')?->format('Y-m-d H:i:s'));
+        $this->assertSame('2025-11-24 18:00:00', $service->cutoff('1_year')?->format('Y-m-d H:i:s'));
+        Carbon::setTestNow();
+    }
+
     public function test_old_listening_is_eligible_in_the_default_window_but_not_all_time(): void
     {
         $artist = Artist::query()->create([

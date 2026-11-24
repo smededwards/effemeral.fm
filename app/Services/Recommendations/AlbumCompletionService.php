@@ -14,6 +14,9 @@ use Illuminate\Support\Collection;
  */
 class AlbumCompletionService
 {
+    /**
+     * @param  RecommendationListeningWindow  $listeningWindow  The listening-window resolver.
+     */
     public function __construct(private RecommendationListeningWindow $listeningWindow) {}
 
     /**
@@ -164,6 +167,12 @@ class AlbumCompletionService
         ];
     }
 
+    /**
+     * Normalise a value for comparison with imported listening data.
+     *
+     * @param  string  $value  The value to normalise.
+     * @return string The normalised value.
+     */
     private function normalise(string $value): string
     {
         return preg_replace('/\s+/', ' ', mb_strtolower(trim($value))) ?? '';

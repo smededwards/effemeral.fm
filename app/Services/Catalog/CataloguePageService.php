@@ -19,6 +19,9 @@ use Illuminate\Validation\Rule;
  */
 class CataloguePageService
 {
+    /**
+     * @param  RecommendationListeningWindow  $recommendationListeningWindow  The listening-window resolver.
+     */
     public function __construct(private RecommendationListeningWindow $recommendationListeningWindow) {}
 
     /**

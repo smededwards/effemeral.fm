@@ -57,6 +57,7 @@ class DashboardController extends Controller
      * Create a reviewable draft from matching incomplete catalogue albums.
      *
      * @param  Request  $request  The discovery criteria.
+     * @param  RecommendationListeningWindow  $listeningWindow  The selected listening window.
      * @return RedirectResponse The recommendation review redirect.
      */
     public function discoverRecommendations(Request $request, RecommendationListeningWindow $listeningWindow): RedirectResponse
@@ -135,7 +136,7 @@ class DashboardController extends Controller
                     'heard' => $heard,
                     'total' => $tracks->count(),
                     'percentage' => (int) floor(($heard / $tracks->count()) * 100),
-                'match_reason' => 'Genre: '.$validated['genre'].' · Release year: '.$validated['year'].($savedAlbum?->completion_override === false ? ' · Manual incomplete override' : ''),
+                    'match_reason' => 'Genre: '.$validated['genre'].' · Release year: '.$validated['year'].($savedAlbum?->completion_override === false ? ' · Manual incomplete override' : ''),
                 ];
             })
             ->filter()
@@ -446,8 +447,7 @@ class DashboardController extends Controller
     public function recommendations(
         AlbumCompletionService $completionService,
         RecommendationListeningWindow $listeningWindow,
-    ): View
-    {
+    ): View {
         return view('recommendations.index', $this->recommendationsData($completionService, $listeningWindow));
     }
 
@@ -459,8 +459,7 @@ class DashboardController extends Controller
     private function recommendationsData(
         AlbumCompletionService $completionService,
         RecommendationListeningWindow $listeningWindow,
-    ): array
-    {
+    ): array {
         return [
             'incompleteAlbums' => $completionService->incompleteAlbums(),
             'recommendationListeningWindows' => $listeningWindow->options(),
