@@ -46,13 +46,30 @@
                     @php
                         $primaryNavigation = [
                             ['route' => 'dashboard', 'active' => ['dashboard'], 'label' => 'Home'],
-                            ['route' => 'playlists.index', 'active' => ['playlists.*', 'album-playlists.*', 'spotify-playlists.*'], 'label' => 'Playlists'],
-                            ['route' => 'catalogue.index', 'active' => ['catalogue.*', 'artists.show', 'albums.show', 'genres.show'], 'label' => 'Explore'],
+                            [
+                                'route' => 'playlists.index',
+                                'active' => ['playlists.*', 'album-playlists.*'],
+                                'label' => 'Playlists',
+                            ],
+                            [
+                                'route' => 'catalogue.index',
+                                'active' => ['catalogue.*', 'artists.show', 'albums.show', 'genres.show'],
+                                'label' => 'Explore',
+                            ],
                             ['route' => 'listening.index', 'active' => ['listening.*'], 'label' => 'Listening'],
                         ];
                         $secondaryNavigation = [
                             ['route' => 'library.index', 'active' => ['library.*'], 'label' => 'Library'],
-                            ['route' => 'recommendations.index', 'active' => ['recommendations.*'], 'label' => 'To Complete'],
+                            [
+                                'route' => 'recommendations.index',
+                                'active' => ['recommendations.*'],
+                                'label' => 'To Complete',
+                            ],
+                            [
+                                'route' => 'spotify-playlists.index',
+                                'active' => ['spotify-playlists.*'],
+                                'label' => 'Spotify Archive',
+                            ],
                             ['route' => 'imports.index', 'active' => ['imports.*'], 'label' => 'Sources'],
                         ];
                     @endphp
@@ -68,7 +85,8 @@
                             @endforeach
                         </ul>
                     </nav>
-                    <nav class="border-t border-ef-line pt-3 lg:ml-auto lg:border-t-0 lg:pt-0" aria-label="Supporting Navigation">
+                    <nav class="border-t border-ef-line pt-3 lg:ml-auto lg:border-t-0 lg:pt-0"
+                        aria-label="Supporting Navigation">
                         <ul class="flex flex-wrap justify-end gap-x-4 gap-y-2 text-xs font-semibold">
                             @foreach ($secondaryNavigation as $item)
                                 @php($isActive = request()->routeIs(...$item['active']))

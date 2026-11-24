@@ -4,7 +4,7 @@
     <header class="flex flex-col gap-6 border-b border-ef-line pb-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <a class="text-sm font-semibold text-ef-accent-strong hover:underline"
-                href="{{ route('playlists.index', [], false) }}">← All Playlists</a>
+                href="{{ route('spotify-playlists.index', [], false) }}">← All Spotify Playlists</a>
             <p class="mt-5 text-xs font-semibold tracking-[0.2em] text-ef-accent-strong uppercase">Imported Spotify Playlist
             </p>
             <h1 class="mt-2 font-serif text-4xl font-semibold sm:text-5xl">{{ $spotifyPlaylist->name }}</h1>

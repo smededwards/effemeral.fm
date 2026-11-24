@@ -90,7 +90,7 @@
 
     <nav class="flex flex-wrap gap-x-6 gap-y-3 border-t border-ef-line pt-5 text-sm" aria-label="Supporting Tools">
         <a class="font-semibold text-ef-muted hover:text-ef-accent-strong"
-            href="{{ route('playlists.index', [], false) }}">Browse Imported Spotify Playlists</a>
+            href="{{ route('spotify-playlists.index', [], false) }}">Browse Imported Spotify Playlists</a>
         <a class="font-semibold text-ef-muted hover:text-ef-accent-strong"
             href="{{ route('imports.index', [], false) }}">Manage Imports</a>
         <a class="font-semibold text-ef-muted hover:text-ef-accent-strong"

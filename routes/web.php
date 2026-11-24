@@ -15,6 +15,7 @@ Route::middleware('private')->group(function (): void {
     Route::get('/imports', [DashboardController::class, 'imports'])->name('imports.index');
     Route::get('/library', [DashboardController::class, 'library'])->name('library.index');
     Route::get('/playlists', [DashboardController::class, 'playlists'])->name('playlists.index');
+    Route::get('/spotify-playlists', [DashboardController::class, 'spotifyPlaylists'])->name('spotify-playlists.index');
     Route::post('/playlists', [AlbumPlaylistController::class, 'store'])->name('album-playlists.store');
     Route::get('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'show'])->name('album-playlists.show');
     Route::get('/playlists/{albumPlaylist}/export.csv', [AlbumPlaylistController::class, 'export'])->name('album-playlists.export');

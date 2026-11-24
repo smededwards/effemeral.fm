@@ -63,7 +63,8 @@ class AlbumPlaylistTest extends TestCase
         $this->get(route('playlists.index'))
             ->assertOk()
             ->assertSee('Effemeral Album Playlists')
-            ->assertSee('Listening Queue');
+            ->assertSee('Listening Queue')
+            ->assertSee(route('album-playlists.show', $playlist, false), false);
 
         $this->get(route('album-playlists.show', [$playlist, 'q' => 'Mariner']))
             ->assertOk()

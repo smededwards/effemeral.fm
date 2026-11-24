@@ -19,6 +19,7 @@ use App\Services\Imports\ImportStatusPageService;
 use App\Services\Library\LibraryPageService;
 use App\Services\Playlists\SpotifyPlaylistOverviewService;
 use App\Services\Recommendations\AlbumCompletionService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -342,21 +343,41 @@ class DashboardController extends Controller
     }
 
     /**
-     * Show imported Spotify playlists and Effemeral album playlists.
+     * Show Effemeral album playlists.
      *
-     * @return View The playlist overview page.
+     * @return View The Effemeral playlist page.
      */
-    public function playlists(SpotifyPlaylistOverviewService $overviewService): View
+    public function playlists(Request $request): View
     {
-        $search = trim((string) request('playlist_search'));
-        $playlists = SpotifyPlaylist::query()
+        $playlistSort = $this->playlistSort($request->query('playlist_sort'));
+
+        return view('playlists.index', [
+            'albumPlaylists' => $this->sortPlaylists(
+                AlbumPlaylist::query()->withCount('albums'),
+                $playlistSort,
+                'updated_at',
+            )->get(),
+            'playlistSort' => $playlistSort,
+        ]);
+    }
+
+    /**
+     * Show imported Spotify playlists for browsing and audit work.
+     *
+     * @return View The Spotify playlist archive page.
+     */
+    public function spotifyPlaylists(Request $request, SpotifyPlaylistOverviewService $overviewService): View
+    {
+        $search = trim((string) $request->query('playlist_search'));
+        $playlistSort = $this->playlistSort($request->query('playlist_sort'));
+        $spotifyPlaylists = SpotifyPlaylist::query()
             ->with(['items.album'])
             ->withCount([
                 'items',
                 'items as album_items_count' => fn ($query) => $query->whereNotNull('album_id'),
             ])
-            ->when($search !== '', fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
-            ->orderBy('name')
+            ->when($search !== '', fn ($query) => $query->where('name', 'like', '%'.$search.'%'));
+        $playlists = $this->sortPlaylists($spotifyPlaylists, $playlistSort, 'last_synced_at')
             ->paginate(25)
             ->withQueryString();
 
@@ -368,13 +389,49 @@ class DashboardController extends Controller
             return $playlist;
         });
 
-        return view('playlists.index', [
-            'albumPlaylists' => AlbumPlaylist::query()->withCount('albums')->orderBy('name')->get(),
+        return view('spotify-playlists.index', [
             'playlists' => $playlists,
             'playlistSearch' => $search,
+            'playlistSort' => $playlistSort,
             'latestPlaylistImport' => SpotifyPlaylistImportRun::query()->latest()->first(),
             'failedPlaylists' => SpotifyPlaylist::query()->whereNotNull('last_import_error')->latest('last_import_attempted_at')->get(),
         ]);
+    }
+
+    /**
+     * Resolve the supported playlist sort options.
+     *
+     * @param  mixed  $sort  The requested sort option.
+     * @return string The normalised sort option.
+     */
+    private function playlistSort(mixed $sort): string
+    {
+        return match ($sort) {
+            'oldest' => 'oldest',
+            'a_z' => 'a_z',
+            'z_a' => 'z_a',
+            default => 'recent',
+        };
+    }
+
+    /**
+     * Apply a playlist sort to an Eloquent query.
+     *
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query  The playlist query.
+     * @param  string  $sort  The normalised sort option.
+     * @param  string  $updatedColumn  The model column representing its latest update.
+     * @return Builder<TModel> The sorted query.
+     */
+    private function sortPlaylists(Builder $query, string $sort, string $updatedColumn): Builder
+    {
+        return match ($sort) {
+            'oldest' => $query->orderBy($updatedColumn)->orderBy('name'),
+            'a_z' => $query->orderBy('name')->orderByDesc($updatedColumn),
+            'z_a' => $query->orderByDesc('name')->orderByDesc($updatedColumn),
+            default => $query->orderByDesc($updatedColumn)->orderBy('name'),
+        };
     }
 
     /**
