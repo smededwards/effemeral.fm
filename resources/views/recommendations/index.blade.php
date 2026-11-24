@@ -20,8 +20,18 @@
                 <p class="mt-2 text-sm text-ef-muted">{{ number_format($incompleteAlbums->count()) }} albums ready to
                     continue.</p>
             </div>
-            <form method="POST" action="{{ route('recommendations.generate', [], false) }}">
+            <form class="flex flex-col gap-3 sm:flex-row sm:items-end" method="POST"
+                action="{{ route('recommendations.generate', [], false) }}">
                 @csrf
+                <label class="text-sm text-ef-muted" for="recommendation-listening-window">Exclude albums heard within
+                    <select id="recommendation-listening-window"
+                        class="mt-2 block border border-ef-line bg-ef-canvas px-3 py-3 text-ef-text"
+                        name="listened_within">
+                        @foreach ($recommendationListeningWindows as $value => $label)
+                            <option value="{{ $value }}" @selected($value === '1_year')>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
                 <button class="bg-ef-accent px-4 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                     type="submit">Generate Draft</button>
             </form>

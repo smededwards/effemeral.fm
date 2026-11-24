@@ -19,6 +19,7 @@ use App\Services\Imports\ImportStatusPageService;
 use App\Services\Library\LibraryPageService;
 use App\Services\Playlists\SpotifyPlaylistOverviewService;
 use App\Services\Recommendations\AlbumCompletionService;
+use App\Services\Recommendations\RecommendationListeningWindow;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,15 +57,17 @@ class DashboardController extends Controller
      * Create a reviewable draft from matching incomplete catalogue albums.
      *
      * @param  Request  $request  The discovery criteria.
+     * @param  RecommendationListeningWindow  $listeningWindow  The selected listening window.
      * @return RedirectResponse The recommendation review redirect.
      */
-    public function discoverRecommendations(Request $request): RedirectResponse
+    public function discoverRecommendations(Request $request, RecommendationListeningWindow $listeningWindow): RedirectResponse
     {
         $validated = $request->validate([
             'artist_id' => ['nullable', 'integer', 'exists:artists,id'],
             'album_id' => ['nullable', 'integer', 'exists:albums,id'],
             'genre' => ['required', 'string', 'max:100'],
             'year' => ['required', 'integer', 'between:1900,2100'],
+            'listened_within' => ['nullable', 'string', 'in:7_days,1_month,this_year,1_year,all_time'],
         ]);
 
         if (empty($validated['artist_id']) === empty($validated['album_id'])) {
@@ -79,8 +82,10 @@ class DashboardController extends Controller
             : null;
         $contextArtistIds = $selectedAlbum?->artists->pluck('id')->all() ?? [$selectedArtist->id];
         $genre = $this->normalise($validated['genre']);
+        $window = $validated['listened_within'] ?? RecommendationListeningWindow::DEFAULT;
         $heardTrackIds = Scrobble::query()
             ->whereNotNull('track_id')
+            ->when($listeningWindow->cutoff($window), fn ($query, $cutoff) => $query->where('listened_at', '>=', $cutoff))
             ->pluck('track_id')
             ->flip();
         /**
@@ -439,18 +444,25 @@ class DashboardController extends Controller
      *
      * @return View The recommendation page.
      */
-    public function recommendations(AlbumCompletionService $completionService): View
-    {
-        return view('recommendations.index', $this->recommendationsData($completionService));
+    public function recommendations(
+        AlbumCompletionService $completionService,
+        RecommendationListeningWindow $listeningWindow,
+    ): View {
+        return view('recommendations.index', $this->recommendationsData($completionService, $listeningWindow));
     }
 
     /**
+     * @param  AlbumCompletionService  $completionService  The album completion service.
+     * @param  RecommendationListeningWindow  $listeningWindow  The recommendation listening-window service.
      * @return array<string, mixed> The recommendation data.
      */
-    private function recommendationsData(AlbumCompletionService $completionService): array
-    {
+    private function recommendationsData(
+        AlbumCompletionService $completionService,
+        RecommendationListeningWindow $listeningWindow,
+    ): array {
         return [
             'incompleteAlbums' => $completionService->incompleteAlbums(),
+            'recommendationListeningWindows' => $listeningWindow->options(),
             'latestRecommendation' => RecommendationRun::query()
                 ->with('albumRecommendations.album', 'albumRecommendations.spotifySavedAlbum')
                 ->latest()
@@ -468,9 +480,12 @@ class DashboardController extends Controller
      *
      * @return RedirectResponse The recommendation review redirect.
      */
-    public function generateRecommendations(AlbumCompletionService $completionService): RedirectResponse
+    public function generateRecommendations(Request $request, AlbumCompletionService $completionService): RedirectResponse
     {
-        $albums = $completionService->incompleteAlbums();
+        $validated = $request->validate([
+            'listened_within' => ['nullable', 'string', 'in:7_days,1_month,this_year,1_year,all_time'],
+        ]);
+        $albums = $completionService->incompleteAlbums($validated['listened_within'] ?? RecommendationListeningWindow::DEFAULT);
 
         if ($albums->isEmpty()) {
             return back()->with('error', 'No incomplete albums are available for recommendation.');

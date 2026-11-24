@@ -15,12 +15,18 @@ use Illuminate\Support\Collection;
 class AlbumCompletionService
 {
     /**
+     * @param  RecommendationListeningWindow  $listeningWindow  The listening-window resolver.
+     */
+    public function __construct(private RecommendationListeningWindow $listeningWindow) {}
+
+    /**
+     * @param  string  $window  The listening window used to determine completion.
      * @return Collection<int, array<string, mixed>>
      */
-    public function incompleteAlbums(): Collection
+    public function incompleteAlbums(string $window = RecommendationListeningWindow::DEFAULT): Collection
     {
         $legacyAlbums = SpotifySavedAlbum::query()->get()->keyBy('spotify_album_id');
-        $heardTrackIds = Scrobble::query()->whereNotNull('track_id')->pluck('track_id')->flip();
+        $heardTrackIds = $this->heardTrackIds($window);
         $canonicalAlbums = Album::query()
             ->with(['artists', 'tracks', 'spotifyCollections'])
             ->whereHas('spotifyCollections', fn ($query) => $query->where('collection_type', 'saved'))
@@ -68,7 +74,11 @@ class AlbumCompletionService
         }
 
         $heardTracks = [];
-        foreach (Scrobble::query()->whereNotNull('album_name')->get(['artist_name', 'album_name', 'track_name']) as $scrobble) {
+        $scrobbles = Scrobble::query()
+            ->whereNotNull('album_name')
+            ->when($this->listeningWindow->cutoff($window), fn ($query, $cutoff) => $query->where('listened_at', '>=', $cutoff))
+            ->get(['artist_name', 'album_name', 'track_name']);
+        foreach ($scrobbles as $scrobble) {
             $albumKey = $this->normalise($scrobble->artist_name).'|'.$this->normalise((string) $scrobble->album_name);
             $heardTracks[$albumKey][$this->normalise($scrobble->track_name)] = true;
         }
@@ -157,8 +167,29 @@ class AlbumCompletionService
         ];
     }
 
+    /**
+     * Normalise a value for comparison with imported listening data.
+     *
+     * @param  string  $value  The value to normalise.
+     * @return string The normalised value.
+     */
     private function normalise(string $value): string
     {
         return preg_replace('/\s+/', ' ', mb_strtolower(trim($value))) ?? '';
+    }
+
+    /**
+     * Return track IDs heard inside the selected listening window.
+     *
+     * @param  string  $window  The selected listening window.
+     * @return Collection<int|string, int|string> The heard track IDs keyed for lookup.
+     */
+    private function heardTrackIds(string $window): Collection
+    {
+        return Scrobble::query()
+            ->whereNotNull('track_id')
+            ->when($this->listeningWindow->cutoff($window), fn ($query, $cutoff) => $query->where('listened_at', '>=', $cutoff))
+            ->pluck('track_id')
+            ->flip();
     }
 }
