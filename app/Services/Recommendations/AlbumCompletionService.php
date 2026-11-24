@@ -182,7 +182,7 @@ class AlbumCompletionService
      * Return track IDs heard inside the selected listening window.
      *
      * @param  string  $window  The selected listening window.
-     * @return Collection<int|string, bool> The heard track IDs.
+     * @return Collection<int|string, int|string> The heard track IDs keyed for lookup.
      */
     private function heardTrackIds(string $window): Collection
     {
