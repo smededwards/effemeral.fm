@@ -113,6 +113,26 @@ nav[aria-label='Pagination Navigation'] span[aria-current='page'] > span {
     border-color: var(--ef-accent);
 }
 
+@media (min-width: 40rem) {
+    nav[aria-label='Pagination Navigation'] > div.hidden {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    nav[aria-label='Pagination Navigation'] > div.hidden > div:first-child {
+        white-space: nowrap;
+    }
+
+    nav[aria-label='Pagination Navigation'] > div.hidden > div:last-child {
+        align-self: flex-end;
+        max-width: 100%;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+    }
+}
+
 @layer components {
     article,
     section[class*='border'],
