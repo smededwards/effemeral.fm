@@ -173,10 +173,12 @@ class AlbumPlaylistTest extends TestCase
         $newest->update(['release_date' => '2024-01-01']);
         $middle = $this->createAlbum('Middle Release');
         $middle->update(['release_date' => '2018-01-01']);
-        $artist->albums()->attach([$oldest->id, $newest->id, $middle->id]);
+        $deluxe = $this->createAlbum('Middle Release Deluxe');
+        $deluxe->update(['release_date' => '2018-01-01']);
+        $artist->albums()->attach([$oldest->id, $newest->id, $middle->id, $deluxe->id]);
         $playlist = AlbumPlaylist::query()->create(['name' => 'Listening Queue']);
 
-        $response = $this->get(route('album-playlists.show', [$playlist, 'q' => 'Cult of Luna']))
+        $response = $this->get(route('album-playlists.show', [$playlist, 'q' => 'Cult']))
             ->assertOk();
 
         $this->assertSame(

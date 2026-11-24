@@ -70,17 +70,31 @@
             <div aria-labelledby="add-albums">
                 <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Catalogue</p>
                 <h3 id="add-albums" class="mt-2 text-xl font-semibold">Add Full Albums</h3>
-                <form class="mt-4 flex flex-col gap-3 sm:flex-row" method="GET"
+                <form id="album-suggestion-search" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" method="GET"
                     action="{{ route('album-playlists.show', $albumPlaylist, false) }}">
                     <label class="sr-only" for="album-search">Search albums, artists, or genres</label>
                     <input id="album-search"
                         class="min-w-0 flex-1 border border-ef-line bg-ef-canvas px-4 py-3 text-sm text-ef-text"
                         type="search" name="q" value="{{ $search }}"
                         placeholder="Search albums, artists, or genres">
+                    <label class="text-sm text-ef-muted">Sort by
+                        <select class="mt-2 block border border-ef-line bg-ef-canvas px-2 py-3 text-sm text-ef-text"
+                            name="sort">
+                            <option value="relevance" @selected($sort === 'relevance')>{{ $artistSearch ? 'Release order' : 'Relevance and newest' }}</option>
+                            <option value="release_oldest" @selected($sort === 'release_oldest')>Oldest release</option>
+                            <option value="release_newest" @selected($sort === 'release_newest')>Newest release</option>
+                            <option value="recently_added" @selected($sort === 'recently_added')>Recently added</option>
+                        </select>
+                    </label>
                     <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                         type="submit">Search Catalogue</button>
                 </form>
                 @if ($search !== '')
+                    <div class="mt-4 flex flex-col gap-2 border-b border-ef-line pb-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-xs font-semibold tracking-[0.14em] text-ef-accent-strong uppercase">
+                            {{ $artistSearch ? 'Artist discography' : 'Related albums' }}
+                        </p>
+                    </div>
                     @if ($albums->isNotEmpty())
                         <form class="mt-4" method="POST"
                             action="{{ route('album-playlists.albums.bulk-store', [], false) }}">
@@ -97,8 +111,8 @@
                                     class="bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                                     type="submit">Add selected albums</button>
                             </div>
-                            <p class="mt-3 text-xs text-ef-muted">Showing up to 50 related albums, with exact matches and
-                                newer releases first. Refine your search for more focused results.</p>
+                            <p class="mt-3 text-xs text-ef-muted">Showing up to 50 results. Duplicate editions are grouped
+                                with the original preferred. Refine your search for more focused results.</p>
                             <ul class="divide-y divide-ef-line">
                                 @foreach ($albums as $album)
                                     <li class="flex items-start gap-3 py-4">
@@ -108,7 +122,9 @@
                                             for="playlist-album-{{ $album->id }}">
                                             <span class="font-semibold">{{ $album->displayTitle() }}</span>
                                             <span class="mt-1 block text-sm text-ef-muted">
-                                                {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</span>
+                                                {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }} ·
+                                                {{ $album->release_date ? substr($album->release_date, 0, 4) : 'Release year unknown' }} ·
+                                                {{ ucfirst($album->album_type ?: 'Album') }}</span>
                                         </label>
                                     </li>
                                 @endforeach
