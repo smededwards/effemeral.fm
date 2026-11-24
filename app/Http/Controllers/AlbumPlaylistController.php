@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Album;
 use App\Models\AlbumPlaylist;
+use App\Models\Artist;
 use App\Models\SpotifyPlaylist;
 use App\Services\Playlists\AlbumPlaylistExporter;
 use App\Services\Recommendations\PlaylistNameSuggester;
@@ -34,6 +35,9 @@ class AlbumPlaylistController extends Controller
         $search = trim((string) $request->query('q', ''));
         $searchTerm = '%'.$search.'%';
         $normalisedSearch = mb_strtolower($search);
+        $artistSearch = $search !== '' && Artist::query()
+            ->where('normalised_name', $normalisedSearch)
+            ->exists();
         $albumQuery = Album::query()
             ->with('artists')
             ->when($search !== '', function ($query) use ($search): void {
@@ -44,7 +48,7 @@ class AlbumPlaylistController extends Controller
                 });
             })
             ->whereDoesntHave('playlists', fn ($query) => $query->whereKey($albumPlaylist->id))
-            ->when($search !== '', function ($query) use ($normalisedSearch, $searchTerm): void {
+            ->when($search !== '', function ($query) use ($artistSearch, $normalisedSearch, $searchTerm): void {
                 $query->orderByRaw(
                     "CASE
                         WHEN LOWER(albums.title) = ? THEN 0
@@ -59,11 +63,20 @@ class AlbumPlaylistController extends Controller
                         ELSE 3
                     END",
                     [$normalisedSearch, $searchTerm, $normalisedSearch, $normalisedSearch]
-                )
-                ->orderByRaw('CASE WHEN release_date IS NULL THEN 1 ELSE 0 END')
-                ->orderByDesc('release_date')
-                ->orderByDesc('albums.created_at')
-                ->orderBy('title');
+                );
+
+                if ($artistSearch) {
+                    $query->orderByRaw('CASE WHEN release_date IS NULL THEN 1 ELSE 0 END')
+                        ->orderBy('release_date')
+                        ->orderBy('title');
+
+                    return;
+                }
+
+                $query->orderByRaw('CASE WHEN release_date IS NULL THEN 1 ELSE 0 END')
+                    ->orderByDesc('release_date')
+                    ->orderByDesc('albums.created_at')
+                    ->orderBy('title');
             });
 
         return view('playlists.show', [

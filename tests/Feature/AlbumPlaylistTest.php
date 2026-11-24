@@ -161,6 +161,30 @@ class AlbumPlaylistTest extends TestCase
         $this->assertSame($older->id, $albums->get(2)->id);
     }
 
+    public function test_artist_search_lists_albums_in_release_order(): void
+    {
+        $artist = Artist::query()->create([
+            'name' => 'Cult of Luna',
+            'normalised_name' => 'cult of luna',
+        ]);
+        $oldest = $this->createAlbum('Oldest Release');
+        $oldest->update(['release_date' => '2010-01-01']);
+        $newest = $this->createAlbum('Newest Release');
+        $newest->update(['release_date' => '2024-01-01']);
+        $middle = $this->createAlbum('Middle Release');
+        $middle->update(['release_date' => '2018-01-01']);
+        $artist->albums()->attach([$oldest->id, $newest->id, $middle->id]);
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Listening Queue']);
+
+        $response = $this->get(route('album-playlists.show', [$playlist, 'q' => 'Cult of Luna']))
+            ->assertOk();
+
+        $this->assertSame(
+            [$oldest->id, $middle->id, $newest->id],
+            $response->viewData('albums')->pluck('id')->all(),
+        );
+    }
+
     public function test_playlist_name_can_be_saved_or_refreshed_from_album_contents(): void
     {
         $album = $this->createAlbum('Mourning Earth');
