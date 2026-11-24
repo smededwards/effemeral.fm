@@ -15,19 +15,16 @@ class MusicBrainzClient
     private bool $hasRequested = false;
 
     /**
-     * @return array{musicbrainz_mbid: string, location: ?string, country_code: ?string}|null
-     */
-    /**
      * Resolve an artist's origin metadata without guessing ambiguous matches.
      *
      * @param  Artist  $artist  The existing artist to enrich.
-     * @return array<string, mixed>|null The matched metadata, if unambiguous.
+     * @return array{musicbrainz_mbid: string, location: ?string, country_code: ?string, genres: list<string>}|null
      */
     public function artistMetadata(Artist $artist): ?array
     {
         $musicbrainzId = $artist->musicbrainz_mbid ?: $artist->lastfm_mbid;
         $payload = $musicbrainzId !== null
-            ? $this->get('artist/'.rawurlencode($musicbrainzId), ['fmt' => 'json'])
+            ? $this->get('artist/'.rawurlencode($musicbrainzId), ['fmt' => 'json', 'inc' => 'genres'])
             : null;
 
         if ($payload !== null && $this->normalise((string) ($payload['name'] ?? '')) !== $this->normalise($artist->name)) {
@@ -45,12 +42,25 @@ class MusicBrainzClient
             return null;
         }
 
+        if (! array_key_exists('genres', $payload)) {
+            $payload = $this->get('artist/'.rawurlencode($musicbrainzId), [
+                'fmt' => 'json',
+                'inc' => 'genres',
+            ]) ?? $payload;
+        }
+
         $countryCode = strtoupper((string) ($payload['country'] ?? ''));
 
         return [
             'musicbrainz_mbid' => $musicbrainzId,
             'location' => $this->areaName($payload, 'begin-area.name'),
             'country_code' => preg_match('/^[A-Z]{2}$/', $countryCode) === 1 ? $countryCode : null,
+            'genres' => collect($payload['genres'] ?? [])
+                ->filter(fn (mixed $genre): bool => is_array($genre) && is_string($genre['name'] ?? null))
+                ->sortByDesc(fn (array $genre): int => (int) ($genre['count'] ?? 0))
+                ->pluck('name')
+                ->values()
+                ->all(),
         ];
     }
 
@@ -136,7 +146,8 @@ class MusicBrainzClient
     {
         for ($attempt = 1; $attempt <= 3; $attempt++) {
             if ($this->hasRequested) {
-                Sleep::for(1)->seconds();
+                // MusicBrainz requires requests to be spaced even when the previous response failed.
+                Sleep::for((int) config('services.musicbrainz.min_request_interval_ms', 1500))->milliseconds();
             }
             $this->hasRequested = true;
 

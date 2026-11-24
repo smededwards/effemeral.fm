@@ -122,7 +122,7 @@ class SpotifyPlaylistImportTest extends TestCase
             'requested_limit' => null,
         ]);
 
-        $job = new ImportSpotifyPlaylists($run->id);
+        $job = new ImportSpotifyPlaylists($run->id, null, false, true);
         $job->handle(app(SpotifyClient::class));
         $job->handle(app(SpotifyClient::class));
 
@@ -152,6 +152,73 @@ class SpotifyPlaylistImportTest extends TestCase
             'updated_count' => 1,
         ]);
         $this->assertSame(1, $playlistItemRequests);
+    }
+
+    public function test_a_bounded_new_playlist_import_skips_existing_playlists(): void
+    {
+        config()->set('services.spotify.access_token', 'test-token');
+        $playlistItemRequests = [];
+        SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'existing-playlist',
+            'name' => 'Existing playlist',
+        ]);
+
+        Http::fake(function ($request) use (&$playlistItemRequests) {
+            if (str_contains($request->url(), '/me/playlists')) {
+                return Http::response([
+                    'next' => null,
+                    'total' => 3,
+                    'items' => [
+                        ['id' => 'existing-playlist', 'name' => 'Existing playlist'],
+                        ['id' => 'new-playlist-one', 'name' => 'New playlist one'],
+                        ['id' => 'new-playlist-two', 'name' => 'New playlist two'],
+                    ],
+                ]);
+            }
+
+            if (str_contains($request->url(), '/artists')) {
+                return Http::response(['artists' => []]);
+            }
+
+            if (str_contains($request->url(), '/playlists/')) {
+                $playlistItemRequests[] = $request->url();
+            }
+
+            return Http::response([
+                'items' => [[
+                    'added_at' => '2026-11-04T12:00:00Z',
+                    'track' => [
+                        'id' => 'track-id',
+                        'uri' => 'spotify:track:track-id',
+                        'name' => 'A Track',
+                        'album' => [
+                            'id' => 'album-id',
+                            'name' => 'An Album',
+                            'album_type' => 'album',
+                            'artists' => [['id' => 'artist-id', 'name' => 'An Artist']],
+                        ],
+                    ],
+                ]],
+            ]);
+        });
+
+        $run = SpotifyPlaylistImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'queued',
+            'requested_limit' => 2,
+        ]);
+
+        (new ImportSpotifyPlaylists($run->id, null, true))->handle(app(SpotifyClient::class));
+
+        $this->assertDatabaseCount('spotify_playlists', 3);
+        $this->assertDatabaseHas('spotify_playlist_import_runs', [
+            'id' => $run->id,
+            'status' => 'completed',
+            'imported_count' => 2,
+            'skipped_count' => 1,
+        ]);
+        $this->assertCount(2, $playlistItemRequests);
+        $this->assertNotContains('https://api.spotify.com/v1/playlists/existing-playlist/items', $playlistItemRequests);
     }
 
     public function test_playlist_import_persists_the_next_page_after_a_quota_failure(): void

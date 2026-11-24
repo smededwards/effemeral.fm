@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEfmId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class Genre extends Model
 {
+    use HasEfmId;
+
+    /** EFMID entity type used in generated identifiers. */
+    protected const EFM_TYPE = 'GEN';
+
     protected $fillable = ['name', 'normalised_name'];
 
     protected function name(): Attribute

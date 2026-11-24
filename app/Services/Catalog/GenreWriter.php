@@ -41,6 +41,17 @@ class GenreWriter
     }
 
     /**
+     * Add allowlisted MusicBrainz genres while preserving manual overrides.
+     *
+     * @param  Artist  $artist  The artist being updated.
+     * @param  list<string>  $genres  The imported MusicBrainz genre values.
+     */
+    public function syncMusicBrainz(Artist $artist, array $genres): void
+    {
+        $this->syncImported($artist, $genres, 'musicbrainz');
+    }
+
+    /**
      * @param  Artist  $artist  The artist being updated.
      * @param  list<string>  $genres  The requested manual genre values.
      */

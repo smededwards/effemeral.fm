@@ -23,6 +23,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
                 'begin-area' => ['name' => 'Manchester'],
                 'area' => ['name' => 'England'],
                 'country' => 'GB',
+                'genres' => [],
             ]),
         ]);
         $artist = Artist::query()->create([
@@ -42,8 +43,29 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
             'country_manual' => false,
         ]);
         Http::assertSent(fn ($request): bool => $request->hasHeader('User-Agent', 'Effemeral/0.1 (https://github.com/smededwards/effemeral.fm)')
-            && $request->url() === 'https://musicbrainz.org/ws/2/artist/artist-mbid?fmt=json');
+            && $request->url() === 'https://musicbrainz.org/ws/2/artist/artist-mbid?fmt=json&inc=genres');
         Sleep::assertNeverSlept();
+    }
+
+    public function test_provider_errors_skip_an_artist_and_continue_the_batch(): void
+    {
+        Sleep::fake();
+        Http::preventStrayRequests();
+        Http::fakeSequence('musicbrainz.org/ws/2/artist*')
+            ->pushStatus(503)
+            ->pushStatus(503)
+            ->pushStatus(503)
+            ->push([
+                'count' => 1,
+                'artists' => [['id' => 'artist-mbid', 'name' => 'The Artist', 'country' => 'GB', 'genres' => []]],
+            ]);
+        Artist::query()->create(['name' => 'Blocked Artist', 'normalised_name' => 'blocked artist']);
+        $artist = Artist::query()->create(['name' => 'The Artist', 'normalised_name' => 'the artist']);
+
+        $this->artisan('artists:import-musicbrainz --limit=2')->assertSuccessful();
+
+        $this->assertNull(Artist::query()->where('name', 'Blocked Artist')->value('musicbrainz_checked_at'));
+        $this->assertNotNull($artist->fresh()->musicbrainz_checked_at);
     }
 
     public function test_musicbrainz_search_only_imports_a_unique_exact_name_match(): void
@@ -54,7 +76,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
             'musicbrainz.org/ws/2/artist*' => Http::response([
                 'count' => 2,
                 'artists' => [
-                    ['id' => 'artist-one', 'name' => 'The Artist', 'begin-area' => ['name' => 'Leeds'], 'country' => 'GB'],
+                    ['id' => 'artist-one', 'name' => 'The Artist', 'begin-area' => ['name' => 'Leeds'], 'country' => 'GB', 'genres' => []],
                     ['id' => 'near-match', 'name' => 'The Artist Project'],
                 ],
             ]),
@@ -88,6 +110,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
                     'name' => 'The Artist',
                     'begin-area' => ['name' => 'Manchester'],
                     'country' => 'US',
+                    'genres' => [],
                 ]],
             ]),
         ]);
@@ -115,8 +138,8 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
             'musicbrainz.org/ws/2/artist*' => Http::response([
                 'count' => 2,
                 'artists' => [
-                    ['id' => 'artist-one', 'name' => 'The Artist', 'begin-area' => ['name' => 'Leeds']],
-                    ['id' => 'artist-two', 'name' => 'The Artist', 'begin-area' => ['name' => 'Bristol']],
+                    ['id' => 'artist-one', 'name' => 'The Artist', 'begin-area' => ['name' => 'Leeds'], 'genres' => []],
+                    ['id' => 'artist-two', 'name' => 'The Artist', 'begin-area' => ['name' => 'Bristol'], 'genres' => []],
                 ],
             ]),
         ]);
@@ -148,6 +171,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
                 'begin-area' => ['name' => 'Manchester'],
                 'area' => ['name' => 'England'],
                 'country' => 'GB',
+                'genres' => [],
             ]),
         ]);
         $artist = Artist::query()->create([

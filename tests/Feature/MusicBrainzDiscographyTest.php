@@ -149,6 +149,34 @@ class MusicBrainzDiscographyTest extends TestCase
         Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'offset=100'));
     }
 
+    public function test_musicbrainz_artist_metadata_includes_location_country_and_genres(): void
+    {
+        Sleep::fake();
+        $artist = Artist::query()->create([
+            'name' => 'Baroness',
+            'normalised_name' => 'baroness',
+            'musicbrainz_mbid' => 'artist-mbid',
+        ]);
+        Http::fake([
+            'musicbrainz.org/ws/2/artist/artist-mbid*' => Http::response([
+                'id' => 'artist-mbid',
+                'name' => 'Baroness',
+                'country' => 'US',
+                'begin-area' => ['name' => 'Savannah'],
+                'genres' => [
+                    ['name' => 'sludge metal', 'count' => 5],
+                    ['name' => 'metal', 'count' => 2],
+                ],
+            ]),
+        ]);
+
+        $metadata = app(MusicBrainzClient::class)->artistMetadata($artist);
+
+        $this->assertSame('US', $metadata['country_code']);
+        $this->assertSame('Savannah', $metadata['location']);
+        $this->assertSame(['sludge metal', 'metal'], $metadata['genres']);
+    }
+
     public function test_persistent_musicbrainz_rate_limits_mark_the_refresh_as_failed(): void
     {
         Sleep::fake();

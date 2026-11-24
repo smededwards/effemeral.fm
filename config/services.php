@@ -52,6 +52,7 @@ return [
 
     'musicbrainz' => [
         'endpoint' => env('MUSICBRAINZ_API_ENDPOINT', 'https://musicbrainz.org/ws/2'),
+        'min_request_interval_ms' => (int) env('MUSICBRAINZ_MIN_REQUEST_INTERVAL_MS', 1500),
         'user_agent' => env('MUSICBRAINZ_USER_AGENT', 'Effemeral/0.1 (https://github.com/smededwards/effemeral.fm)'),
     ],
 

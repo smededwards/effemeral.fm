@@ -3,17 +3,18 @@
 namespace App\Console\Commands;
 
 use App\Models\Artist;
+use App\Services\Catalog\GenreWriter;
 use App\Services\MusicBrainz\MusicBrainzClient;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
-#[Signature('artists:import-musicbrainz {--refresh : Check all artists again, including previously checked artists} {--limit=0 : Stop after this many artists (0 means all)}')]
-#[Description('Import artist country and locality from MusicBrainz')]
 /**
- * Imports MusicBrainz origins for artists that already exist locally.
+ * Enriches existing artists with MusicBrainz identity, origin and genre metadata.
  */
+#[Signature('artists:import-musicbrainz {--refresh : Check all artists again, including previously checked artists} {--limit=0 : Stop after this many artists (0 means all)}')]
+#[Description('Enrich existing artists with MusicBrainz metadata')]
 class ImportMusicBrainzArtistMetadata extends Command
 {
     /**
@@ -22,7 +23,7 @@ class ImportMusicBrainzArtistMetadata extends Command
      * @param  MusicBrainzClient  $client  The MusicBrainz API client.
      * @return int The command exit status.
      */
-    public function handle(MusicBrainzClient $client): int
+    public function handle(MusicBrainzClient $client, GenreWriter $genreWriter): int
     {
         $lock = Cache::lock('musicbrainz-artist-metadata-import', 86400);
         if (! $lock->get()) {
@@ -38,6 +39,7 @@ class ImportMusicBrainzArtistMetadata extends Command
             $limit = max(0, (int) $this->option('limit'));
             $total = $limit > 0 ? min($limit, $artists->count()) : $artists->count();
             $matched = 0;
+            $failed = 0;
 
             if ($total === 0) {
                 $this->info('No artists need MusicBrainz metadata.');
@@ -49,14 +51,23 @@ class ImportMusicBrainzArtistMetadata extends Command
                 ? $artists->limit($limit)->get()
                 : $artists->lazyById();
 
-            $this->withProgressBar($artistsToProcess, function (Artist $artist) use ($client, &$matched): void {
-                $metadata = $client->artistMetadata($artist);
+            $this->withProgressBar($artistsToProcess, function (Artist $artist) use ($client, $genreWriter, &$failed, &$matched): void {
+                try {
+                    $metadata = $client->artistMetadata($artist);
+                } catch (\RuntimeException) {
+                    // Leave the timestamp empty so the artist remains eligible for a later retry.
+                    $failed++;
+
+                    return;
+                }
+
                 $artist->fill([
                     'musicbrainz_mbid' => $metadata['musicbrainz_mbid'] ?? $artist->musicbrainz_mbid,
                     'location' => $artist->location_manual ? $artist->location : ($metadata['location'] ?? $artist->location),
                     'country_code' => $artist->country_manual ? $artist->country_code : ($metadata['country_code'] ?? $artist->country_code),
                     'musicbrainz_checked_at' => now(),
                 ])->save();
+                $genreWriter->syncMusicBrainz($artist, $metadata['genres'] ?? []);
 
                 if ($metadata !== null) {
                     $matched++;
@@ -65,6 +76,9 @@ class ImportMusicBrainzArtistMetadata extends Command
 
             $this->newLine();
             $this->info("Checked {$total} artists; matched {$matched}.");
+            if ($failed > 0) {
+                $this->warn("Skipped {$failed} artists after provider errors; they remain eligible for a later retry.");
+            }
 
             return self::SUCCESS;
         } finally {
