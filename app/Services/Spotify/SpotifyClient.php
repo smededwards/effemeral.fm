@@ -2,21 +2,15 @@
 
 namespace App\Services\Spotify;
 
-use App\Models\SpotifyConnection;
-use Carbon\CarbonImmutable;
-use Closure;
-use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
 use RuntimeException;
-use Throwable;
 
 /**
  * Wraps the Spotify Web API with authentication, pagination, and rate limits.
  */
 class SpotifyClient
 {
+    public function __construct(private SpotifyApiTransport $transport) {}
+
     /**
      * @return list<array<string, mixed>>
      */
@@ -33,13 +27,13 @@ class SpotifyClient
 
         do {
             $pageLimit = $limit === null ? 50 : min(50, $limit - count($albums));
-            $response = $this->get('/me/albums', [
+            $response = $this->transport->get('/me/albums', [
                 'limit' => $pageLimit,
                 'offset' => $offset,
             ]);
 
             if ($response->failed()) {
-                throw new RuntimeException($this->errorMessage($response));
+                throw new RuntimeException($this->transport->errorMessage($response));
             }
 
             $payload = $response->json();
@@ -62,13 +56,13 @@ class SpotifyClient
      */
     public function savedAlbumsPage(int $offset = 0, int $limit = 50): array
     {
-        $response = $this->get('/me/albums', [
+        $response = $this->transport->get('/me/albums', [
             'limit' => min(50, max(1, $limit)),
             'offset' => max(0, $offset),
         ]);
 
         if ($response->failed()) {
-            throw new RuntimeException($this->errorMessage($response));
+            throw new RuntimeException($this->transport->errorMessage($response));
         }
 
         $payload = $response->json();
@@ -117,13 +111,13 @@ class SpotifyClient
      */
     public function playlistsPage(int $offset = 0, int $limit = 50): array
     {
-        $response = $this->get('/me/playlists', [
+        $response = $this->transport->get('/me/playlists', [
             'limit' => min(50, max(1, $limit)),
             'offset' => max(0, $offset),
         ]);
 
         if ($response->failed()) {
-            throw new RuntimeException($this->errorMessage($response));
+            throw new RuntimeException($this->transport->errorMessage($response));
         }
 
         $payload = $response->json();
@@ -148,10 +142,10 @@ class SpotifyClient
         $artists = [];
 
         foreach (array_chunk(array_values(array_unique($ids)), 50) as $chunk) {
-            $response = $this->get('/artists', ['ids' => implode(',', $chunk)]);
+            $response = $this->transport->get('/artists', ['ids' => implode(',', $chunk)]);
 
             if ($response->failed()) {
-                throw new RuntimeException($this->errorMessage($response));
+                throw new RuntimeException($this->transport->errorMessage($response));
             }
 
             $artists = array_merge($artists, array_values(array_filter(
@@ -172,7 +166,7 @@ class SpotifyClient
      */
     public function searchAlbums(string $artistName, string $albumTitle): array
     {
-        $response = $this->get('/search', [
+        $response = $this->transport->get('/search', [
             'q' => 'album:"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $albumTitle).'" artist:"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $artistName).'"',
             'type' => 'album',
             'limit' => 10,
@@ -229,7 +223,7 @@ class SpotifyClient
      */
     public function playlistDetails(string $playlistId): array
     {
-        $response = $this->get('/playlists/'.$playlistId, []);
+        $response = $this->transport->get('/playlists/'.$playlistId, []);
 
         if ($response->failed()) {
             throw new RuntimeException('Spotify playlist details could not be read (HTTP '.$response->status().'). Reconnect Spotify if access was denied.');
@@ -262,7 +256,7 @@ class SpotifyClient
      */
     public function updatePlaylistName(string $playlistId, string $name): void
     {
-        $response = $this->put('/playlists/'.$playlistId, ['name' => $name]);
+        $response = $this->transport->put('/playlists/'.$playlistId, ['name' => $name]);
 
         if ($response->failed()) {
             throw new RuntimeException('Spotify playlist name could not be updated (HTTP '.$response->status().'). Reconnect Spotify if access was denied.');
@@ -285,9 +279,7 @@ class SpotifyClient
                 $payload['snapshot_id'] = $snapshotId;
             }
 
-            $response = $this->sendWithRateLimit(
-                fn (): Response => $this->request()->send('DELETE', '/playlists/'.$playlistId.'/items', ['json' => $payload]),
-            );
+            $response = $this->transport->delete('/playlists/'.$playlistId.'/items', $payload);
 
             if ($response->failed()) {
                 throw new RuntimeException('Spotify playlist tracks could not be removed (HTTP '.$response->status().'). Recheck the preview and Spotify access before retrying.');
@@ -311,7 +303,7 @@ class SpotifyClient
      */
     public function createPrivatePlaylist(string $name, string $description): array
     {
-        $response = $this->post('/me/playlists', [
+        $response = $this->transport->post('/me/playlists', [
             'name' => $name,
             'description' => $description,
             'public' => false,
@@ -345,7 +337,7 @@ class SpotifyClient
     public function addPlaylistItems(string $playlistId, array $uris): void
     {
         foreach (array_chunk($uris, 100) as $chunk) {
-            $response = $this->post('/playlists/'.$playlistId.'/items', ['uris' => $chunk]);
+            $response = $this->transport->post('/playlists/'.$playlistId.'/items', ['uris' => $chunk]);
 
             if ($response->failed()) {
                 throw new RuntimeException('Spotify tracks could not be added (HTTP '.$response->status().'). Verify playlist access and reconnect Spotify if permissions changed.');
@@ -368,13 +360,13 @@ class SpotifyClient
                 break;
             }
 
-            $response = $this->get($path, [
+            $response = $this->transport->get($path, [
                 'limit' => $pageLimit,
                 'offset' => $offset,
             ]);
 
             if ($response->failed()) {
-                throw new RuntimeException($this->errorMessage($response));
+                throw new RuntimeException($this->transport->errorMessage($response));
             }
 
             $payload = $response->json();
@@ -389,115 +381,5 @@ class SpotifyClient
         } while (($limit === null || count($items) < $limit) && data_get($payload, 'next') !== null && $rawItems !== []);
 
         return $limit === null ? $items : array_slice($items, 0, $limit);
-    }
-
-    private function request(): PendingRequest
-    {
-        return Http::baseUrl(config('services.spotify.api_endpoint'))
-            ->withToken($this->accessToken())
-            ->acceptJson()
-            ->timeout(15)
-            ->retry(3, 1000, function (Throwable $exception): bool {
-                return $exception instanceof RequestException
-                    ? $exception->response->status() !== 429
-                    : true;
-            }, throw: false);
-    }
-
-    /**
-     * @param  array<string, int|string>  $query  The Spotify request parameters.
-     */
-    private function get(string $path, array $query): Response
-    {
-        return $this->sendWithRateLimit(fn (): Response => $this->request()->get($path, $query));
-    }
-
-    /**
-     * @param  array<string, mixed>  $payload  The Spotify request body.
-     */
-    private function post(string $path, array $payload): Response
-    {
-        return $this->sendWithRateLimit(fn (): Response => $this->request()->post($path, $payload));
-    }
-
-    /**
-     * @param  array<string, mixed>  $payload  The Spotify request body.
-     */
-    private function put(string $path, array $payload): Response
-    {
-        return $this->sendWithRateLimit(fn (): Response => $this->request()->put($path, $payload));
-    }
-
-    /**
-     * @param  Closure(): Response  $request  The API request callback.
-     */
-    private function sendWithRateLimit(Closure $request): Response
-    {
-        for ($attempt = 1; $attempt <= 3; $attempt++) {
-            $response = $request();
-
-            if ($response->status() !== 429) {
-                return $response;
-            }
-
-            if ($response->json('error.reason') === 'QUOTA_EXCEEDED') {
-                throw new SpotifyRateLimitException('Spotify quota has been exceeded. Try again later.', false);
-            }
-
-            if ($attempt === 3) {
-                throw new SpotifyRateLimitException($this->errorMessage($response));
-            }
-
-            $headers = array_change_key_case($response->headers());
-            $retryAfter = (int) ($headers['retry-after'] ?? 0);
-            sleep($retryAfter > 0 ? $retryAfter : 2 ** ($attempt - 1));
-        }
-
-        throw new SpotifyRateLimitException('Spotify rate limit could not be cleared.');
-    }
-
-    private function errorMessage(Response $response): string
-    {
-        return $response->status() === 429
-            ? 'Spotify rate limit reached. Try again later.'
-            : 'Spotify returned HTTP '.$response->status().'.';
-    }
-
-    private function accessToken(): string
-    {
-        $connection = SpotifyConnection::query()->latest()->first();
-
-        if ($connection === null) {
-            $token = config('services.spotify.access_token');
-
-            if (! is_string($token) || $token === '') {
-                throw new RuntimeException('Spotify account is not connected.');
-            }
-
-            return $token;
-        }
-
-        if ($connection->expires_at === null || CarbonImmutable::parse((string) $connection->expires_at)->isFuture()) {
-            return $connection->access_token;
-        }
-
-        $response = Http::asForm()->acceptJson()->post(config('services.spotify.token_endpoint'), [
-            'grant_type' => 'refresh_token',
-            'refresh_token' => $connection->refresh_token,
-            'client_id' => config('services.spotify.client_id'),
-            'client_secret' => config('services.spotify.client_secret'),
-        ]);
-
-        if ($response->failed() || ! is_string($response->json('access_token'))) {
-            throw new RuntimeException('Spotify token refresh failed.');
-        }
-
-        $connection->update([
-            'access_token' => $response->json('access_token'),
-            'expires_at' => now()->addSeconds((int) $response->json('expires_in', 3600)),
-            'refresh_token' => $response->json('refresh_token', $connection->refresh_token),
-        ]);
-
-        return $connection->access_token;
     }
 }
