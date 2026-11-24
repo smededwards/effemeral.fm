@@ -10,6 +10,7 @@ use App\Models\SpotifyPlaylist;
 use App\Services\Spotify\AlbumPlaylistSyncService;
 use App\Services\Spotify\SpotifyClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use RuntimeException;
 use Tests\TestCase;
 
 class AlbumPlaylistTest extends TestCase
@@ -269,6 +270,19 @@ class AlbumPlaylistTest extends TestCase
 
         $this->assertFalse($preview['sync_allowed']);
         $this->assertSame([['title' => 'Incomplete Album', 'artist' => 'Unknown artist', 'available_tracks' => 1, 'total_tracks' => 2]], $preview['incomplete_albums']);
+    }
+
+    public function test_spotify_sync_rechecks_incomplete_albums_without_trusting_the_preview(): void
+    {
+        $album = $this->createAlbumWithTrack('Incomplete Album', 'spotify:track:available');
+        $album->update(['total_tracks' => 2]);
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Incomplete Draft']);
+        $playlist->albums()->attach($album->id, ['position' => 1]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Complete every album before syncing this playlist to Spotify.');
+
+        app(AlbumPlaylistSyncService::class)->sync($playlist, ['destination' => 'new']);
     }
 
     private function createAlbum(string $title): Album
