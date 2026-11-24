@@ -99,7 +99,7 @@ class AlbumSuggestionService
         }
 
         $query->orderByRaw(
-            "CASE
+            'CASE
                 WHEN LOWER(albums.title) = ? THEN 0
                 WHEN LOWER(albums.title) LIKE ? THEN 1
                 WHEN EXISTS (
@@ -111,7 +111,7 @@ class AlbumSuggestionService
                         OR LOWER(artists.normalised_name) LIKE ?)
                 ) THEN 2
                 ELSE 3
-            END",
+            END',
             [$normalisedSearch, $searchTerm, $normalisedSearch, $normalisedSearch, $searchTerm]
         );
 
