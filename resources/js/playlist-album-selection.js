@@ -1,3 +1,4 @@
+// Keep playlist selection behavior in the compiled asset so Blade remains markup-only.
 const selectAll = document.querySelector('[data-playlist-select-all]');
 const albums = [...document.querySelectorAll('.playlist-album-checkbox')];
 

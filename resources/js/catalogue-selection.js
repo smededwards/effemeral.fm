@@ -1,3 +1,4 @@
+// Keep catalogue selection behavior in the compiled asset so Blade remains markup-only.
 const selectAll = document.querySelector('#catalogue-select-all');
 const albums = [...document.querySelectorAll('.catalogue-album-checkbox')];
 
