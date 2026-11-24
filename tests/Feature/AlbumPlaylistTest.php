@@ -176,6 +176,12 @@ class AlbumPlaylistTest extends TestCase
         $this->assertSame($exact->id, $albums->first()->id);
         $this->assertSame($newer->id, $albums->get(1)->id);
         $this->assertSame($older->id, $albums->get(2)->id);
+
+        $oldestFirst = $this->get(route('album-playlists.show', [$playlist, 'q' => 'Metal', 'sort' => 'release_oldest']))
+            ->assertOk()
+            ->viewData('albums');
+
+        $this->assertSame($older->id, $oldestFirst->first()->id);
     }
 
     public function test_artist_search_lists_albums_in_release_order(): void

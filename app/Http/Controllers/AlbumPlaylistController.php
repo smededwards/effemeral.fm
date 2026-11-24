@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Album;
 use App\Models\AlbumPlaylist;
-use App\Models\Artist;
 use App\Models\SpotifyPlaylist;
+use App\Services\Playlists\AlbumSuggestionService;
 use App\Services\Playlists\AlbumPlaylistExporter;
 use App\Services\Recommendations\PlaylistNameSuggester;
 use App\Services\Spotify\AlbumPlaylistSyncService;
@@ -26,7 +26,10 @@ class AlbumPlaylistController extends Controller
      *
      * @param  PlaylistNameSuggester  $playlistNameSuggester  The playlist-name suggestion service.
      */
-    public function __construct(private PlaylistNameSuggester $playlistNameSuggester) {}
+    public function __construct(
+        private PlaylistNameSuggester $playlistNameSuggester,
+        private AlbumSuggestionService $albumSuggestionService,
+    ) {}
 
     /**
      * Show a playlist and the optional catalogue search results.
@@ -37,88 +40,18 @@ class AlbumPlaylistController extends Controller
      */
     public function show(Request $request, AlbumPlaylist $albumPlaylist): View
     {
-        $search = trim((string) $request->query('q', ''));
-        $searchTerm = '%'.$search.'%';
-        $normalisedSearch = mb_strtolower($search);
-        $artistSearch = $search !== '' && Artist::query()
-            ->where('normalised_name', 'like', '%'.$normalisedSearch.'%')
-            ->exists();
-        $sort = $this->suggestionSort((string) $request->query('sort', ''));
-        $albumQuery = Album::query()
-            ->with('artists')
-            ->withCount('tracks')
-            ->whereHas('tracks')
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->where(function ($albumQuery) use ($search): void {
-                    $albumQuery->where('title', 'like', '%'.$search.'%')
-                        ->orWhereHas('artists', fn ($artistQuery) => $artistQuery->where('name', 'like', '%'.$search.'%'))
-                        ->orWhereHas('artists.acceptedGenres', fn ($genreQuery) => $genreQuery->where('genres.name', 'like', '%'.$search.'%'));
-                });
-            })
-            ->whereDoesntHave('playlists', fn ($query) => $query->whereKey($albumPlaylist->id))
-            ->when($search !== '', function ($query) use ($artistSearch, $normalisedSearch, $searchTerm, $sort): void {
-                $query->orderByRaw(
-                    "CASE
-                        WHEN LOWER(albums.title) = ? THEN 0
-                        WHEN LOWER(albums.title) LIKE ? THEN 1
-                        WHEN EXISTS (
-                            SELECT 1
-                            FROM album_artist
-                            INNER JOIN artists ON artists.id = album_artist.artist_id
-                            WHERE album_artist.album_id = albums.id
-                            AND (LOWER(artists.name) = ? OR LOWER(artists.normalised_name) = ?
-                                OR LOWER(artists.normalised_name) LIKE ?)
-                        ) THEN 2
-                        ELSE 3
-                    END",
-                    [$normalisedSearch, $searchTerm, $normalisedSearch, $normalisedSearch, $searchTerm]
-                );
-
-                if ($sort === 'release_oldest' || $artistSearch && $sort === 'relevance') {
-                    $query->orderByRaw('CASE WHEN release_date IS NULL THEN 1 ELSE 0 END')
-                        ->orderBy('release_date')
-                        ->orderBy('title');
-
-                    return;
-                }
-
-                if ($sort === 'release_newest') {
-                    $query->orderByRaw('CASE WHEN release_date IS NULL THEN 1 ELSE 0 END')
-                        ->orderByDesc('release_date')
-                        ->orderBy('title');
-
-                    return;
-                }
-
-                if ($sort === 'recently_added') {
-                    $query->orderByDesc('albums.created_at')->orderBy('title');
-
-                    return;
-                }
-
-                $query->orderByRaw('CASE WHEN release_date IS NULL THEN 1 ELSE 0 END')
-                    ->orderByDesc('release_date')
-                    ->orderByDesc('albums.created_at')
-                    ->orderBy('title');
-            });
-
-        $albums = $search === ''
-            ? collect()
-            : $albumQuery
-                // shortcut: inspect 150 candidates before deduplication; increase this if suggestions become sparse.
-                ->limit(150)
-                ->get()
-                ->groupBy(fn (Album $album): string => $this->editionKey($album->title))
-                ->map(fn ($variants): Album => $variants->sortBy(fn (Album $album): int => $this->editionPenalty($album->title))->first())
-                ->take(50)
-                ->values();
+        $suggestions = $this->albumSuggestionService->search(
+            $albumPlaylist,
+            (string) $request->query('q', ''),
+            (string) $request->query('sort', ''),
+        );
 
         return view('playlists.show', [
             'albumPlaylist' => $albumPlaylist->load('albums.artists'),
-            'search' => $search,
-            'artistSearch' => $artistSearch,
-            'sort' => $sort,
-            'albums' => $albums,
+            'search' => trim((string) $request->query('q', '')),
+            'artistSearch' => $suggestions['artist_search'],
+            'sort' => $suggestions['sort'],
+            'albums' => $suggestions['albums'],
             'spotifyPlaylists' => $albumPlaylist->spotify_playlist_id === null
                 ? SpotifyPlaylist::query()->orderBy('name')->get(['spotify_playlist_id', 'name', 'public', 'collaborative'])
                 : collect(),
@@ -126,50 +59,6 @@ class AlbumPlaylistController extends Controller
                 ? null
                 : SpotifyPlaylist::query()->where('spotify_playlist_id', $albumPlaylist->spotify_playlist_id)->first(),
         ]);
-    }
-
-    /**
-     * Resolve the supported album suggestion sort order.
-     *
-     * @param  string  $sort  The requested sort order.
-     * @return string The normalised sort order.
-     */
-    private function suggestionSort(string $sort): string
-    {
-        return match ($sort) {
-            'release_oldest', 'release_newest', 'recently_added' => $sort,
-            default => 'relevance',
-        };
-    }
-
-    /**
-     * Return a grouping key that treats common editions as one album.
-     *
-     * @param  string  $title  The album title.
-     * @return string The normalised edition-independent title.
-     */
-    private function editionKey(string $title): string
-    {
-        $title = preg_replace(
-            '/\b(?:remaster(?:ed)?|deluxe|expanded|anniversary|special edition|bonus tracks?)\b/i',
-            '',
-            $title,
-        ) ?? $title;
-
-        return preg_replace('/\s+/', ' ', mb_strtolower(trim($title, " \t\n\r\0\x0B()[]-"))) ?? '';
-    }
-
-    /**
-     * Prefer original editions when duplicate album variants are grouped.
-     *
-     * @param  string  $title  The album title.
-     * @return int The edition penalty.
-     */
-    private function editionPenalty(string $title): int
-    {
-        return preg_match('/\b(?:remaster(?:ed)?|deluxe|expanded|anniversary|special edition|bonus tracks?)\b/i', $title) === 1
-            ? 1
-            : 0;
     }
 
     /**
