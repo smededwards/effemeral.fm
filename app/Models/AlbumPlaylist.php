@@ -18,7 +18,8 @@ class AlbumPlaylist extends Model
 
     protected $fillable = [
         'name', 'spotify_playlist_id', 'spotify_playlist_url', 'spotify_managed_track_uris',
-        'spotify_pending_track_uris', 'spotify_sync_status', 'spotify_sync_error', 'spotify_synced_at',
+        'spotify_pending_track_uris', 'spotify_sync_status', 'spotify_sync_started_at', 'spotify_sync_error',
+        'spotify_synced_at',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class AlbumPlaylist extends Model
         return [
             'spotify_managed_track_uris' => 'array',
             'spotify_pending_track_uris' => 'array',
+            'spotify_sync_started_at' => 'immutable_datetime',
             'spotify_synced_at' => 'immutable_datetime',
         ];
     }

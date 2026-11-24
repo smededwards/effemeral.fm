@@ -23,6 +23,7 @@ Route::middleware('private')->group(function (): void {
     Route::post('/playlists/{albumPlaylist}/name/refresh', [AlbumPlaylistController::class, 'refreshName'])->name('album-playlists.name.refresh');
     Route::post('/playlists/{albumPlaylist}/spotify/preview', [AlbumPlaylistController::class, 'previewSpotifySync'])->name('album-playlists.spotify.preview');
     Route::post('/playlists/{albumPlaylist}/spotify/sync', [AlbumPlaylistController::class, 'syncSpotify'])->name('album-playlists.spotify.sync');
+    Route::post('/playlists/{albumPlaylist}/spotify/recover', [AlbumPlaylistController::class, 'recoverSpotifySync'])->name('album-playlists.spotify.recover');
     Route::post('/playlists/{albumPlaylist}/albums', [AlbumPlaylistController::class, 'addAlbum'])->name('album-playlists.albums.store');
     Route::delete('/playlists/{albumPlaylist}/albums/{album}', [AlbumPlaylistController::class, 'removeAlbum'])->name('album-playlists.albums.destroy');
     Route::post('/playlists/{albumPlaylist}/albums/{album}/move', [AlbumPlaylistController::class, 'moveAlbum'])->name('album-playlists.albums.move');

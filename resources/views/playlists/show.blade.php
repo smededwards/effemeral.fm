@@ -164,6 +164,24 @@
                         {{ $albumPlaylist->spotify_sync_error }}</p>
                 @endif
 
+                @if ($albumPlaylist->spotify_sync_status === 'syncing')
+                    @if ($spotifySyncStale)
+                        <div class="mt-4 border-l-4 border-amber-400 bg-ef-canvas px-4 py-3 text-sm text-amber-200"
+                            role="alert">
+                            <p>The sync has not reported progress within the recovery window.</p>
+                            <form class="mt-3" method="POST"
+                                action="{{ route('album-playlists.spotify.recover', $albumPlaylist, false) }}">
+                                @csrf
+                                <button class="border border-amber-400 px-4 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-400/10"
+                                    type="submit">Reset stale sync</button>
+                            </form>
+                        </div>
+                    @else
+                        <p class="mt-4 text-sm text-ef-muted" role="status">Spotify sync is still in progress. Editing is
+                            temporarily locked.</p>
+                    @endif
+                @endif
+
                 @if ($albumPlaylist->spotify_playlist_id)
                     <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <p class="text-sm text-ef-muted">Linked to <span
