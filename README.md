@@ -36,7 +36,7 @@ The local URL is https://app.effemeral.local.
 
 Start the shared proxy once:
 
-    docker compose -f /Users/smededwards/Developer/effemeral/.docker/traefik/compose.yaml up -d
+    docker compose -f ../.docker/traefik/compose.yaml up -d
 
 Then start Effemeral:
 

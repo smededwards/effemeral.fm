@@ -12,12 +12,13 @@ Closes #
 
 ## Testing
 
-- [ ] `composer run lint`
+- [ ] `composer run lint:check`
 - [ ] PSR-12 formatting and repo-wide control-flow rules reviewed
 - [ ] Custom JavaScript and CSS are in dedicated Vite-managed files, not inline in Blade
 - [ ] Comments and multiline PHPDoc follow the repository documentation standards
 - [ ] `composer run analyse`
 - [ ] `php artisan test`
+- [ ] Ponytail review completed and actionable findings addressed
 - [ ] Other verification: <!-- describe if applicable -->
 
 ## Review notes
