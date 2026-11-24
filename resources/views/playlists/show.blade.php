@@ -66,8 +66,8 @@
             <p class="mt-2 text-sm text-ef-muted">Add albums, review the order, then prepare the Spotify sync.</p>
         </header>
 
-        <div class="grid gap-8 lg:grid-cols-2">
-            <div class="pt-6 lg:pt-0" aria-labelledby="add-albums">
+        <div class="grid gap-8 pt-6 lg:grid-cols-2">
+            <div aria-labelledby="add-albums">
                 <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Catalogue</p>
                 <h3 id="add-albums" class="mt-2 text-xl font-semibold">Add Full Albums</h3>
                 <form class="mt-4 flex flex-col gap-3 sm:flex-row" method="GET"
