@@ -172,4 +172,6 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Open pull requests into dev; do not merge them without the user's review.
 - Every pull request must include a non-empty description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
 - Use Conventional Commits and labels limited to Conventional Commit types.
+- Keep custom JavaScript in dedicated files under `resources/js` and custom CSS in dedicated files under `resources/css`, loaded through Vite. Blade templates must not contain inline `<script>` or `<style>` blocks; use data attributes for view-to-script configuration.
+- Enforce comments and docblocks across custom code. Public PHP classes and methods, non-obvious private methods, complex array shapes, and meaningful extension points require multiline PHPDoc with useful `@param`, `@return`, `@throws`, or shape annotations. Single-line comments must use `//` on their own line directly above the code they explain; never use trailing comments or redundant comments.
 - Before handoff, run the narrowest relevant tests plus Pint and PHPStan. Report any skipped verification and remaining risks.

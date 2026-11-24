@@ -14,6 +14,8 @@ Closes #
 
 - [ ] `composer run lint`
 - [ ] PSR-12 formatting and repo-wide control-flow rules reviewed
+- [ ] Custom JavaScript and CSS are in dedicated Vite-managed files, not inline in Blade
+- [ ] Comments and multiline PHPDoc follow the repository documentation standards
 - [ ] `composer run analyse`
 - [ ] `php artisan test`
 - [ ] Other verification: <!-- describe if applicable -->
