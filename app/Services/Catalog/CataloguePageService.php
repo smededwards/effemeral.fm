@@ -8,6 +8,7 @@ use App\Models\Artist;
 use App\Models\Genre;
 use App\Models\Scrobble;
 use App\Models\SpotifySavedAlbum;
+use App\Services\Recommendations\RecommendationListeningWindow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,8 @@ use Illuminate\Validation\Rule;
  */
 class CataloguePageService
 {
+    public function __construct(private RecommendationListeningWindow $recommendationListeningWindow) {}
+
     /**
      * @return Collection<int, Genre> The filterable catalogue genres.
      */
@@ -137,6 +140,7 @@ class CataloguePageService
             'catalogueGenres' => $this->genres(),
             'catalogueCountries' => Artist::query()->whereNotNull('country_code')->distinct()->orderBy('country_code')->pluck('country_code'),
             'albumPlaylists' => AlbumPlaylist::query()->orderBy('name')->get(['id', 'name']),
+            'recommendationListeningWindows' => $this->recommendationListeningWindow->options(),
             'filters' => $filters,
             'selectedArtist' => $artistId > 0
                 ? Artist::query()->with(['albums' => fn ($query) => $query->withCount('tracks')->orderBy('title'), 'acceptedGenres'])->find($artistId)
