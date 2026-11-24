@@ -1,3 +1,6 @@
+import './catalogue-selection';
+import './playlist-album-selection';
+
 document.querySelectorAll('[data-playlist-name-editor]').forEach((editor) => {
     const display = editor.querySelector('[data-playlist-name-display]');
     const form = editor.querySelector('[data-playlist-name-form]');

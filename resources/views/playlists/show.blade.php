@@ -244,29 +244,3 @@
         @endif
     </section>
 @endsection
-
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const selectAll = document.querySelector('[data-playlist-select-all]');
-            const albums = [...document.querySelectorAll('.playlist-album-checkbox')];
-
-            if (!selectAll || albums.length === 0) {
-                return;
-            }
-
-            const updateSelectAll = () => {
-                const selected = albums.filter((album) => album.checked).length;
-                selectAll.checked = selected === albums.length;
-                selectAll.indeterminate = selected > 0 && selected < albums.length;
-            };
-
-            selectAll.addEventListener('change', () => {
-                albums.forEach((album) => {
-                    album.checked = selectAll.checked;
-                });
-            });
-            albums.forEach((album) => album.addEventListener('change', updateSelectAll));
-        });
-    </script>
-@endpush
