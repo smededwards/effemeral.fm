@@ -6,6 +6,7 @@ use App\Models\Album;
 use App\Models\AlbumPlaylist;
 use App\Models\SpotifyPlaylist;
 use App\Services\Playlists\AlbumPlaylistExporter;
+use App\Services\Recommendations\PlaylistNameSuggester;
 use App\Services\Spotify\AlbumPlaylistSyncService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class AlbumPlaylistController extends Controller
 {
+    public function __construct(private PlaylistNameSuggester $playlistNameSuggester) {}
+
     /**
      * Show a playlist and the optional catalogue search results.
      *
@@ -146,15 +149,18 @@ class AlbumPlaylistController extends Controller
     }
 
     /**
-     * Create a named Effemeral album playlist.
+     * Create an Effemeral album playlist, generating a name when none is supplied.
      *
      * @param  Request  $request  The submitted playlist name.
      * @return RedirectResponse The playlist index redirect.
      */
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate(['name' => ['required', 'string', 'max:100']]);
-        $playlist = AlbumPlaylist::query()->create(['name' => trim($validated['name'])]);
+        $validated = $request->validate(['name' => ['nullable', 'string', 'max:100']]);
+        $name = trim((string) ($validated['name'] ?? ''));
+        $playlist = AlbumPlaylist::query()->create([
+            'name' => $name !== '' ? $name : $this->playlistNameSuggester->suggestFromTitles([]),
+        ]);
 
         return to_route('album-playlists.show', $playlist)->with('success', 'Album playlist created.');
     }
@@ -177,6 +183,27 @@ class AlbumPlaylistController extends Controller
         $this->markSyncPending($albumPlaylist);
 
         return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Playlist name updated.');
+    }
+
+    /**
+     * Replace a playlist name with a new suggestion based on its albums.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being renamed.
+     * @return RedirectResponse The playlist detail redirect.
+     */
+    public function refreshName(AlbumPlaylist $albumPlaylist): RedirectResponse
+    {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
+        $name = $this->playlistNameSuggester->suggestFromTitles(
+            $albumPlaylist->albums()->pluck('albums.title'),
+        );
+        $albumPlaylist->update(['name' => $name]);
+        $this->markSyncPending($albumPlaylist);
+
+        return back()->with('success', 'Playlist name refreshed.');
     }
 
     /**
@@ -231,9 +258,11 @@ class AlbumPlaylistController extends Controller
             }
         }
 
-        [$playlist, $addedCount] = DB::transaction(function () use ($playlist, $validated): array {
+        $albumTitles = Album::query()->whereKey($validated['album_ids'])->pluck('title');
+        [$playlist, $addedCount] = DB::transaction(function () use ($playlist, $validated, $albumTitles): array {
             $playlist ??= AlbumPlaylist::query()->create([
-                'name' => trim((string) ($validated['playlist_name'] ?? '')) ?: 'Album Draft · '.now()->format('Y.m.d'),
+                'name' => trim((string) ($validated['playlist_name'] ?? ''))
+                    ?: $this->playlistNameSuggester->suggestFromTitles($albumTitles),
             ]);
             $existingIds = $playlist->albums()->whereKey($validated['album_ids'])->pluck('albums.id')->all();
             $newIds = array_values(array_diff($validated['album_ids'], $existingIds));

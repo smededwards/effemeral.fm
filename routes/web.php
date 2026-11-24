@@ -20,6 +20,7 @@ Route::middleware('private')->group(function (): void {
     Route::get('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'show'])->name('album-playlists.show');
     Route::get('/playlists/{albumPlaylist}/export.csv', [AlbumPlaylistController::class, 'export'])->name('album-playlists.export');
     Route::patch('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'update'])->name('album-playlists.update');
+    Route::post('/playlists/{albumPlaylist}/name/refresh', [AlbumPlaylistController::class, 'refreshName'])->name('album-playlists.name.refresh');
     Route::post('/playlists/{albumPlaylist}/spotify/preview', [AlbumPlaylistController::class, 'previewSpotifySync'])->name('album-playlists.spotify.preview');
     Route::post('/playlists/{albumPlaylist}/spotify/sync', [AlbumPlaylistController::class, 'syncSpotify'])->name('album-playlists.spotify.sync');
     Route::post('/playlists/{albumPlaylist}/albums', [AlbumPlaylistController::class, 'addAlbum'])->name('album-playlists.albums.store');

@@ -48,8 +48,7 @@
                 <label class="sr-only" for="new-album-playlist-name">New playlist name</label>
                 <input id="new-album-playlist-name"
                     class="min-w-0 border border-ef-line bg-ef-canvas px-4 py-3 text-sm text-ef-text placeholder:text-ef-muted focus:border-ef-accent"
-                    type="text" name="name" maxlength="100" placeholder="e.g. New albums" value="{{ old('name') }}"
-                    required>
+                    type="text" name="name" maxlength="100" placeholder="e.g. New albums" value="{{ old('name') }}">
                 <button
                     class="whitespace-nowrap bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                     type="submit">Create Playlist</button>

@@ -103,6 +103,33 @@ class SpotifyClient
     }
 
     /**
+     * Fetch the connected Spotify user's identity.
+     *
+     * @return array{id: string, display_name: string|null} The Spotify user identity.
+     */
+    public function currentUser(): array
+    {
+        $response = $this->transport->get('/me', []);
+
+        if ($response->failed()) {
+            throw new RuntimeException('Spotify user identity could not be read (HTTP '.$response->status().').');
+        }
+
+        $id = $response->json('id');
+
+        if (! is_string($id) || $id === '') {
+            throw new RuntimeException('Spotify returned an incomplete user identity.');
+        }
+
+        $displayName = $response->json('display_name');
+
+        return [
+            'id' => $id,
+            'display_name' => is_string($displayName) ? $displayName : null,
+        ];
+    }
+
+    /**
      * Fetch one resumable playlist page and its next offset.
      *
      * @param  int  $offset  The first Spotify playlist to request.

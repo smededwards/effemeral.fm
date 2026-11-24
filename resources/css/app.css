@@ -139,6 +139,19 @@ textarea {
     color: var(--ef-text);
 }
 
+input:not([type='hidden']):not([type='checkbox']):not([type='radio']).playlist-name-input {
+    width: min(24ch, 80vw);
+    height: auto !important;
+    min-height: 0 !important;
+    border: 1px solid transparent !important;
+    background: transparent;
+    padding: 0 !important;
+}
+
+input:not([type='hidden']):not([type='checkbox']):not([type='radio']).playlist-name-input:focus {
+    border-color: var(--ef-accent) !important;
+}
+
 input:not([type='hidden']):not([type='checkbox']):not([type='radio'])::placeholder,
 textarea::placeholder {
     color: var(--ef-muted);

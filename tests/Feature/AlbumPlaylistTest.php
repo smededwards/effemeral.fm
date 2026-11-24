@@ -6,6 +6,7 @@ use App\Models\Album;
 use App\Models\AlbumPlaylist;
 use App\Models\Artist;
 use App\Models\Genre;
+use App\Models\SpotifyPlaylist;
 use App\Services\Spotify\AlbumPlaylistSyncService;
 use App\Services\Spotify\SpotifyClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,6 +28,53 @@ class AlbumPlaylistTest extends TestCase
             ->assertRedirect(route('album-playlists.show', $playlist));
 
         $this->assertSame('New Releases', $playlist->fresh()->name);
+    }
+
+    public function test_unnamed_playlist_creation_generates_a_two_word_draft_name(): void
+    {
+        $this->post(route('album-playlists.store'), ['name' => '   '])
+            ->assertRedirect();
+
+        $playlist = AlbumPlaylist::query()->firstOrFail();
+
+        $this->assertMatchesRegularExpression('/^[A-Z][a-z]+ [A-Z][a-z]+$/', $playlist->name);
+    }
+
+    public function test_unnamed_playlist_names_store_deduplicated_words_from_owned_spotify_playlists(): void
+    {
+        $this->mock(SpotifyClient::class, function ($mock): void {
+            $mock->shouldReceive('currentUser')->once()->andReturn([
+                'id' => 'owned-user',
+                'display_name' => 'Owned User',
+            ]);
+        });
+        SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'owned-one',
+            'name' => 'Mourning Earth',
+            'owner_id' => 'owned-user',
+        ]);
+        SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'owned-two',
+            'name' => 'Mourning Garden',
+            'owner_id' => 'owned-user',
+        ]);
+        SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'other-one',
+            'name' => 'Unrelated Static',
+            'owner_id' => 'other-user',
+        ]);
+
+        $this->post(route('album-playlists.store'), ['name' => '   '])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('playlist_name_options', [
+            'word' => 'mourning',
+            'source' => 'spotify_playlist',
+        ]);
+        $this->assertDatabaseHas('playlist_name_options', ['word' => 'earth']);
+        $this->assertDatabaseHas('playlist_name_options', ['word' => 'garden']);
+        $this->assertDatabaseMissing('playlist_name_options', ['word' => 'unrelated']);
+        $this->assertSame(3, (int) \DB::table('playlist_name_options')->count());
     }
 
     public function test_user_can_add_remove_and_reorder_albums_independently_of_other_playlists(): void
@@ -74,6 +122,22 @@ class AlbumPlaylistTest extends TestCase
         $this->assertDatabaseHas('albums', ['id' => $album->id]);
     }
 
+    public function test_playlist_name_can_be_saved_or_refreshed_from_album_contents(): void
+    {
+        $album = $this->createAlbum('Mourning Earth');
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Old Name']);
+        $playlist->albums()->attach($album->id, ['position' => 1]);
+
+        $this->patch(route('album-playlists.update', $playlist), ['name' => 'New Name'])
+            ->assertRedirect();
+        $this->assertSame('New Name', $playlist->fresh()->name);
+
+        $this->post(route('album-playlists.name.refresh', $playlist))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Playlist name refreshed.');
+        $this->assertSame('Mourning Earth', $playlist->fresh()->name);
+    }
+
     public function test_bulk_album_add_generates_a_name_for_an_unnamed_new_playlist(): void
     {
         $album = $this->createAlbum('Mariner');
@@ -85,7 +149,7 @@ class AlbumPlaylistTest extends TestCase
         ])->assertRedirect();
 
         $playlist = AlbumPlaylist::query()->firstOrFail();
-        $this->assertMatchesRegularExpression('/^Album Draft · \d{4}\.\d{2}\.\d{2}$/', $playlist->name);
+        $this->assertStringContainsString('Mariner', $playlist->name);
         $this->assertSame([$album->id], $playlist->albums->pluck('id')->all());
     }
 
