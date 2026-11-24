@@ -105,7 +105,7 @@ class AlbumPlaylistTest extends TestCase
 
     public function test_playlist_page_searches_canonical_albums_and_lists_saved_playlists(): void
     {
-        $album = $this->createAlbum('Mariner');
+        $album = $this->createAlbumWithTrack('Mariner', 'spotify:track:mariner');
         $artist = Artist::query()->create([
             'name' => 'Cult of Luna',
             'normalised_name' => 'cult of luna',
@@ -137,18 +137,35 @@ class AlbumPlaylistTest extends TestCase
         $this->assertDatabaseHas('albums', ['id' => $album->id]);
     }
 
+    public function test_playlist_search_hides_albums_without_tracks(): void
+    {
+        $artist = Artist::query()->create([
+            'name' => 'Urfaust',
+            'normalised_name' => 'urfaust',
+        ]);
+        $emptyAlbum = $this->createAlbum('Empty Release');
+        $availableAlbum = $this->createAlbumWithTrack('Available Release', 'spotify:track:available');
+        $artist->albums()->attach([$emptyAlbum->id, $availableAlbum->id]);
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Listening Queue']);
+
+        $response = $this->get(route('album-playlists.show', [$playlist, 'q' => 'Urfaust']))
+            ->assertOk();
+
+        $this->assertSame([$availableAlbum->id], $response->viewData('albums')->pluck('id')->all());
+    }
+
     public function test_playlist_search_prioritises_related_recent_albums_and_caps_results(): void
     {
         $playlist = AlbumPlaylist::query()->create(['name' => 'Listening Queue']);
-        $exact = $this->createAlbum('Metal');
+        $exact = $this->createAlbumWithTrack('Metal', 'spotify:track:metal-exact');
         $exact->update(['release_date' => '2020-01-01']);
-        $older = $this->createAlbum('Metal Older');
+        $older = $this->createAlbumWithTrack('Metal Older', 'spotify:track:metal-older');
         $older->update(['release_date' => '2019-01-01']);
-        $newer = $this->createAlbum('Metal Newer');
+        $newer = $this->createAlbumWithTrack('Metal Newer', 'spotify:track:metal-newer');
         $newer->update(['release_date' => '2026-01-01']);
 
         foreach (range(1, 50) as $number) {
-            $this->createAlbum('Metal Result '.$number);
+            $this->createAlbumWithTrack('Metal Result '.$number, 'spotify:track:metal-result-'.$number);
         }
 
         $response = $this->get(route('album-playlists.show', [$playlist, 'q' => 'Metal']))
@@ -167,13 +184,13 @@ class AlbumPlaylistTest extends TestCase
             'name' => 'Cult of Luna',
             'normalised_name' => 'cult of luna',
         ]);
-        $oldest = $this->createAlbum('Oldest Release');
+        $oldest = $this->createAlbumWithTrack('Oldest Release', 'spotify:track:oldest');
         $oldest->update(['release_date' => '2010-01-01']);
-        $newest = $this->createAlbum('Newest Release');
+        $newest = $this->createAlbumWithTrack('Newest Release', 'spotify:track:newest');
         $newest->update(['release_date' => '2024-01-01']);
-        $middle = $this->createAlbum('Middle Release');
+        $middle = $this->createAlbumWithTrack('Middle Release', 'spotify:track:middle');
         $middle->update(['release_date' => '2018-01-01']);
-        $deluxe = $this->createAlbum('Middle Release Deluxe');
+        $deluxe = $this->createAlbumWithTrack('Middle Release Deluxe', 'spotify:track:deluxe');
         $deluxe->update(['release_date' => '2018-01-01']);
         $artist->albums()->attach([$oldest->id, $newest->id, $middle->id, $deluxe->id]);
         $playlist = AlbumPlaylist::query()->create(['name' => 'Listening Queue']);

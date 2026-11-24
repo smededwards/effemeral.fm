@@ -124,7 +124,8 @@
                                             <span class="mt-1 block text-sm text-ef-muted">
                                                 {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }} ·
                                                 {{ $album->release_date ? substr($album->release_date, 0, 4) : 'Release year unknown' }} ·
-                                                {{ ucfirst($album->album_type ?: 'Album') }}</span>
+                                                {{ ucfirst($album->album_type ?: 'Album') }} · {{ $album->tracks_count }}
+                                                {{ $album->tracks_count === 1 ? 'track' : 'tracks' }}</span>
                                         </label>
                                     </li>
                                 @endforeach

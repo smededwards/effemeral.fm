@@ -41,6 +41,8 @@ class AlbumPlaylistController extends Controller
         $sort = $this->suggestionSort((string) $request->query('sort', ''));
         $albumQuery = Album::query()
             ->with('artists')
+            ->withCount('tracks')
+            ->whereHas('tracks')
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($albumQuery) use ($search): void {
                     $albumQuery->where('title', 'like', '%'.$search.'%')
