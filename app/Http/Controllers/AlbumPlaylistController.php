@@ -6,6 +6,7 @@ use App\Models\Album;
 use App\Models\AlbumPlaylist;
 use App\Models\SpotifyPlaylist;
 use App\Services\Playlists\AlbumPlaylistExporter;
+use App\Services\Playlists\AlbumSuggestionService;
 use App\Services\Recommendations\PlaylistNameSuggester;
 use App\Services\Spotify\AlbumPlaylistSyncService;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,15 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class AlbumPlaylistController extends Controller
 {
-    public function __construct(private PlaylistNameSuggester $playlistNameSuggester) {}
+    /**
+     * Create the playlist controller.
+     *
+     * @param  PlaylistNameSuggester  $playlistNameSuggester  The playlist-name suggestion service.
+     */
+    public function __construct(
+        private PlaylistNameSuggester $playlistNameSuggester,
+        private AlbumSuggestionService $albumSuggestionService,
+    ) {}
 
     /**
      * Show a playlist and the optional catalogue search results.
@@ -31,23 +40,18 @@ class AlbumPlaylistController extends Controller
      */
     public function show(Request $request, AlbumPlaylist $albumPlaylist): View
     {
-        $search = trim((string) $request->query('q', ''));
-        $albumQuery = Album::query()
-            ->with('artists')
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->where(function ($albumQuery) use ($search): void {
-                    $albumQuery->where('title', 'like', '%'.$search.'%')
-                        ->orWhereHas('artists', fn ($artistQuery) => $artistQuery->where('name', 'like', '%'.$search.'%'))
-                        ->orWhereHas('artists.acceptedGenres', fn ($genreQuery) => $genreQuery->where('genres.name', 'like', '%'.$search.'%'));
-                });
-            })
-            ->whereDoesntHave('playlists', fn ($query) => $query->whereKey($albumPlaylist->id))
-            ->orderBy('title');
+        $suggestions = $this->albumSuggestionService->search(
+            $albumPlaylist,
+            (string) $request->query('q', ''),
+            (string) $request->query('sort', ''),
+        );
 
         return view('playlists.show', [
             'albumPlaylist' => $albumPlaylist->load('albums.artists'),
-            'search' => $search,
-            'albums' => $search === '' ? collect() : $albumQuery->paginate(15)->withQueryString(),
+            'search' => trim((string) $request->query('q', '')),
+            'artistSearch' => $suggestions['artist_search'],
+            'sort' => $suggestions['sort'],
+            'albums' => $suggestions['albums'],
             'spotifyPlaylists' => $albumPlaylist->spotify_playlist_id === null
                 ? SpotifyPlaylist::query()->orderBy('name')->get(['spotify_playlist_id', 'name', 'public', 'collaborative'])
                 : collect(),
