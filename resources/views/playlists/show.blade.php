@@ -200,26 +200,42 @@
                 type="submit">Search Catalogue</button>
         </form>
         @if ($search !== '')
-            <ul class="mt-4 divide-y divide-ef-line">
-                @forelse ($albums as $album)
-                    <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
-                        <div class="min-w-0 flex-1">
-                            <h3 class="font-semibold">{{ $album->displayTitle() }}</h3>
-                            <p class="mt-1 text-sm text-ef-muted">
-                                {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</p>
-                        </div>
-                        <form method="POST" action="{{ route('album-playlists.albums.store', $albumPlaylist, false) }}">
-                            @csrf
-                            <input type="hidden" name="album_id" value="{{ $album->id }}">
-                            <button
-                                class="border border-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash"
-                                type="submit">Add Album</button>
-                        </form>
-                    </li>
-                @empty
-                    <li class="py-5 text-sm text-ef-muted">No matching albums found in the catalogue.</li>
-                @endforelse
-            </ul>
+            @if ($albums->isNotEmpty())
+                <form class="mt-4" method="POST"
+                    action="{{ route('album-playlists.albums.bulk-store', [], false) }}">
+                    @csrf
+                    <input type="hidden" name="destination" value="existing">
+                    <input type="hidden" name="playlist_id" value="{{ $albumPlaylist->id }}">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ef-line pb-3">
+                        <label class="flex items-center gap-2 text-sm font-semibold text-ef-text"
+                            for="playlist-select-all">
+                            <input id="playlist-select-all" type="checkbox" data-playlist-select-all>
+                            <span>Select all albums on this page</span>
+                        </label>
+                        <button
+                            class="bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
+                            type="submit">Add selected albums</button>
+                    </div>
+                    <ul class="divide-y divide-ef-line">
+                        @foreach ($albums as $album)
+                            <li class="flex items-start gap-3 py-4">
+                                <input class="playlist-album-checkbox mt-1" id="playlist-album-{{ $album->id }}"
+                                    type="checkbox" name="album_ids[]" value="{{ $album->id }}">
+                                <label class="min-w-0 flex-1 cursor-pointer" for="playlist-album-{{ $album->id }}">
+                                    <span class="font-semibold">{{ $album->displayTitle() }}</span>
+                                    <span class="mt-1 block text-sm text-ef-muted">
+                                        {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</span>
+                                </label>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <button
+                        class="mt-4 bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
+                        type="submit">Add selected albums</button>
+                </form>
+            @else
+                <p class="mt-4 text-sm text-ef-muted">No matching albums found in the catalogue.</p>
+            @endif
             @if ($albums->hasPages())
                 <div class="mt-4 border-t border-ef-line pt-4">{{ $albums->links() }}</div>
             @endif
@@ -228,3 +244,29 @@
         @endif
     </section>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectAll = document.querySelector('[data-playlist-select-all]');
+            const albums = [...document.querySelectorAll('.playlist-album-checkbox')];
+
+            if (!selectAll || albums.length === 0) {
+                return;
+            }
+
+            const updateSelectAll = () => {
+                const selected = albums.filter((album) => album.checked).length;
+                selectAll.checked = selected === albums.length;
+                selectAll.indeterminate = selected > 0 && selected < albums.length;
+            };
+
+            selectAll.addEventListener('change', () => {
+                albums.forEach((album) => {
+                    album.checked = selectAll.checked;
+                });
+            });
+            albums.forEach((album) => album.addEventListener('change', updateSelectAll));
+        });
+    </script>
+@endpush

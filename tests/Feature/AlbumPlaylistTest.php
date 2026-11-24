@@ -117,7 +117,8 @@ class AlbumPlaylistTest extends TestCase
         $this->get(route('album-playlists.show', [$playlist, 'q' => 'Mariner']))
             ->assertOk()
             ->assertSee('Mariner')
-            ->assertSee(route('album-playlists.albums.store', $playlist, false), false);
+            ->assertSee('name="album_ids[]"', false)
+            ->assertSee(route('album-playlists.albums.bulk-store', [], false), false);
 
         $this->assertDatabaseHas('albums', ['id' => $album->id]);
     }
@@ -151,6 +152,21 @@ class AlbumPlaylistTest extends TestCase
         $playlist = AlbumPlaylist::query()->firstOrFail();
         $this->assertStringContainsString('Mariner', $playlist->name);
         $this->assertSame([$album->id], $playlist->albums->pluck('id')->all());
+    }
+
+    public function test_selected_albums_can_be_added_to_an_existing_playlist(): void
+    {
+        $first = $this->createAlbum('Mariner');
+        $second = $this->createAlbum('The Silent Life');
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Fossil Gardens']);
+
+        $this->post(route('album-playlists.albums.bulk-store'), [
+            'album_ids' => [$first->id, $second->id],
+            'destination' => 'existing',
+            'playlist_id' => $playlist->id,
+        ])->assertRedirect(route('album-playlists.show', $playlist));
+
+        $this->assertSame([$first->id, $second->id], $playlist->fresh()->albums->pluck('id')->all());
     }
 
     public function test_playlist_can_be_exported_as_csv_without_spotify(): void
