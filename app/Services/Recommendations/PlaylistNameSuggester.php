@@ -3,13 +3,19 @@
 namespace App\Services\Recommendations;
 
 use App\Models\AlbumPlaylist;
+use App\Models\PlaylistNameOption;
+use App\Models\SpotifyConnection;
 use App\Models\SpotifyPlaylist;
+use App\Services\Spotify\SpotifyClient;
+use Throwable;
 
 /**
  * Generates a readable, unused name for an album recommendation draft.
  */
 class PlaylistNameSuggester
 {
+    public function __construct(private SpotifyClient $spotifyClient) {}
+
     /**
      * @param  iterable<array<string, mixed>>  $reviewAlbums  The albums in the draft.
      */
@@ -32,6 +38,7 @@ class PlaylistNameSuggester
      */
     public function suggestFromTitles(iterable $titles): string
     {
+        $this->syncSpotifyPlaylistWords();
         $words = $this->extractWords($titles);
         $counts = array_count_values($words);
         arsort($counts);
@@ -70,7 +77,7 @@ class PlaylistNameSuggester
 
             foreach ($titleWords as $word) {
                 $word = mb_strtolower($word);
-                if (mb_strlen($word) > 2 && ! in_array($word, $stopWords, true)) {
+                if (mb_strlen($word) > 2 && preg_match('/\pL/u', $word) === 1 && ! in_array($word, $stopWords, true)) {
                     $words[] = $word;
                 }
             }
@@ -85,10 +92,10 @@ class PlaylistNameSuggester
      */
     private function fallbackWords(array $selected): array
     {
-        $words = [
+        $words = PlaylistNameOption::query()->pluck('word')->merge([
             'ash', 'cinder', 'earth', 'echo', 'ember', 'estuary', 'fossil', 'garden',
             'hollow', 'lantern', 'mourning', 'night', 'silver', 'static', 'thorn', 'wilderness',
-        ];
+        ])->unique()->values()->all();
 
         while (count($selected) < 2) {
             $candidate = $words[random_int(0, count($words) - 1)];
@@ -98,5 +105,51 @@ class PlaylistNameSuggester
         }
 
         return $selected;
+    }
+
+    /**
+     * Store unique words from playlists owned by the connected Spotify account.
+     */
+    private function syncSpotifyPlaylistWords(): void
+    {
+        $connection = SpotifyConnection::query()->latest()->first();
+        $ownerId = $connection?->spotify_user_id;
+
+        if (! is_string($ownerId) || $ownerId === '') {
+            try {
+                $identity = $this->spotifyClient->currentUser();
+            } catch (Throwable) {
+                return;
+            }
+
+            $ownerId = $identity['id'];
+            $connection?->update([
+                'spotify_user_id' => $ownerId,
+                'display_name' => $identity['display_name'],
+            ]);
+        }
+
+        $words = $this->extractWords(
+            SpotifyPlaylist::query()->where('owner_id', $ownerId)->pluck('name'),
+        );
+
+        if ($words === []) {
+            return;
+        }
+
+        $timestamp = now();
+        PlaylistNameOption::query()->upsert(
+            array_map(
+                fn (string $word): array => [
+                    'word' => $word,
+                    'source' => 'spotify_playlist',
+                    'created_at' => $timestamp,
+                    'updated_at' => $timestamp,
+                ],
+                array_values(array_unique($words)),
+            ),
+            ['word'],
+            ['source', 'updated_at'],
+        );
     }
 }
