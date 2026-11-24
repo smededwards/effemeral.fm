@@ -59,6 +59,61 @@
         <p class="border border-red-800 bg-ef-surface p-4 text-sm text-red-300" role="alert">{{ session('error') }}</p>
     @endif
 
+    <section class="border border-ef-line bg-ef-surface p-5 sm:p-6" aria-labelledby="add-albums">
+        <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Catalogue</p>
+        <h2 id="add-albums" class="mt-2 text-2xl font-semibold">Add Full Albums</h2>
+        <form class="mt-4 flex flex-col gap-3 sm:flex-row" method="GET"
+            action="{{ route('album-playlists.show', $albumPlaylist, false) }}">
+            <label class="sr-only" for="album-search">Search albums, artists, or genres</label>
+            <input id="album-search"
+                class="min-w-0 flex-1 border border-ef-line bg-ef-canvas px-4 py-3 text-sm text-ef-text" type="search"
+                name="q" value="{{ $search }}" placeholder="Search albums, artists, or genres">
+            <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
+                type="submit">Search Catalogue</button>
+        </form>
+        @if ($search !== '')
+            @if ($albums->isNotEmpty())
+                <form class="mt-4" method="POST" action="{{ route('album-playlists.albums.bulk-store', [], false) }}">
+                    @csrf
+                    <input type="hidden" name="destination" value="existing">
+                    <input type="hidden" name="playlist_id" value="{{ $albumPlaylist->id }}">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ef-line pb-3">
+                        <label class="flex items-center gap-2 text-sm font-semibold text-ef-text" for="playlist-select-all">
+                            <input id="playlist-select-all" type="checkbox" data-playlist-select-all>
+                            <span>Select all albums on this page</span>
+                        </label>
+                        <button
+                            class="bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
+                            type="submit">Add selected albums</button>
+                    </div>
+                    <ul class="divide-y divide-ef-line">
+                        @foreach ($albums as $album)
+                            <li class="flex items-start gap-3 py-4">
+                                <input class="playlist-album-checkbox mt-1" id="playlist-album-{{ $album->id }}"
+                                    type="checkbox" name="album_ids[]" value="{{ $album->id }}">
+                                <label class="min-w-0 flex-1 cursor-pointer" for="playlist-album-{{ $album->id }}">
+                                    <span class="font-semibold">{{ $album->displayTitle() }}</span>
+                                    <span class="mt-1 block text-sm text-ef-muted">
+                                        {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</span>
+                                </label>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <button
+                        class="mt-4 bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
+                        type="submit">Add selected albums</button>
+                </form>
+            @else
+                <p class="mt-4 text-sm text-ef-muted">No matching albums found in the catalogue.</p>
+            @endif
+            @if ($albums->hasPages())
+                <div class="mt-4 border-t border-ef-line pt-4">{{ $albums->links() }}</div>
+            @endif
+        @else
+            <p class="mt-4 text-sm text-ef-muted">Search the catalogue to find an album to add.</p>
+        @endif
+    </section>
+
     <section class="border border-ef-accent-line bg-ef-surface p-5 sm:p-6" aria-labelledby="spotify-sync">
         <div class="flex flex-col gap-3 border-b border-ef-line pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -92,13 +147,15 @@
                 <form method="POST" action="{{ route('album-playlists.spotify.preview', $albumPlaylist, false) }}">
                     @csrf
                     <input type="hidden" name="destination" value="linked">
-                    <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
+                    <button
+                        class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                         type="submit">Review Spotify Changes</button>
                 </form>
             </div>
             @if ($albumPlaylist->spotify_playlist_url)
                 <a class="mt-3 inline-block text-sm font-semibold text-ef-accent-strong hover:underline"
-                    href="{{ $albumPlaylist->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
+                    href="{{ $albumPlaylist->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open in
+                    Spotify</a>
             @endif
         @else
             <form class="mt-5 grid gap-4 sm:grid-cols-2" method="POST"
@@ -127,7 +184,8 @@
                     <p class="mt-2 text-xs text-ef-muted">Type a playlist name after opening the list to jump to it.</p>
                 </div>
                 <div class="sm:col-span-2">
-                    <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
+                    <button
+                        class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                         type="submit">Review Spotify Changes</button>
                 </div>
             </form>
@@ -187,60 +245,4 @@
         @endif
     </section>
 
-    <section class="border border-ef-line bg-ef-surface p-5 sm:p-6" aria-labelledby="add-albums">
-        <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Catalogue</p>
-        <h2 id="add-albums" class="mt-2 text-2xl font-semibold">Add Full Albums</h2>
-        <form class="mt-4 flex flex-col gap-3 sm:flex-row" method="GET"
-            action="{{ route('album-playlists.show', $albumPlaylist, false) }}">
-            <label class="sr-only" for="album-search">Search albums or artists</label>
-            <input id="album-search"
-                class="min-w-0 flex-1 border border-ef-line bg-ef-canvas px-4 py-3 text-sm text-ef-text" type="search"
-                name="q" value="{{ $search }}" placeholder="Search albums or artists">
-            <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
-                type="submit">Search Catalogue</button>
-        </form>
-        @if ($search !== '')
-            @if ($albums->isNotEmpty())
-                <form class="mt-4" method="POST"
-                    action="{{ route('album-playlists.albums.bulk-store', [], false) }}">
-                    @csrf
-                    <input type="hidden" name="destination" value="existing">
-                    <input type="hidden" name="playlist_id" value="{{ $albumPlaylist->id }}">
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ef-line pb-3">
-                        <label class="flex items-center gap-2 text-sm font-semibold text-ef-text"
-                            for="playlist-select-all">
-                            <input id="playlist-select-all" type="checkbox" data-playlist-select-all>
-                            <span>Select all albums on this page</span>
-                        </label>
-                        <button
-                            class="bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
-                            type="submit">Add selected albums</button>
-                    </div>
-                    <ul class="divide-y divide-ef-line">
-                        @foreach ($albums as $album)
-                            <li class="flex items-start gap-3 py-4">
-                                <input class="playlist-album-checkbox mt-1" id="playlist-album-{{ $album->id }}"
-                                    type="checkbox" name="album_ids[]" value="{{ $album->id }}">
-                                <label class="min-w-0 flex-1 cursor-pointer" for="playlist-album-{{ $album->id }}">
-                                    <span class="font-semibold">{{ $album->displayTitle() }}</span>
-                                    <span class="mt-1 block text-sm text-ef-muted">
-                                        {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }}</span>
-                                </label>
-                            </li>
-                        @endforeach
-                    </ul>
-                    <button
-                        class="mt-4 bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
-                        type="submit">Add selected albums</button>
-                </form>
-            @else
-                <p class="mt-4 text-sm text-ef-muted">No matching albums found in the catalogue.</p>
-            @endif
-            @if ($albums->hasPages())
-                <div class="mt-4 border-t border-ef-line pt-4">{{ $albums->links() }}</div>
-            @endif
-        @else
-            <p class="mt-4 text-sm text-ef-muted">Search the catalogue to find an album to add.</p>
-        @endif
-    </section>
 @endsection
