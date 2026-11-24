@@ -37,4 +37,29 @@ class GenreManagementTest extends TestCase
         $this->assertSame(['post-metal', 'sludge'], $acceptedGenres);
         $this->assertSame(1, (int) $artist->genres->firstWhere('normalised_name', 'doom')->pivot->suppressed);
     }
+
+    /**
+     * It suppresses a removed genre so a later provider sync does not restore it.
+     */
+    public function test_an_artist_genre_can_be_removed_from_the_artist_page(): void
+    {
+        $artist = Artist::query()->create([
+            'name' => 'An Artist',
+            'normalised_name' => 'an artist',
+        ]);
+        $genre = Genre::query()->create([
+            'name' => 'doom metal',
+            'normalised_name' => 'doom metal',
+        ]);
+        $artist->genres()->attach($genre->id, ['source' => 'musicbrainz', 'suppressed' => false]);
+
+        $this->delete(route('artists.genres.destroy', [$artist, $genre]))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('artist_genre', [
+            'artist_id' => $artist->id,
+            'genre_id' => $genre->id,
+            'suppressed' => true,
+        ]);
+    }
 }

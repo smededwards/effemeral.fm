@@ -48,6 +48,7 @@ Route::middleware('private')->group(function (): void {
     Route::post('/albums/{album}/completion/incomplete', [DashboardController::class, 'markAlbumIncomplete'])->name('albums.completion.incomplete');
     Route::post('/albums/{album}/completion/clear', [DashboardController::class, 'clearAlbumCompletionOverride'])->name('albums.completion.clear');
     Route::post('/artists/{artist}/genres', [DashboardController::class, 'updateArtistGenres'])->name('artists.genres.update');
+    Route::delete('/artists/{artist}/genres/{genre}', [DashboardController::class, 'removeArtistGenre'])->name('artists.genres.destroy');
     Route::post('/artists/{artist}/musicbrainz-discography', [MusicBrainzDiscographyController::class, 'store'])->name('artists.musicbrainz-discography.store');
     Route::patch('/artists/{artist}/location', [MusicPageController::class, 'updateArtistLocation'])->name('artists.location.update');
     Route::post('/playlists/albums', [AlbumPlaylistController::class, 'addAlbums'])->name('album-playlists.albums.bulk-store');
