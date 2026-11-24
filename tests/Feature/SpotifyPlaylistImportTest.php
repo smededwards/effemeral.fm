@@ -186,7 +186,7 @@ class SpotifyPlaylistImportTest extends TestCase
         ]);
     }
 
-    public function test_spotify_quota_errors_are_not_retried(): void
+    public function test_spotify_quota_errors_are_not_retried_or_reissued_during_cooldown(): void
     {
         $attempts = 0;
         config()->set('services.spotify.access_token', 'test-token');
@@ -202,6 +202,14 @@ class SpotifyPlaylistImportTest extends TestCase
         } catch (SpotifyRateLimitException $exception) {
             $this->assertSame('Spotify quota has been exceeded. Try again later.', $exception->getMessage());
         }
+
+        try {
+            app(SpotifyClient::class)->savedAlbums(1);
+            $this->fail('Expected the Spotify cooldown to stop the follow-up request.');
+        } catch (SpotifyRateLimitException $exception) {
+            $this->assertStringContainsString('cooldown is active', $exception->getMessage());
+        }
+
         $this->assertSame(1, $attempts);
     }
 

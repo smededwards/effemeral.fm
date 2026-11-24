@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Throwable;
@@ -17,6 +18,8 @@ use Throwable;
  */
 class SpotifyApiTransport
 {
+    private const RATE_LIMIT_CACHE_KEY = 'spotify:rate-limit:cooldown';
+
     /**
      * Send a GET request to Spotify.
      *
@@ -92,6 +95,7 @@ class SpotifyApiTransport
     private function sendWithRateLimit(Closure $request): Response
     {
         for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $this->assertRateLimitCooldownHasExpired();
             $response = $request();
 
             if ($response->status() !== 429) {
@@ -99,6 +103,7 @@ class SpotifyApiTransport
             }
 
             if ($response->json('error.reason') === 'QUOTA_EXCEEDED') {
+                $this->setRateLimitCooldown((int) config('services.spotify.quota_cooldown_seconds', 300));
                 throw new SpotifyRateLimitException('Spotify quota has been exceeded. Try again later.', false);
             }
 
@@ -107,11 +112,38 @@ class SpotifyApiTransport
             }
 
             $headers = array_change_key_case($response->headers());
-            $retryAfter = (int) ($headers['retry-after'] ?? 0);
+            $retryAfter = array_key_exists('retry-after', $headers)
+                ? max(0, (int) $headers['retry-after'])
+                : (int) config('services.spotify.rate_limit_cooldown_seconds', 60);
+            $this->setRateLimitCooldown($retryAfter);
             sleep($retryAfter > 0 ? $retryAfter : 2 ** ($attempt - 1));
         }
 
         throw new SpotifyRateLimitException('Spotify rate limit could not be cleared.');
+    }
+
+    private function assertRateLimitCooldownHasExpired(): void
+    {
+        $cooldownUntil = Cache::get(self::RATE_LIMIT_CACHE_KEY);
+
+        if (! is_int($cooldownUntil) || $cooldownUntil <= now()->timestamp) {
+            return;
+        }
+
+        $remainingSeconds = $cooldownUntil - now()->timestamp;
+
+        throw new SpotifyRateLimitException(
+            'Spotify rate limit cooldown is active. Try again in '.$remainingSeconds.' seconds.',
+        );
+    }
+
+    private function setRateLimitCooldown(int $seconds): void
+    {
+        if ($seconds < 1) {
+            return;
+        }
+
+        Cache::put(self::RATE_LIMIT_CACHE_KEY, now()->addSeconds($seconds)->timestamp, $seconds);
     }
 
     private function accessToken(): string
