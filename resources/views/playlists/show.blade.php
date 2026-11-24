@@ -97,6 +97,8 @@
                                     class="bg-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                                     type="submit">Add selected albums</button>
                             </div>
+                            <p class="mt-3 text-xs text-ef-muted">Showing up to 50 related albums, with exact matches and
+                                newer releases first. Refine your search for more focused results.</p>
                             <ul class="divide-y divide-ef-line">
                                 @foreach ($albums as $album)
                                     <li class="flex items-start gap-3 py-4">
@@ -117,9 +119,6 @@
                         </form>
                     @else
                         <p class="mt-4 text-sm text-ef-muted">No matching albums found in the catalogue.</p>
-                    @endif
-                    @if ($albums->hasPages())
-                        <div class="mt-4 border-t border-ef-line pt-4">{{ $albums->links() }}</div>
                     @endif
                 @else
                     <p class="mt-4 text-sm text-ef-muted">Search the catalogue to find an album to add.</p>

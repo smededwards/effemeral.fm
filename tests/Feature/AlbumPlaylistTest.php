@@ -137,6 +137,30 @@ class AlbumPlaylistTest extends TestCase
         $this->assertDatabaseHas('albums', ['id' => $album->id]);
     }
 
+    public function test_playlist_search_prioritises_related_recent_albums_and_caps_results(): void
+    {
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Listening Queue']);
+        $exact = $this->createAlbum('Metal');
+        $exact->update(['release_date' => '2020-01-01']);
+        $older = $this->createAlbum('Metal Older');
+        $older->update(['release_date' => '2019-01-01']);
+        $newer = $this->createAlbum('Metal Newer');
+        $newer->update(['release_date' => '2026-01-01']);
+
+        foreach (range(1, 50) as $number) {
+            $this->createAlbum('Metal Result '.$number);
+        }
+
+        $response = $this->get(route('album-playlists.show', [$playlist, 'q' => 'Metal']))
+            ->assertOk();
+        $albums = $response->viewData('albums');
+
+        $this->assertCount(50, $albums);
+        $this->assertSame($exact->id, $albums->first()->id);
+        $this->assertSame($newer->id, $albums->get(1)->id);
+        $this->assertSame($older->id, $albums->get(2)->id);
+    }
+
     public function test_playlist_name_can_be_saved_or_refreshed_from_album_contents(): void
     {
         $album = $this->createAlbum('Mourning Earth');

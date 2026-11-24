@@ -32,6 +32,8 @@ class AlbumPlaylistController extends Controller
     public function show(Request $request, AlbumPlaylist $albumPlaylist): View
     {
         $search = trim((string) $request->query('q', ''));
+        $searchTerm = '%'.$search.'%';
+        $normalisedSearch = mb_strtolower($search);
         $albumQuery = Album::query()
             ->with('artists')
             ->when($search !== '', function ($query) use ($search): void {
@@ -42,12 +44,32 @@ class AlbumPlaylistController extends Controller
                 });
             })
             ->whereDoesntHave('playlists', fn ($query) => $query->whereKey($albumPlaylist->id))
-            ->orderBy('title');
+            ->when($search !== '', function ($query) use ($normalisedSearch, $searchTerm): void {
+                $query->orderByRaw(
+                    "CASE
+                        WHEN LOWER(albums.title) = ? THEN 0
+                        WHEN LOWER(albums.title) LIKE ? THEN 1
+                        WHEN EXISTS (
+                            SELECT 1
+                            FROM album_artist
+                            INNER JOIN artists ON artists.id = album_artist.artist_id
+                            WHERE album_artist.album_id = albums.id
+                            AND (LOWER(artists.name) = ? OR LOWER(artists.normalised_name) = ?)
+                        ) THEN 2
+                        ELSE 3
+                    END",
+                    [$normalisedSearch, $searchTerm, $normalisedSearch, $normalisedSearch]
+                )
+                ->orderByRaw('CASE WHEN release_date IS NULL THEN 1 ELSE 0 END')
+                ->orderByDesc('release_date')
+                ->orderByDesc('albums.created_at')
+                ->orderBy('title');
+            });
 
         return view('playlists.show', [
             'albumPlaylist' => $albumPlaylist->load('albums.artists'),
             'search' => $search,
-            'albums' => $search === '' ? collect() : $albumQuery->paginate(15)->withQueryString(),
+            'albums' => $search === '' ? collect() : $albumQuery->limit(50)->get(),
             'spotifyPlaylists' => $albumPlaylist->spotify_playlist_id === null
                 ? SpotifyPlaylist::query()->orderBy('name')->get(['spotify_playlist_id', 'name', 'public', 'collaborative'])
                 : collect(),
