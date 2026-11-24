@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEfmId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -10,6 +11,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Track extends Model
 {
+    use HasEfmId;
+
+    /** EFMID entity type used in generated identifiers. */
+    protected const EFM_TYPE = 'TRK';
+
     protected $fillable = [
         'album_id', 'title', 'normalised_title', 'spotify_id', 'lastfm_mbid',
         'spotify_uri', 'disc_number', 'track_number', 'duration_ms',

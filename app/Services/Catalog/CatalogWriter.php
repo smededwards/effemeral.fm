@@ -6,6 +6,7 @@ use App\Models\Album;
 use App\Models\Artist;
 use App\Models\SpotifyAlbumCollection;
 use App\Models\Track;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Arr;
 
 /**
@@ -13,6 +14,13 @@ use Illuminate\Support\Arr;
  */
 class CatalogWriter
 {
+    /**
+     * Create a catalogue writer with provider identity persistence enabled.
+     *
+     * @param  CatalogIdentityWriter  $identityWriter  The provider identity writer.
+     */
+    public function __construct(private readonly CatalogIdentityWriter $identityWriter) {}
+
     /**
      * Upsert a Spotify album and its credited artists, tracks, and membership.
      *
@@ -54,6 +62,7 @@ class CatalogWriter
             'cover_image_url' => data_get($albumData, 'images.0.url'),
         ]);
         $album->save();
+        $this->identityWriter->syncAlbum($album);
 
         foreach (Arr::wrap($albumData['artists'] ?? []) as $position => $artistData) {
             if (! is_array($artistData) || ! is_string($artistData['name'] ?? null)) {
@@ -70,6 +79,7 @@ class CatalogWriter
                 'spotify_id' => $artistData['id'] ?? null,
             ]);
             $artist->save();
+            $this->identityWriter->syncArtist($artist);
             $album->artists()->syncWithoutDetaching([$artist->id => ['artist_position' => $position]]);
         }
 
@@ -98,24 +108,62 @@ class CatalogWriter
                 continue;
             }
 
+            $normalisedTitle = $this->normalise($trackData['name']);
+            $discNumber = $trackData['disc_number'] ?? null;
+            $trackNumber = $trackData['track_number'] ?? null;
             $track = isset($trackData['id']) && $trackData['id'] !== ''
                 ? Track::query()->where('spotify_id', $trackData['id'])->first()
                 : null;
-            $track ??= Track::query()->firstOrNew([
-                'album_id' => $album->id,
-                'normalised_title' => $this->normalise($trackData['name']),
-            ]);
+
+            if ($track === null) {
+                $track = Track::query()->firstOrNew([
+                    'album_id' => $album->id,
+                    'normalised_title' => $normalisedTitle,
+                    'disc_number' => $discNumber,
+                    'track_number' => $trackNumber,
+                ]);
+            } else {
+                $conflictingTrackExists = Track::query()
+                    ->where('album_id', $album->id)
+                    ->where('normalised_title', $normalisedTitle)
+                    ->when(
+                        $discNumber === null,
+                        fn ($query) => $query->whereNull('disc_number'),
+                        fn ($query) => $query->where('disc_number', $discNumber),
+                    )
+                    ->when(
+                        $trackNumber === null,
+                        fn ($query) => $query->whereNull('track_number'),
+                        fn ($query) => $query->where('track_number', $trackNumber),
+                    )
+                    ->where('id', '<>', $track->id)
+                    ->exists();
+
+                if ($conflictingTrackExists) {
+                    // Preserve both source records when Spotify reuses a track position ambiguously.
+                    continue;
+                }
+            }
+
             $track->fill([
                 'album_id' => $album->id,
                 'title' => $trackData['name'],
-                'normalised_title' => $this->normalise($trackData['name']),
+                'normalised_title' => $normalisedTitle,
                 'spotify_id' => $trackData['id'] ?? null,
                 'spotify_uri' => $trackData['uri'] ?? null,
-                'disc_number' => $trackData['disc_number'] ?? null,
-                'track_number' => $trackData['track_number'] ?? null,
+                'disc_number' => $discNumber,
+                'track_number' => $trackNumber,
                 'duration_ms' => $trackData['duration_ms'] ?? null,
             ]);
-            $track->save();
+            try {
+                $track->save();
+                $this->identityWriter->syncTrack($track);
+            } catch (QueryException $exception) {
+                if ($exception->getCode() !== '23000'
+                    || ! str_contains($exception->getMessage(), 'tracks_album_title_position_unique')) {
+                    throw $exception;
+                }
+            }
         }
     }
 
@@ -138,6 +186,7 @@ class CatalogWriter
             'lastfm_mbid' => $data['artist_mbid'] ?? null,
         ]);
         $artist->save();
+        $this->identityWriter->syncArtist($artist);
 
         $albumName = $data['album_name'] ?? null;
         $trackName = (string) ($data['track_name'] ?? 'Unknown track');
@@ -160,6 +209,7 @@ class CatalogWriter
             'lastfm_mbid' => $data['album_mbid'] ?? null,
         ]);
         $album->save();
+        $this->identityWriter->syncAlbum($album);
         $album->artists()->syncWithoutDetaching([$artist->id => ['artist_position' => 0]]);
 
         $track = isset($data['track_mbid']) && $data['track_mbid'] !== ''
@@ -176,6 +226,7 @@ class CatalogWriter
             'lastfm_mbid' => $data['track_mbid'] ?? null,
         ]);
         $track->save();
+        $this->identityWriter->syncTrack($track);
 
         return $track;
     }

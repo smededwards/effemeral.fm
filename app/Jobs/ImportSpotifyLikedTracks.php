@@ -22,8 +22,9 @@ class ImportSpotifyLikedTracks implements ShouldQueue
 
     /**
      * @param  int  $importRunId  The persisted import run to update.
+     * @param  bool  $enrich  Whether to request additional Spotify artist metadata.
      */
-    public function __construct(public int $importRunId) {}
+    public function __construct(public int $importRunId, public bool $enrich = false) {}
 
     /**
      * Import liked tracks idempotently and update the run counters.
@@ -80,10 +81,13 @@ class ImportSpotifyLikedTracks implements ShouldQueue
                 $wasExisting ? $updated++ : $imported++;
             }
 
-            foreach ($client->artists(array_keys($artistIds)) as $artistData) {
-                $artist = Artist::query()->where('spotify_id', $artistData['id'])->first();
-                if ($artist !== null) {
-                    $genreWriter->syncSpotify($artist, $artistData['genres'] ?? []);
+            if ($this->enrich) {
+                // Keep the normal import limited to the saved-track data needed by the catalogue.
+                foreach ($client->artists(array_keys($artistIds)) as $artistData) {
+                    $artist = Artist::query()->where('spotify_id', $artistData['id'])->first();
+                    if ($artist !== null) {
+                        $genreWriter->syncSpotify($artist, $artistData['genres'] ?? []);
+                    }
                 }
             }
 

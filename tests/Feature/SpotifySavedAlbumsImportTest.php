@@ -84,7 +84,7 @@ class SpotifySavedAlbumsImportTest extends TestCase
             'requested_limit' => 100,
         ]);
 
-        $job = new ImportSpotifySavedAlbums($run->id);
+        $job = new ImportSpotifySavedAlbums($run->id, true);
         $job->handle(app(SpotifyClient::class));
         $job->handle(app(SpotifyClient::class));
 
@@ -97,6 +97,20 @@ class SpotifySavedAlbumsImportTest extends TestCase
         $this->assertSame('A Saved Album', SpotifySavedAlbum::query()->firstOrFail()->name);
         $this->assertDatabaseHas('artists', ['spotify_id' => 'artist-id', 'name' => 'An Artist']);
         $this->assertDatabaseHas('albums', ['spotify_id' => 'album-id', 'title' => 'A Saved Album']);
+        $this->assertMatchesRegularExpression('/^EFM-ART-\d{3}-\d{3}-\d{3}$/', Artist::query()->firstOrFail()->efm_id);
+        $this->assertMatchesRegularExpression('/^EFM-ALB-\d{3}-\d{3}-\d{3}$/', Album::query()->firstOrFail()->efm_id);
+        $this->assertDatabaseHas('catalog_identities', [
+            'provider' => 'spotify',
+            'entity_type' => 'artist',
+            'identifier_type' => 'spotify_id',
+            'identifier' => 'artist-id',
+        ]);
+        $this->assertDatabaseHas('catalog_identities', [
+            'provider' => 'spotify',
+            'entity_type' => 'album',
+            'identifier_type' => 'spotify_id',
+            'identifier' => 'album-id',
+        ]);
         $this->assertDatabaseHas('tracks', ['spotify_id' => 'track-id', 'title' => 'A Track']);
         $this->assertDatabaseHas('tracks', ['spotify_id' => 'track-id-2', 'title' => 'A Second Track']);
         $this->assertDatabaseHas('spotify_album_collections', ['collection_type' => 'saved']);

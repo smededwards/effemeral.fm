@@ -27,8 +27,15 @@ class ImportSpotifyPlaylists implements ShouldQueue
     /**
      * @param  int  $importRunId  The persisted import run to update.
      * @param  string|null  $playlistId  A single playlist ID for an individual retry.
+     * @param  bool  $onlyNew  Whether to skip playlists already in the local catalogue.
+     * @param  bool  $enrich  Whether to request additional Spotify album and artist metadata.
      */
-    public function __construct(public int $importRunId, public ?string $playlistId = null) {}
+    public function __construct(
+        public int $importRunId,
+        public ?string $playlistId = null,
+        public bool $onlyNew = false,
+        public bool $enrich = false,
+    ) {}
 
     /**
      * @return list<int> Retry delays in seconds.
@@ -81,10 +88,14 @@ class ImportSpotifyPlaylists implements ShouldQueue
                     ]];
                     $page = ['next_offset' => 1, 'total' => 1];
                 } else {
-                    $remaining = $run->requested_limit === null
-                        ? 50
-                        : min(50, (int) $run->requested_limit - $offset);
-                    if ($remaining < 1) {
+                    // A new-only import counts accepted playlists, not Spotify page offsets.
+                    $remaining = 50;
+                    if ($this->onlyNew && $run->requested_limit !== null) {
+                        $remaining = min(50, (int) $run->requested_limit - $imported);
+                    } elseif (! $this->onlyNew && $run->requested_limit !== null) {
+                        $remaining = min(50, (int) $run->requested_limit - $offset);
+                    }
+                    if (! $this->onlyNew && $remaining < 1) {
                         break;
                     }
 
@@ -97,6 +108,15 @@ class ImportSpotifyPlaylists implements ShouldQueue
                     $playlistId = (string) ($playlistData['id'] ?? '');
 
                     if ($playlistId === '') {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    if ($this->onlyNew && SpotifyPlaylist::query()
+                        ->where('spotify_playlist_id', $playlistId)
+                        ->exists()) {
+                        // Do not fetch items for playlists already represented locally.
                         $skipped++;
 
                         continue;
@@ -175,20 +195,23 @@ class ImportSpotifyPlaylists implements ShouldQueue
                             }
                         });
 
-                        $albumIds = collect($items)
-                            ->map(fn (array $item): mixed => data_get($item, 'track.album.id'))
-                            ->filter(fn (mixed $albumId): bool => is_string($albumId) && $albumId !== '')
-                            ->unique()
-                            ->values();
+                        if ($this->enrich) {
+                            // Album track lookups are optional because they increase Spotify API usage.
+                            $albumIds = collect($items)
+                                ->map(fn (array $item): mixed => data_get($item, 'track.album.id'))
+                                ->filter(fn (mixed $albumId): bool => is_string($albumId) && $albumId !== '')
+                                ->unique()
+                                ->values();
 
-                        foreach ($albumIds as $albumId) {
-                            $album = Album::query()->where('spotify_id', $albumId)->first();
-                            if ($album === null || ($album->total_tracks !== null
-                                && $album->tracks()->whereNotNull('spotify_uri')->count() === $album->total_tracks)) {
-                                continue;
+                            foreach ($albumIds as $albumId) {
+                                $album = Album::query()->where('spotify_id', $albumId)->first();
+                                if ($album === null || ($album->total_tracks !== null
+                                    && $album->tracks()->whereNotNull('spotify_uri')->count() === $album->total_tracks)) {
+                                    continue;
+                                }
+
+                                $catalog->spotifyAlbumTracks($album, $client->albumTracks($albumId));
                             }
-
-                            $catalog->spotifyAlbumTracks($album, $client->albumTracks($albumId));
                         }
 
                         $playlist->update([
@@ -220,12 +243,18 @@ class ImportSpotifyPlaylists implements ShouldQueue
 
                 $offset = $page['next_offset'];
                 $run->update(['next_offset' => $offset]);
-            } while ($this->playlistId === null && $playlists !== [] && $offset < $page['total']);
+            } while ($this->playlistId === null
+                && $playlists !== []
+                && $offset < $page['total']
+                && (! $this->onlyNew || $run->requested_limit === null || $imported < $run->requested_limit));
 
-            foreach ($client->artists(array_keys($artistIds)) as $artistData) {
-                $artist = Artist::query()->where('spotify_id', $artistData['id'])->first();
-                if ($artist !== null) {
-                    $genreWriter->syncSpotify($artist, $artistData['genres'] ?? []);
+            if ($this->enrich) {
+                // Enrichment is opt-in so import-only runs avoid extra Spotify requests.
+                foreach ($client->artists(array_keys($artistIds)) as $artistData) {
+                    $artist = Artist::query()->where('spotify_id', $artistData['id'])->first();
+                    if ($artist !== null) {
+                        $genreWriter->syncSpotify($artist, $artistData['genres'] ?? []);
+                    }
                 }
             }
 

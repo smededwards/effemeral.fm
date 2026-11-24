@@ -69,7 +69,7 @@ class SpotifyLikedTracksImportTest extends TestCase
             'status' => 'queued',
         ]);
 
-        $job = new ImportSpotifyLikedTracks($run->id);
+        $job = new ImportSpotifyLikedTracks($run->id, true);
         $job->handle(app(SpotifyClient::class));
         $job->handle(app(SpotifyClient::class));
 

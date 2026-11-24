@@ -21,8 +21,9 @@ class ImportSpotifySavedAlbums implements ShouldQueue
 
     /**
      * @param  int  $importRunId  The persisted import run to update.
+     * @param  bool  $enrich  Whether to request additional Spotify album and artist metadata.
      */
-    public function __construct(public int $importRunId) {}
+    public function __construct(public int $importRunId, public bool $enrich = false) {}
 
     /**
      * Process the next saved-album page and persist its offset.
@@ -85,7 +86,10 @@ class ImportSpotifySavedAlbums implements ShouldQueue
                     }
 
                     $canonicalAlbum = $catalog->spotifyAlbum($album, $item['added_at'] ?? null);
-                    $catalog->spotifyAlbumTracks($canonicalAlbum, $client->albumTracks($albumId));
+                    if ($this->enrich) {
+                        // Track pages are deferred during import-only runs to reduce API usage.
+                        $catalog->spotifyAlbumTracks($canonicalAlbum, $client->albumTracks($albumId));
+                    }
 
                     $savedAlbum = SpotifySavedAlbum::query()->firstOrNew(['spotify_album_id' => $albumId]);
                     $wasExisting = $savedAlbum->exists;
@@ -124,10 +128,13 @@ class ImportSpotifySavedAlbums implements ShouldQueue
                 ]);
             } while ($items !== [] && $offset < $page['total']);
 
-            foreach ($client->artists(array_keys($artistIds)) as $artistData) {
-                $artist = Artist::query()->where('spotify_id', $artistData['id'])->first();
-                if ($artist !== null) {
-                    $genreWriter->syncSpotify($artist, $artistData['genres'] ?? []);
+            if ($this->enrich) {
+                // Artist genre enrichment is optional and can be run after the import.
+                foreach ($client->artists(array_keys($artistIds)) as $artistData) {
+                    $artist = Artist::query()->where('spotify_id', $artistData['id'])->first();
+                    if ($artist !== null) {
+                        $genreWriter->syncSpotify($artist, $artistData['genres'] ?? []);
+                    }
                 }
             }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEfmId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,6 +12,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Artist extends Model
 {
+    use HasEfmId;
+
+    /** EFMID entity type used in generated identifiers. */
+    protected const EFM_TYPE = 'ART';
+
     protected $fillable = [
         'name', 'normalised_name', 'location', 'location_manual', 'region', 'region_manual', 'country_code', 'country_manual',
         'spotify_id', 'lastfm_mbid', 'musicbrainz_mbid', 'musicbrainz_checked_at',

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEfmId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
@@ -10,6 +11,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class AlbumPlaylist extends Model
 {
+    use HasEfmId;
+
+    /** EFMID entity type used in generated identifiers. */
+    protected const EFM_TYPE = 'PLY';
+
     protected $fillable = [
         'name', 'spotify_playlist_id', 'spotify_playlist_url', 'spotify_managed_track_uris',
         'spotify_pending_track_uris', 'spotify_sync_status', 'spotify_sync_error', 'spotify_synced_at',

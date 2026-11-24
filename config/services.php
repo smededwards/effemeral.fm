@@ -52,6 +52,7 @@ return [
 
     'musicbrainz' => [
         'endpoint' => env('MUSICBRAINZ_API_ENDPOINT', 'https://musicbrainz.org/ws/2'),
+        'min_request_interval_ms' => (int) env('MUSICBRAINZ_MIN_REQUEST_INTERVAL_MS', 1500),
         'user_agent' => env('MUSICBRAINZ_USER_AGENT', 'Effemeral/0.1 (https://github.com/smededwards/effemeral.fm)'),
     ],
 
@@ -63,6 +64,8 @@ return [
         'refresh_token' => env('SPOTIFY_REFRESH_TOKEN'),
         'api_endpoint' => env('SPOTIFY_API_ENDPOINT', 'https://api.spotify.com/v1'),
         'token_endpoint' => env('SPOTIFY_TOKEN_ENDPOINT', 'https://accounts.spotify.com/api/token'),
+        'rate_limit_cooldown_seconds' => (int) env('SPOTIFY_RATE_LIMIT_COOLDOWN_SECONDS', 60),
+        'quota_cooldown_seconds' => (int) env('SPOTIFY_QUOTA_COOLDOWN_SECONDS', 300),
         'scopes' => env('SPOTIFY_SCOPES', 'user-library-read playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public'),
     ],
 

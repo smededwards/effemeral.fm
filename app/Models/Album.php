@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasEfmId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,11 @@ use Illuminate\Support\Str;
  */
 class Album extends Model
 {
+    use HasEfmId;
+
+    /** EFMID entity type used in generated identifiers. */
+    protected const EFM_TYPE = 'ALB';
+
     protected $fillable = [
         'title', 'normalised_title', 'album_type', 'spotify_id', 'lastfm_mbid', 'musicbrainz_release_group_mbid',
         'spotify_uri', 'spotify_url', 'total_tracks', 'release_date',
