@@ -35,8 +35,11 @@ class AlbumPlaylistController extends Controller
         $albumQuery = Album::query()
             ->with('artists')
             ->when($search !== '', function ($query) use ($search): void {
-                $query->where('title', 'like', '%'.$search.'%')
-                    ->orWhereHas('artists', fn ($artistQuery) => $artistQuery->where('name', 'like', '%'.$search.'%'));
+                $query->where(function ($albumQuery) use ($search): void {
+                    $albumQuery->where('title', 'like', '%'.$search.'%')
+                        ->orWhereHas('artists', fn ($artistQuery) => $artistQuery->where('name', 'like', '%'.$search.'%'))
+                        ->orWhereHas('artists.acceptedGenres', fn ($genreQuery) => $genreQuery->where('genres.name', 'like', '%'.$search.'%'));
+                });
             })
             ->whereDoesntHave('playlists', fn ($query) => $query->whereKey($albumPlaylist->id))
             ->orderBy('title');

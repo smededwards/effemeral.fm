@@ -106,6 +106,16 @@ class AlbumPlaylistTest extends TestCase
     public function test_playlist_page_searches_canonical_albums_and_lists_saved_playlists(): void
     {
         $album = $this->createAlbum('Mariner');
+        $artist = Artist::query()->create([
+            'name' => 'Cult of Luna',
+            'normalised_name' => 'cult of luna',
+        ]);
+        $genre = Genre::query()->create([
+            'name' => 'post-metal',
+            'normalised_name' => 'post metal',
+        ]);
+        $artist->genres()->attach($genre->id, ['source' => 'manual', 'suppressed' => false]);
+        $album->artists()->attach($artist->id);
         $playlist = AlbumPlaylist::query()->create(['name' => 'Listening Queue']);
 
         $this->get(route('playlists.index'))
@@ -119,6 +129,10 @@ class AlbumPlaylistTest extends TestCase
             ->assertSee('Mariner')
             ->assertSee('name="album_ids[]"', false)
             ->assertSee(route('album-playlists.albums.bulk-store', [], false), false);
+
+        $this->get(route('album-playlists.show', [$playlist, 'q' => 'post-metal']))
+            ->assertOk()
+            ->assertSee('Mariner');
 
         $this->assertDatabaseHas('albums', ['id' => $album->id]);
     }
