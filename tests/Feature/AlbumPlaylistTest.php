@@ -258,6 +258,19 @@ class AlbumPlaylistTest extends TestCase
         $this->assertSame([], $preview['add_uris']);
     }
 
+    public function test_spotify_sync_preview_blocks_incomplete_albums(): void
+    {
+        $album = $this->createAlbumWithTrack('Incomplete Album', 'spotify:track:available');
+        $album->update(['total_tracks' => 2]);
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Incomplete Draft']);
+        $playlist->albums()->attach($album->id, ['position' => 1]);
+
+        $preview = app(AlbumPlaylistSyncService::class)->preview($playlist, 'new');
+
+        $this->assertFalse($preview['sync_allowed']);
+        $this->assertSame([['title' => 'Incomplete Album', 'artist' => 'Unknown artist', 'available_tracks' => 1, 'total_tracks' => 2]], $preview['incomplete_albums']);
+    }
+
     private function createAlbum(string $title): Album
     {
         return Album::query()->create([
