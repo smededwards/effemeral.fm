@@ -21,6 +21,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class AlbumPlaylistController extends Controller
 {
+    /**
+     * Create the playlist controller.
+     *
+     * @param  PlaylistNameSuggester  $playlistNameSuggester  The playlist-name suggestion service.
+     */
     public function __construct(private PlaylistNameSuggester $playlistNameSuggester) {}
 
     /**
@@ -99,7 +104,10 @@ class AlbumPlaylistController extends Controller
 
         $albums = $search === ''
             ? collect()
-            : $albumQuery->limit(150)->get()
+            : $albumQuery
+                // shortcut: inspect 150 candidates before deduplication; increase this if suggestions become sparse.
+                ->limit(150)
+                ->get()
                 ->groupBy(fn (Album $album): string => $this->editionKey($album->title))
                 ->map(fn ($variants): Album => $variants->sortBy(fn (Album $album): int => $this->editionPenalty($album->title))->first())
                 ->take(50)
