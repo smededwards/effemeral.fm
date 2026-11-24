@@ -38,6 +38,24 @@
         </div>
     </dl>
 
+    @if (!$preview['sync_allowed'])
+        <section class="border border-amber-500/60 bg-ef-surface p-5 sm:p-6" aria-labelledby="sync-blocked">
+            <p class="text-xs font-semibold tracking-[0.16em] text-amber-300 uppercase">Sync blocked</p>
+            <h2 id="sync-blocked" class="mt-2 text-xl font-semibold">Complete every album first</h2>
+            <p class="mt-2 text-sm text-ef-muted">Spotify tracks are missing from the albums below. Add the missing
+                tracks to the catalogue before syncing this playlist.</p>
+            <ul class="mt-4 divide-y divide-ef-line">
+                @foreach ($preview['incomplete_albums'] as $album)
+                    <li class="flex items-center justify-between gap-4 py-3 text-sm">
+                        <span class="font-semibold">{{ $album['title'] }}</span>
+                        <span class="shrink-0 text-amber-300">{{ $album['available_tracks'] }} of
+                            {{ $album['total_tracks'] }} tracks</span>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     <section class="border border-ef-line bg-ef-surface p-5 sm:p-6" aria-labelledby="album-order">
         <p class="text-xs font-semibold tracking-[0.16em] text-ef-accent-strong uppercase">Playlist Contents</p>
         <h2 id="album-order" class="mt-2 text-2xl font-semibold">Albums in Sync Order</h2>
@@ -107,8 +125,8 @@
         <form method="POST" action="{{ route('album-playlists.spotify.sync', $albumPlaylist, false) }}">
             @csrf
             <button
-                class="w-full bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover sm:w-auto"
-                type="submit">Confirm and Sync to Spotify</button>
+                class="w-full bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                type="submit" @disabled(!$preview['sync_allowed'])>Confirm and Sync to Spotify</button>
         </form>
     </div>
 @endsection

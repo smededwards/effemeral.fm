@@ -106,6 +106,8 @@ class AlbumPlaylistController extends Controller
             'add_uris',
             'desired_uris',
             'managed_uris',
+            'incomplete_albums',
+            'sync_allowed',
             'local_hash',
         ])));
 

@@ -88,6 +88,8 @@ class AlbumPlaylistSyncService
             throw new RuntimeException('No Spotify-linked tracks are available. Add albums with matched Spotify tracks before syncing.');
         }
 
+        $incompleteAlbums = $this->incompleteAlbums($desired['albums']);
+
         return [
             'destination' => $destination,
             'target_playlist_id' => $targetPlaylistId,
@@ -116,6 +118,8 @@ class AlbumPlaylistSyncService
             'managed_uris' => array_values(array_diff($desired['uris'], $unmanagedUris)),
             'unmanaged_count' => count($unmanagedUris),
             'albums' => $desired['albums'],
+            'incomplete_albums' => $incompleteAlbums,
+            'sync_allowed' => $incompleteAlbums === [],
             'local_hash' => $this->playlistHash(
                 $albumPlaylist,
                 $destination,
@@ -136,6 +140,11 @@ class AlbumPlaylistSyncService
         $destination = (string) ($preview['destination'] ?? '');
         $targetPlaylistId = $preview['target_playlist_id'] ?? null;
         $desired = $this->trackResolver->resolve($albumPlaylist);
+        $incompleteAlbums = $this->incompleteAlbums($desired['albums']);
+
+        if ($incompleteAlbums !== []) {
+            throw new RuntimeException('Complete every album before syncing this playlist to Spotify.');
+        }
 
         if ($this->playlistHash(
             $albumPlaylist,
@@ -242,6 +251,20 @@ class AlbumPlaylistSyncService
 
             throw $exception;
         }
+    }
+
+    /**
+     * Find albums whose local tracklists cannot produce a complete Spotify sync.
+     *
+     * @param  array<int, array<string, mixed>>  $albums  The resolved album data.
+     * @return array<int, array<string, mixed>> The incomplete albums.
+     */
+    private function incompleteAlbums(array $albums): array
+    {
+        return array_values(array_filter(
+            $albums,
+            fn (array $album): bool => $album['available_tracks'] < $album['total_tracks'],
+        ));
     }
 
     /**
