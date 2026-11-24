@@ -1,0 +1,18 @@
+// Keep playlist selection behavior in the compiled asset so Blade remains markup-only.
+const selectAll = document.querySelector('[data-playlist-select-all]');
+const albums = [...document.querySelectorAll('.playlist-album-checkbox')];
+
+if (selectAll && albums.length > 0) {
+    const updateSelectAll = () => {
+        const selected = albums.filter((album) => album.checked).length;
+        selectAll.checked = selected === albums.length;
+        selectAll.indeterminate = selected > 0 && selected < albums.length;
+    };
+
+    selectAll.addEventListener('change', () => {
+        albums.forEach((album) => {
+            album.checked = selectAll.checked;
+        });
+    });
+    albums.forEach((album) => album.addEventListener('change', updateSelectAll));
+}
