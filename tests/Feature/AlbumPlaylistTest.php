@@ -29,6 +29,16 @@ class AlbumPlaylistTest extends TestCase
         $this->assertSame('New Releases', $playlist->fresh()->name);
     }
 
+    public function test_unnamed_playlist_creation_generates_a_dated_draft_name(): void
+    {
+        $this->post(route('album-playlists.store'), ['name' => '   '])
+            ->assertRedirect();
+
+        $playlist = AlbumPlaylist::query()->firstOrFail();
+
+        $this->assertMatchesRegularExpression('/^[A-Z][a-z]+ [A-Z][a-z]+$/', $playlist->name);
+    }
+
     public function test_user_can_add_remove_and_reorder_albums_independently_of_other_playlists(): void
     {
         $first = $this->createAlbum('First Album');
@@ -74,6 +84,22 @@ class AlbumPlaylistTest extends TestCase
         $this->assertDatabaseHas('albums', ['id' => $album->id]);
     }
 
+    public function test_playlist_name_can_be_saved_or_refreshed_from_album_contents(): void
+    {
+        $album = $this->createAlbum('Mourning Earth');
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Old Name']);
+        $playlist->albums()->attach($album->id, ['position' => 1]);
+
+        $this->patch(route('album-playlists.update', $playlist), ['name' => 'New Name'])
+            ->assertRedirect();
+        $this->assertSame('New Name', $playlist->fresh()->name);
+
+        $this->post(route('album-playlists.name.refresh', $playlist))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Playlist name refreshed.');
+        $this->assertSame('Mourning Earth', $playlist->fresh()->name);
+    }
+
     public function test_bulk_album_add_generates_a_name_for_an_unnamed_new_playlist(): void
     {
         $album = $this->createAlbum('Mariner');
@@ -85,7 +111,7 @@ class AlbumPlaylistTest extends TestCase
         ])->assertRedirect();
 
         $playlist = AlbumPlaylist::query()->firstOrFail();
-        $this->assertMatchesRegularExpression('/^Album Draft · \d{4}\.\d{2}\.\d{2}$/', $playlist->name);
+        $this->assertStringContainsString('Mariner', $playlist->name);
         $this->assertSame([$album->id], $playlist->albums->pluck('id')->all());
     }
 

@@ -6,17 +6,49 @@
             <a class="text-sm font-semibold text-ef-accent-strong hover:underline"
                 href="{{ route('playlists.index', [], false) }}">← All Playlists</a>
             <p class="mt-5 text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Effemeral Playlist</p>
-            <h1 class="mt-2 text-4xl font-semibold tracking-[-0.04em]">{{ $albumPlaylist->name }}</h1>
+            <div class="mt-2" data-playlist-name-editor>
+                <h1 class="text-4xl font-semibold leading-tight tracking-[-0.04em]" data-playlist-name-display>
+                    {{ $albumPlaylist->name }}</h1>
+                <div class="hidden flex-wrap items-center gap-2" data-playlist-name-form>
+                    <form class="contents" method="POST"
+                        action="{{ route('album-playlists.update', $albumPlaylist, false) }}">
+                        @csrf
+                        @method('PATCH')
+                        <label class="sr-only" for="playlist-name">Playlist Name</label>
+                        <input id="playlist-name"
+                            class="playlist-name-input font-serif text-4xl font-semibold leading-tight tracking-[-0.04em] text-ef-text"
+                            type="text" name="name" maxlength="100" value="{{ old('name', $albumPlaylist->name) }}"
+                            required>
+                        <button
+                            class="border border-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash"
+                            type="submit">Save</button>
+                        <button
+                            class="border border-ef-line px-4 py-2 text-sm font-semibold text-ef-muted hover:border-ef-accent hover:text-ef-text"
+                            type="button" data-playlist-name-cancel>Cancel</button>
+                    </form>
+                    <form class="contents" method="POST"
+                        action="{{ route('album-playlists.name.refresh', $albumPlaylist, false) }}">
+                        @csrf
+                        <button
+                            class="border border-ef-line px-4 py-2 text-sm font-semibold text-ef-muted hover:border-ef-accent hover:text-ef-text"
+                            type="submit">Refresh</button>
+                    </form>
+                </div>
+            </div>
             <p class="mt-3 text-sm text-ef-muted">{{ $albumPlaylist->albums->count() }}
                 {{ $albumPlaylist->albums->count() === 1 ? 'album' : 'albums' }} ·
                 {{ ucfirst(str_replace('_', ' ', $albumPlaylist->spotify_sync_status)) }}</p>
         </div>
-        @if ($albumPlaylist->spotify_playlist_url)
-            <a class="font-semibold text-ef-accent-strong hover:underline" href="{{ $albumPlaylist->spotify_playlist_url }}"
-                target="_blank" rel="noreferrer">Open in Spotify</a>
-        @endif
-        <a class="font-semibold text-ef-accent-strong hover:underline"
-            href="{{ route('album-playlists.export', $albumPlaylist, false) }}">Export CSV</a>
+        <div class="flex flex-wrap items-center gap-4 sm:justify-end">
+            <button class="font-semibold text-ef-accent-strong hover:underline" type="button" data-playlist-name-edit>Edit
+                Name</button>
+            @if ($albumPlaylist->spotify_playlist_url)
+                <a class="font-semibold text-ef-accent-strong hover:underline"
+                    href="{{ $albumPlaylist->spotify_playlist_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
+            @endif
+            <a class="font-semibold text-ef-accent-strong hover:underline"
+                href="{{ route('album-playlists.export', $albumPlaylist, false) }}">Export CSV</a>
+        </div>
     </header>
 
     @if (session('success'))
@@ -100,22 +132,6 @@
                 </div>
             </form>
         @endif
-    </section>
-
-    <section class="border border-ef-line bg-ef-surface p-5 sm:p-6" aria-labelledby="rename-playlist">
-        <h2 id="rename-playlist" class="text-lg font-semibold">Playlist Name</h2>
-        <form class="mt-3 flex flex-col gap-3 sm:flex-row" method="POST"
-            action="{{ route('album-playlists.update', $albumPlaylist, false) }}">
-            @csrf
-            @method('PATCH')
-            <label class="sr-only" for="playlist-name">Playlist name</label>
-            <input id="playlist-name"
-                class="min-w-0 flex-1 border border-ef-line bg-ef-canvas px-4 py-3 text-sm text-ef-text" type="text"
-                name="name" maxlength="100" value="{{ old('name', $albumPlaylist->name) }}" required>
-            <button
-                class="border border-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash"
-                type="submit">Save Name</button>
-        </form>
     </section>
 
     <section class="border border-ef-line bg-ef-canvas p-5 sm:p-6" aria-labelledby="playlist-albums">
