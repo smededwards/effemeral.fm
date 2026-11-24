@@ -93,7 +93,7 @@
                 <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Playlists</p>
                 <h2 id="spotify-playlists-heading" class="mt-2 text-2xl font-semibold">Spotify Playlists</h2>
             </div><a class="text-sm font-semibold text-ef-accent-strong hover:underline"
-                href="{{ route('playlists.index', [], false) }}">Browse All Spotify Playlists →</a>
+                href="{{ route('spotify-playlists.index', [], false) }}">Browse All Spotify Playlists →</a>
         </div>
         <ul class="mt-6 grid gap-px border border-ef-line bg-ef-line sm:grid-cols-2">
             @forelse ($spotifyPlaylists as $playlist)

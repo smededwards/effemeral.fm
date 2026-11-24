@@ -23,8 +23,15 @@ class PageRoutingTest extends TestCase
 
         $this->get(route('playlists.index'))
             ->assertOk()
-            ->assertSee('Spotify Playlist Organisation')
-            ->assertSee('Import all playlists');
+            ->assertSee('Effemeral Playlists')
+            ->assertSee('Create Playlist')
+            ->assertSee(route('spotify-playlists.index', [], false), false)
+            ->assertDontSee('Import All Playlists');
+
+        $this->get(route('spotify-playlists.index'))
+            ->assertOk()
+            ->assertSee('Spotify Playlist Archive')
+            ->assertSee('Import All Playlists');
 
         $this->get(route('listening.index'))
             ->assertOk()
@@ -48,6 +55,7 @@ class PageRoutingTest extends TestCase
             ->assertSee('>Playlists</a>', false)
             ->assertSee('>Explore</a>', false)
             ->assertSee('>Listening</a>', false)
+            ->assertSee('>Spotify Archive</a>', false)
             ->assertSee('>Sources</a>', false)
             ->assertSee('<link rel="manifest" href="/site.webmanifest">', false)
             ->assertSee('href="/favicon-32x32.png"', false);
