@@ -89,6 +89,10 @@ class AlbumPlaylistSyncService
         }
 
         $incompleteAlbums = $this->incompleteAlbums($desired['albums']);
+        $addTracks = array_values(array_filter(
+            $desired['tracks'],
+            fn (array $track): bool => isset($addUriSet[$track['uri']]),
+        ));
 
         return [
             'destination' => $destination,
@@ -110,10 +114,8 @@ class AlbumPlaylistSyncService
                 ])
                 ->values()
                 ->all(),
-            'add_tracks' => array_values(array_filter(
-                $desired['tracks'],
-                fn (array $track): bool => isset($addUriSet[$track['uri']]),
-            )),
+            'add_tracks' => $addTracks,
+            'add_albums' => $this->summariseAddedAlbums($addTracks),
             'desired_uris' => $desired['uris'],
             'managed_uris' => array_values(array_diff($desired['uris'], $unmanagedUris)),
             'unmanaged_count' => count($unmanagedUris),
@@ -268,6 +270,31 @@ class AlbumPlaylistSyncService
             $albums,
             fn (array $album): bool => $album['available_tracks'] < $album['total_tracks'],
         ));
+    }
+
+    /**
+     * Group pending Spotify tracks into album-level changes for the review page.
+     *
+     * @param  list<array{uri: string, title: string, album: string, artist: string, album_id: int}>  $tracks  The pending tracks.
+     * @return list<array{album_id: int, title: string, artist: string, track_count: int}> The pending album changes.
+     */
+    private function summariseAddedAlbums(array $tracks): array
+    {
+        return collect($tracks)
+            ->groupBy('album_id')
+            ->map(function ($albumTracks): array {
+                /** @var array{uri: string, title: string, album: string, artist: string, album_id: int} $track */
+                $track = $albumTracks->first();
+
+                return [
+                    'album_id' => $track['album_id'],
+                    'title' => $track['album'],
+                    'artist' => $track['artist'],
+                    'track_count' => $albumTracks->count(),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     /**

@@ -27,6 +27,7 @@ class CatalogueTest extends TestCase
         $response = $this->get(route('catalogue.index', ['q' => 'Cult of Luna']));
 
         $response->assertOk();
+        $response->assertSee('Search by artist or album');
         $response->assertSee('Cult of Luna');
         $response->assertSee('Mariner');
     }
@@ -74,6 +75,11 @@ class CatalogueTest extends TestCase
             'release_date' => '2024-06-01',
         ]);
         $matchingAlbum->artists()->attach($artist->id);
+        $matchingAlbum->tracks()->create([
+            'title' => 'Matching track',
+            'normalised_title' => 'matching track',
+            'spotify_uri' => 'spotify:track:matching',
+        ]);
 
         $unmatchedArtist = Artist::query()->create([
             'name' => 'Unfiltered Artist',

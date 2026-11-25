@@ -223,6 +223,27 @@ class AlbumPlaylistController extends Controller
     }
 
     /**
+     * Delete a local Effemeral playlist without changing its Spotify destination.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being deleted.
+     * @return RedirectResponse The playlist index redirect.
+     */
+    public function destroy(AlbumPlaylist $albumPlaylist): RedirectResponse
+    {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
+        $playlistName = $albumPlaylist->name;
+        $albumPlaylist->delete();
+
+        return to_route('playlists.index')->with(
+            'success',
+            $playlistName.' was deleted from Effemeral. Any Spotify playlist remains unchanged.',
+        );
+    }
+
+    /**
      * Replace a playlist name with a new suggestion based on its albums.
      *
      * @param  AlbumPlaylist  $albumPlaylist  The playlist being renamed.
@@ -234,11 +255,25 @@ class AlbumPlaylistController extends Controller
             return $response;
         }
 
+        $sessionKey = $this->playlistNameSuggestionSessionKey($albumPlaylist);
+        $recentSuggestions = session()->get($sessionKey, []);
+        $recentSuggestions = is_array($recentSuggestions) ? array_values($recentSuggestions) : [];
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums */
+        $albums = $albumPlaylist->albums()
+            ->with('releaseTracks')
+            ->get();
+        $albumTitlesAndTracks = $albums
+            ->flatMap(fn (Album $album): array => [$album->title, ...$album->releaseTracks->pluck('title')->all()]);
         $name = $this->playlistNameSuggester->suggestFromTitles(
-            $albumPlaylist->albums()->pluck('albums.title'),
+            $albumTitlesAndTracks,
+            $albumPlaylist->name,
+            $recentSuggestions,
         );
+        $recentSuggestions[] = $albumPlaylist->name;
+        $recentSuggestions[] = $name;
         $albumPlaylist->update(['name' => $name]);
         $this->markSyncPending($albumPlaylist);
+        session()->put($sessionKey, array_slice(array_values(array_unique($recentSuggestions)), -10));
 
         return back()->with('success', 'Playlist name refreshed.');
     }
@@ -260,6 +295,10 @@ class AlbumPlaylistController extends Controller
 
         if ($albumPlaylist->albums()->whereKey($validated['album_id'])->exists()) {
             return back()->with('error', 'That album is already in this playlist.');
+        }
+
+        if (! Album::query()->whereKey($validated['album_id'])->whereHas('releaseTracks')->exists()) {
+            return back()->with('error', 'Only albums with Spotify tracks can be added to a playlist.');
         }
 
         $albumPlaylist->albums()->attach($validated['album_id'], [
@@ -293,6 +332,15 @@ class AlbumPlaylistController extends Controller
             if ($response = $this->syncInProgress($playlist)) {
                 return $response;
             }
+        }
+
+        $playableAlbumCount = Album::query()
+            ->whereKey($validated['album_ids'])
+            ->whereHas('releaseTracks')
+            ->count();
+
+        if ($playableAlbumCount !== count($validated['album_ids'])) {
+            return back()->with('error', 'Only albums with Spotify tracks can be added to a playlist.');
         }
 
         $albumTitles = Album::query()->whereKey($validated['album_ids'])->pluck('title');
@@ -340,7 +388,7 @@ class AlbumPlaylistController extends Controller
         });
         $this->markSyncPending($albumPlaylist);
 
-        return back()->with('success', 'Album removed from playlist.');
+        return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Album removed from playlist.');
     }
 
     /**
@@ -369,7 +417,7 @@ class AlbumPlaylistController extends Controller
         $targetIndex = $currentIndex + ($validated['direction'] === 'up' ? -1 : 1);
 
         if ($targetIndex < 0 || $targetIndex >= $albums->count()) {
-            return back();
+            return to_route('album-playlists.show', $albumPlaylist);
         }
 
         $albums->splice($currentIndex, 1);
@@ -382,7 +430,7 @@ class AlbumPlaylistController extends Controller
         });
         $this->markSyncPending($albumPlaylist);
 
-        return back()->with('success', 'Album order updated.');
+        return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Album order updated.');
     }
 
     private function saveOrder(AlbumPlaylist $albumPlaylist): void
@@ -432,5 +480,16 @@ class AlbumPlaylistController extends Controller
     private function syncPreviewSessionKey(AlbumPlaylist $albumPlaylist): string
     {
         return 'album_playlist_sync_preview_'.$albumPlaylist->id;
+    }
+
+    /**
+     * Return the session key used to avoid repeating recent playlist suggestions.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being renamed.
+     * @return string The session key.
+     */
+    private function playlistNameSuggestionSessionKey(AlbumPlaylist $albumPlaylist): string
+    {
+        return 'album_playlist_name_suggestions_'.$albumPlaylist->id;
     }
 }

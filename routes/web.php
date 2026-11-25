@@ -20,6 +20,7 @@ Route::middleware('private')->group(function (): void {
     Route::get('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'show'])->name('album-playlists.show');
     Route::get('/playlists/{albumPlaylist}/export.csv', [AlbumPlaylistController::class, 'export'])->name('album-playlists.export');
     Route::patch('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'update'])->name('album-playlists.update');
+    Route::delete('/playlists/{albumPlaylist}', [AlbumPlaylistController::class, 'destroy'])->name('album-playlists.destroy');
     Route::post('/playlists/{albumPlaylist}/name/refresh', [AlbumPlaylistController::class, 'refreshName'])->name('album-playlists.name.refresh');
     Route::post('/playlists/{albumPlaylist}/spotify/preview', [AlbumPlaylistController::class, 'previewSpotifySync'])->name('album-playlists.spotify.preview');
     Route::post('/playlists/{albumPlaylist}/spotify/sync', [AlbumPlaylistController::class, 'syncSpotify'])->name('album-playlists.spotify.sync');
@@ -48,6 +49,7 @@ Route::middleware('private')->group(function (): void {
     Route::post('/albums/{album}/completion/incomplete', [DashboardController::class, 'markAlbumIncomplete'])->name('albums.completion.incomplete');
     Route::post('/albums/{album}/completion/clear', [DashboardController::class, 'clearAlbumCompletionOverride'])->name('albums.completion.clear');
     Route::post('/artists/{artist}/genres', [DashboardController::class, 'updateArtistGenres'])->name('artists.genres.update');
+    Route::delete('/artists/{artist}/genres/{genre}', [DashboardController::class, 'removeArtistGenre'])->name('artists.genres.destroy');
     Route::post('/artists/{artist}/musicbrainz-discography', [MusicBrainzDiscographyController::class, 'store'])->name('artists.musicbrainz-discography.store');
     Route::patch('/artists/{artist}/location', [MusicPageController::class, 'updateArtistLocation'])->name('artists.location.update');
     Route::post('/playlists/albums', [AlbumPlaylistController::class, 'addAlbums'])->name('album-playlists.albums.bulk-store');

@@ -12,6 +12,104 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * It does not enrich an artist whose only identity is MusicBrainz.
+     */
+    public function test_musicbrainz_only_artists_are_not_enriched(): void
+    {
+        Sleep::fake();
+        Http::preventStrayRequests();
+        $artist = Artist::query()->create([
+            'name' => 'MusicBrainz Only Artist',
+            'normalised_name' => 'musicbrainz only artist',
+            'musicbrainz_mbid' => 'artist-mbid',
+        ]);
+
+        $this->artisan('artists:import-musicbrainz --refresh')->assertSuccessful();
+
+        $this->assertNull($artist->fresh()->musicbrainz_checked_at);
+        Http::assertNothingSent();
+    }
+
+    /**
+     * It enriches only artists that already have a MusicBrainz ID when requested.
+     */
+    public function test_known_only_import_skips_artists_without_a_musicbrainz_id(): void
+    {
+        Sleep::fake();
+        Http::preventStrayRequests();
+        Http::fake([
+            'musicbrainz.org/ws/2/artist/artist-mbid*' => Http::response([
+                'id' => 'artist-mbid',
+                'name' => 'Known Artist',
+                'area' => ['name' => 'England'],
+                'country' => 'GB',
+                'genres' => [],
+                'aliases' => [
+                    ['name' => 'The Artist Project', 'locale' => 'en', 'type' => 'Artist name'],
+                ],
+                'relations' => [
+                    [
+                        'type' => 'member of band',
+                        'artist' => ['id' => 'band-mbid', 'name' => 'The Band'],
+                        'attributes' => [],
+                    ],
+                ],
+            ]),
+        ]);
+        $unknownArtist = Artist::query()->create([
+            'name' => 'Unknown Artist',
+            'normalised_name' => 'unknown artist',
+        ]);
+        $knownArtist = Artist::query()->create([
+            'name' => 'Known Artist',
+            'normalised_name' => 'known artist',
+            'spotify_id' => 'spotify-known-artist',
+            'musicbrainz_mbid' => 'artist-mbid',
+        ]);
+
+        $this->artisan('artists:import-musicbrainz --known-only --limit=1')->assertSuccessful();
+
+        $this->assertNull($unknownArtist->fresh()->musicbrainz_checked_at);
+        $this->assertNotNull($knownArtist->fresh()->musicbrainz_checked_at);
+        Http::assertSentCount(1);
+        Sleep::assertNeverSlept();
+    }
+
+    /**
+     * It starts a known-artist batch after the supplied cursor.
+     */
+    public function test_known_only_import_can_continue_after_an_artist_id(): void
+    {
+        Sleep::fake();
+        Http::preventStrayRequests();
+        Http::fake([
+            'musicbrainz.org/ws/2/artist/artist-two*' => Http::response([
+                'id' => 'artist-two',
+                'name' => 'Second Artist',
+                'genres' => [],
+            ]),
+        ]);
+        $firstArtist = Artist::query()->create([
+            'name' => 'First Artist',
+            'normalised_name' => 'first artist',
+            'spotify_id' => 'spotify-first-artist',
+            'musicbrainz_mbid' => 'artist-one',
+        ]);
+        $secondArtist = Artist::query()->create([
+            'name' => 'Second Artist',
+            'normalised_name' => 'second artist',
+            'spotify_id' => 'spotify-second-artist',
+            'musicbrainz_mbid' => 'artist-two',
+        ]);
+
+        $this->artisan('artists:import-musicbrainz --refresh --known-only --after-id='.$firstArtist->id.' --limit=1')->assertSuccessful();
+
+        $this->assertNull(Artist::query()->where('name', 'First Artist')->value('musicbrainz_checked_at'));
+        $this->assertNotNull($secondArtist->fresh()->musicbrainz_checked_at);
+        Http::assertSentCount(1);
+    }
+
     public function test_musicbrainz_metadata_is_imported_for_artists_with_a_known_mbid(): void
     {
         Sleep::fake();
@@ -24,6 +122,16 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
                 'area' => ['name' => 'England'],
                 'country' => 'GB',
                 'genres' => [],
+                'aliases' => [
+                    ['name' => 'The Artist Project', 'locale' => 'en', 'type' => 'Artist name'],
+                ],
+                'relations' => [
+                    [
+                        'type' => 'member of band',
+                        'artist' => ['id' => 'band-mbid', 'name' => 'The Band'],
+                        'attributes' => [],
+                    ],
+                ],
             ]),
         ]);
         $artist = Artist::query()->create([
@@ -42,8 +150,20 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
             'location_manual' => false,
             'country_manual' => false,
         ]);
+        $this->assertDatabaseHas('artist_aliases', [
+            'artist_id' => $artist->id,
+            'name' => 'The Artist Project',
+            'source' => 'musicbrainz',
+        ]);
+        $this->assertDatabaseHas('artist_relationships', [
+            'artist_id' => $artist->id,
+            'related_provider_id' => 'band-mbid',
+            'related_name' => 'The Band',
+            'relationship_type' => 'member of band',
+            'source' => 'musicbrainz',
+        ]);
         Http::assertSent(fn ($request): bool => $request->hasHeader('User-Agent', 'Effemeral/0.1 (https://github.com/smededwards/effemeral.fm)')
-            && $request->url() === 'https://musicbrainz.org/ws/2/artist/artist-mbid?fmt=json&inc=genres');
+            && $request->url() === 'https://musicbrainz.org/ws/2/artist/artist-mbid?fmt=json&inc=aliases%2Bartist-rels');
         Sleep::assertNeverSlept();
     }
 
@@ -59,8 +179,16 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
                 'count' => 1,
                 'artists' => [['id' => 'artist-mbid', 'name' => 'The Artist', 'country' => 'GB', 'genres' => []]],
             ]);
-        Artist::query()->create(['name' => 'Blocked Artist', 'normalised_name' => 'blocked artist']);
-        $artist = Artist::query()->create(['name' => 'The Artist', 'normalised_name' => 'the artist']);
+        Artist::query()->create([
+            'name' => 'Blocked Artist',
+            'normalised_name' => 'blocked artist',
+            'spotify_id' => 'spotify-blocked-artist',
+        ]);
+        $artist = Artist::query()->create([
+            'name' => 'The Artist',
+            'normalised_name' => 'the artist',
+            'spotify_id' => 'spotify-the-artist',
+        ]);
 
         $this->artisan('artists:import-musicbrainz --limit=2')->assertSuccessful();
 
@@ -84,6 +212,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
         $artist = Artist::query()->create([
             'name' => 'The Artist',
             'normalised_name' => 'the artist',
+            'spotify_id' => 'spotify-the-artist',
         ]);
 
         $this->artisan('artists:import-musicbrainz --limit=1')->assertSuccessful();
@@ -146,6 +275,7 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
         $artist = Artist::query()->create([
             'name' => 'The Artist',
             'normalised_name' => 'the artist',
+            'spotify_id' => 'spotify-the-artist',
         ]);
 
         $this->artisan('artists:import-musicbrainz --limit=1')->assertSuccessful();

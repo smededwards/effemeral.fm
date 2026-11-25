@@ -60,7 +60,7 @@ class CataloguePageService
                 ->get();
             $albums = Album::query()
                 ->with('artists')
-                ->withCount('tracks')
+                ->withCount('releaseTracks as tracks_count')
                 ->where(function ($query) use ($search): void {
                     $query->where('title', 'like', '%'.$search.'%')
                         ->orWhere('normalised_title', 'like', '%'.$this->normalise($search).'%')
@@ -87,7 +87,8 @@ class CataloguePageService
 
         if ($request->hasAny(['filter', 'genre', 'country', 'year', 'completion', 'include_completed', 'include_non_albums'])) {
             $catalogueQuery = Album::query()
-                ->withCount('tracks')
+                ->withCount('releaseTracks as tracks_count')
+                ->whereHas('releaseTracks')
                 ->selectSub(Scrobble::query()->selectRaw('COUNT(DISTINCT track_id)')
                     ->whereColumn('scrobbles.album_id', 'albums.id')
                     ->where('source', 'lastfm')->whereNotNull('track_id'), 'heard_tracks')
@@ -146,10 +147,10 @@ class CataloguePageService
             'recommendationListeningWindows' => $this->recommendationListeningWindow->options(),
             'filters' => $filters,
             'selectedArtist' => $artistId > 0
-                ? Artist::query()->with(['albums' => fn ($query) => $query->withCount('tracks')->orderBy('title'), 'acceptedGenres'])->find($artistId)
+                ? Artist::query()->with(['albums' => fn ($query) => $query->withCount('releaseTracks as tracks_count')->orderBy('title'), 'acceptedGenres'])->find($artistId)
                 : null,
             'selectedAlbum' => $albumId > 0
-                ? Album::query()->with('artists.acceptedGenres', 'tracks')->find($albumId)
+                ? Album::query()->with('artists.acceptedGenres', 'releaseTracks')->find($albumId)
                 : null,
         ];
     }

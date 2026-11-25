@@ -149,29 +149,47 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Effemeral product focus
 
-- Effemeral is a private, single-user Laravel prototype for album-first listening intelligence.
+- Effemeral is a private, single-user album-first playlist curator. The main user journey is discovering albums, building and managing named Effemeral playlists, reviewing them, then syncing them to Spotify.
+- Treat Last.fm and Spotify imports as supporting data maintenance. Keep import controls available, but do not make import volume or import status the primary product experience.
 - Last.fm is the canonical source for listening history and completion evidence.
-- Spotify is a supporting library and export source: saved albums, liked songs, and playlists enrich the catalogue but do not prove that an album was heard.
+- Spotify is a supporting catalogue and playlist destination: saved albums, liked songs, and imported playlists enrich the catalogue but do not prove that an album was heard.
+- A usable playlist workflow needs multiple persistent playlists, album-level add/remove/include/reorder controls, and clear draft and Spotify sync states.
+- Prefer catalogue filters for genre, artist, country or region, release year, and listening completion. Completed albums are excluded from discovery by default, with manual inclusion available.
+- Keep Spotify sync explicit and review-first. Bidirectional Spotify-to-Effemeral playlist editing is deferred until the one-way create/update workflow is useful and validated.
 - The canonical catalogue is the artists, albums, and tracks tables, with source identifiers and collection membership. Do not add new features that depend only on embedded provider JSON when the canonical model can be used.
 - Importers must be idempotent, preserve source provenance, tolerate retries, and avoid creating cross-source duplicates. Existing compatibility tables should not be removed without a migration plan.
-- Discogs metadata, deeper playlist-content analysis, deployment hardening, and multi-user support remain later slices. Do not imply they are implemented when they are only represented in the model or roadmap.
+- Discogs metadata, full discography expansion, deeper playlist-content analysis, deployment hardening, and multi-user support remain later slices. Do not imply they are implemented when they are only represented in the model or roadmap.
 - Album-level workflows come before individual-track playlist workflows. Keep manual review, ordering, inclusion, and completion overrides available for consequential automation.
 - The selected-album discovery target is implemented on `dev`: choose an album or artist, find similar incomplete albums from a requested genre and year, or generate an album-level artist discography draft.
 - Similarity recommendations require normalized genre data, release-year filtering, canonical catalogue records, and Last.fm completion evidence; do not make Spotify playlist membership the recommendation authority.
 - Artist discography drafts should reuse the existing recommendation review, ordering, exclusion, audit, and Spotify sync flow rather than creating a second playlist workflow.
-- The agreed milestone sequence is `Agalloch`, `Baroness`, `Cathedral`, `Darkthrone`, `Earth`, `Funeral`, `Gallows`, `Hawkwind`, `Interpol`, `Jinjer`, `Kyuss`, `Lucifer`, `Mastodon`, `Neurosis`, `Opeth`, `Pallbearer`, `Quicksand`, `Rammstein`, `Slayer`, `Tombs`, `Ulver`, `Venom`, `Windhand`, `Xasthur`, `Yob`, and `Zao`; then cycle back to `A`.
+- The agreed milestone sequence is `Agalloch`, `Baroness`, `Candlemass`, `Darkthrone`, `Earth`, `Funeral`, `Gallows`, `Hawkwind`, `Interpol`, `Jinjer`, `Kyuss`, `Lucifer`, `Mastodon`, `Neurosis`, `Opeth`, `Pallbearer`, `Quicksand`, `Rammstein`, `Slayer`, `Tombs`, `Ulver`, `Venom`, `Windhand`, `Xasthur`, `Yob`, and `Zao`; then cycle back to `A`.
 - The sequence starts with `Agalloch` as the closed `v0.1.0` prototype baseline and `Baroness` as the next `v0.2.0` milestone. Do not pre-create future milestones; create each one as its release work begins.
 - A milestone is complete only after its issues are merged into `dev`, CI/Pint/PHPStan/PHPUnit pass, the user reviews the working prototype, and `dev` is merged into `main`.
 - Milestone completion creates the matching semantic-version tag, GitHub release, and Conventional Commit changelog summary. Patch releases are reserved for fixes; new feature milestones increment the minor version while the project remains below `v1.0.0`.
-- The `v0.2.0` Baroness issues are now merged into `dev` and closed. The current workflow state is prototype validation pending; do not start the next feature milestone until the user has tested the working app and decided whether `dev` is ready to merge into `main`.
+- Candlemass is the active `v0.3.0` milestone for the first usable playlist-first workflow. Keep imported Spotify playlist browsing as supporting context; prioritize persistent Effemeral playlists, catalogue discovery, reviewed sync, and a playlist-focused overview.
 - After a milestone release, create the next issue and feature branch from the updated `dev`, open a PR into `dev`, and close the linked issue only after the PR is merged.
 
 ## Effemeral delivery workflow
 
+- Make routine changes in the primary repository checkout so the user can run and review them locally before merging. Use Git worktrees only to develop separate changes for separate pull requests; when each pull request is merged or closed, remove its clean worktree and return to the primary checkout.
 - Work from the latest dev branch using a feature branch without codex in its name.
 - Open pull requests into dev; do not merge them without the user's review.
 - Every pull request must include a non-empty description covering purpose, user-facing changes, validation, migration or setup notes, and follow-up work.
 - Use Conventional Commits and labels limited to Conventional Commit types.
+- Enforce PSR-12 across every tracked PHP file: use Laravel Pint in CI with `composer run lint:check`, and treat formatting failures as blocking.
 - Keep custom JavaScript in dedicated files under `resources/js` and custom CSS in dedicated files under `resources/css`, loaded through Vite. Blade templates must not contain inline `<script>` or `<style>` blocks; use data attributes for view-to-script configuration.
 - Enforce comments and docblocks across custom code. Public PHP classes and methods, non-obvious private methods, complex array shapes, and meaningful extension points require multiline PHPDoc with useful `@param`, `@return`, `@throws`, or shape annotations. Single-line comments must use `//` on their own line directly above the code they explain; never use trailing comments or redundant comments.
 - Before handoff, run the narrowest relevant tests plus Pint and PHPStan. Report any skipped verification and remaining risks.
+- Before opening a pull request, run the Ponytail review against the complete proposed change, fix its actionable findings, and include the review outcome in the handoff.
+- Before handoff, format Blade templates with `npx --yes blade-formatter@1.44.6 --write --indent-inner-html 'resources/views/**/*.blade.php'` and verify with the same command using `--check-formatted` instead of `--write`.
+- Use semantic HTML in Blade views: choose landmarks for their document role, give each `<section>` an accessible name, use lists for repeated collections, and use headings, labels, descriptions, and status roles according to their meaning.
+
+## Development principles
+
+- Apply DRY to meaningful duplication, KISS to keep each solution easy to understand, and YAGNI to avoid speculative features, abstractions, and configuration.
+- Use SOLID as design guidance: give classes focused responsibilities, depend on useful boundaries, and keep interfaces small.
+- Keep separate concerns in the layer responsible for them; prefer composition over inheritance unless an existing framework or domain hierarchy makes inheritance clearer.
+- Fail fast at trust boundaries and use guard clauses for invalid, unavailable, or already-completed states.
+- Never use Yoda conditions. Put the variable or expression on the left and the literal on the right.
+- Use ternary operators only for simple, single-line value selection. Use `??` for null defaults, and use `if` or `match` for multi-step logic. Never nest ternaries.

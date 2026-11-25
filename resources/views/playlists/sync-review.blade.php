@@ -47,7 +47,11 @@
             <ul class="mt-4 divide-y divide-ef-line">
                 @foreach ($preview['incomplete_albums'] as $album)
                     <li class="flex items-center justify-between gap-4 py-3 text-sm">
-                        <span class="font-semibold">{{ $album['title'] }}</span>
+                        <div>
+                            <a class="font-semibold text-ef-accent-strong hover:underline"
+                                href="{{ route('albums.show', $album['album_id'], false) }}">{{ $album['title'] }}</a>
+                            <p class="mt-1 text-xs text-ef-muted">{{ $album['artist'] }}</p>
+                        </div>
                         <span class="shrink-0 text-amber-300">{{ $album['available_tracks'] }} of
                             {{ $album['total_tracks'] }} tracks</span>
                     </li>
@@ -61,10 +65,12 @@
         <h2 id="album-order" class="mt-2 text-2xl font-semibold">Albums in Sync Order</h2>
         <ol class="mt-4 divide-y divide-ef-line">
             @foreach ($preview['albums'] as $index => $album)
+                @php($isFirst = $loop->first)
+                @php($isLast = $loop->last)
                 <li class="flex items-start gap-4 py-4">
                     <span
                         class="w-8 shrink-0 pt-0.5 text-sm font-semibold tabular-nums text-ef-accent-strong">{{ $index + 1 }}</span>
-                    <div>
+                    <div class="min-w-0 flex-1">
                         <h3 class="font-semibold">{{ $album['title'] }}</h3>
                         <p class="mt-1 text-sm text-ef-muted">{{ $album['artist'] }}</p>
                         @if ($album['total_tracks'] > 0)
@@ -77,21 +83,47 @@
                                 {{ $album['available_tracks'] }} Spotify tracks matched</p>
                         @endif
                     </div>
+                    <div class="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                        @foreach (['up' => 'Move up', 'down' => 'Move down'] as $direction => $label)
+                            @if (($direction === 'up' && !$isFirst) || ($direction === 'down' && !$isLast))
+                                <form method="POST"
+                                    action="{{ route('album-playlists.albums.move', [$albumPlaylist, $album['album_id']], false) }}">
+                                    @csrf
+                                    <input type="hidden" name="direction" value="{{ $direction }}">
+                                    <button
+                                        class="border border-ef-line px-3 py-2 text-xs font-semibold text-ef-text hover:border-ef-accent"
+                                        type="submit">{{ $label }}</button>
+                                </form>
+                            @endif
+                        @endforeach
+                        <form method="POST"
+                            action="{{ route('album-playlists.albums.destroy', [$albumPlaylist, $album['album_id']], false) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button
+                                class="border border-ef-line px-3 py-2 text-xs font-semibold text-ef-muted hover:border-red-700 hover:text-red-300"
+                                type="submit">Remove</button>
+                        </form>
+                    </div>
                 </li>
             @endforeach
         </ol>
     </section>
 
     <div class="grid gap-6 lg:grid-cols-2">
-        <section class="border border-ef-accent-line bg-ef-surface p-5 sm:p-6" aria-labelledby="tracks-to-add">
-            <h2 id="tracks-to-add" class="text-xl font-semibold">Tracks to Add <span
-                    class="text-ef-accent-soft">({{ count($preview['add_tracks']) }})</span></h2>
-            @if ($preview['add_tracks'] !== [])
+        <section class="border border-ef-accent-line bg-ef-surface p-5 sm:p-6" aria-labelledby="albums-to-add">
+            <h2 id="albums-to-add" class="text-xl font-semibold">Albums to Add <span
+                    class="text-ef-accent-soft">({{ count($preview['add_albums']) }})</span></h2>
+            <p class="mt-2 text-sm text-ef-muted">These albums will contribute {{ count($preview['add_tracks']) }} tracks
+                after you confirm the sync.</p>
+            @if ($preview['add_albums'] !== [])
                 <ol class="mt-4 max-h-[32rem] divide-y divide-ef-line overflow-y-auto">
-                    @foreach ($preview['add_tracks'] as $track)
+                    @foreach ($preview['add_albums'] as $album)
                         <li class="py-3">
-                            <p class="font-semibold">{{ $track['title'] }}</p>
-                            <p class="mt-1 text-xs text-ef-muted">{{ $track['artist'] }} · {{ $track['album'] }}</p>
+                            <a class="font-semibold text-ef-accent-strong hover:underline"
+                                href="{{ route('albums.show', $album['album_id'], false) }}">{{ $album['title'] }}</a>
+                            <p class="mt-1 text-xs text-ef-muted">{{ $album['artist'] }} · {{ $album['track_count'] }}
+                                {{ $album['track_count'] === 1 ? 'track' : 'tracks' }}</p>
                         </li>
                     @endforeach
                 </ol>

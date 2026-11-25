@@ -66,7 +66,7 @@ class ImportSpotifyLikedTracks implements ShouldQueue
                 /**
                  * @var Track|null $canonicalTrack
                  */
-                $canonicalTrack = $album->tracks()->where('spotify_id', $track['id'])->first();
+                $canonicalTrack = $album->releaseTracks()->where('tracks.spotify_id', $track['id'])->first();
                 $likedTrack = SpotifyLikedTrack::query()->firstOrNew(['spotify_track_id' => $track['id']]);
                 $wasExisting = $likedTrack->exists;
                 $likedTrack->fill([

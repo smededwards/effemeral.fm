@@ -61,7 +61,7 @@ class MusicPageController extends Controller
             'albums' => Album::query()
                 ->whereHas('artists.acceptedGenres', fn ($query) => $query->whereKey($genre->id))
                 ->with('artists')
-                ->withCount('tracks')
+                ->withCount('releaseTracks as tracks_count')
                 ->orderBy('title')
                 ->paginate(24, ['*'], 'albums_page'),
         ]);
@@ -78,7 +78,7 @@ class MusicPageController extends Controller
         return view('artists.show', [
             'artist' => $artist->load([
                 'acceptedGenres',
-                'albums' => fn ($query) => $query->with('artists')->withCount('tracks')->orderBy('title'),
+                'albums' => fn ($query) => $query->with('artists')->withCount('releaseTracks as tracks_count')->orderBy('title'),
                 'musicBrainzDiscographyImportRuns' => fn ($query) => $query->latest()->limit(1),
             ]),
         ]);
@@ -95,7 +95,10 @@ class MusicPageController extends Controller
         return view('albums.show', [
             'album' => $album->load([
                 'artists.acceptedGenres',
-                'tracks' => fn ($query) => $query->orderBy('disc_number')->orderBy('track_number')->orderBy('id'),
+                'releaseTracks' => fn ($query) => $query
+                    ->orderBy('album_track_releases.disc_number')
+                    ->orderBy('album_track_releases.track_number')
+                    ->orderBy('tracks.id'),
                 'playlists',
                 'spotifyPlaylistItems.playlist',
             ]),

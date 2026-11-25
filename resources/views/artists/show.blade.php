@@ -9,26 +9,32 @@
         <p class="mt-3 text-sm text-ef-muted">
             {{ config('countries.' . $artist->country_code, 'Country not set') }}{{ $artist->location ? ' · ' . $artist->location : '' }}
         </p>
-        <form class="mt-4 flex max-w-xl flex-col gap-3 sm:flex-row" method="POST"
-            action="{{ route('artists.location.update', $artist, false) }}">
-            @csrf
-            @method('PATCH')
-            <label class="sr-only" for="artist-country">Country</label>
-            <select id="artist-country" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
-                name="country_code">
-                <option value="">Country not set</option>
-                @foreach (config('countries') as $countryCode => $countryName)
-                    <option value="{{ $countryCode }}" @selected($artist->country_code === $countryCode)>{{ $countryName }}</option>
-                @endforeach
-            </select>
-            <label class="sr-only" for="artist-location">City or locality</label>
-            <input id="artist-location" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
-                type="text" name="location" maxlength="150" value="{{ $artist->location }}"
-                placeholder="City or locality (optional)">
-            <button
-                class="shrink-0 rounded-md border border-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash"
-                type="submit">Save location</button>
-        </form>
+        @php($hasLocation = filled($artist->country_code) || filled($artist->location))
+        <details class="mt-4 max-w-xl" @unless ($hasLocation) open @endunless>
+            @if ($hasLocation)
+                <summary class="cursor-pointer text-sm font-semibold text-ef-accent-strong">Edit location</summary>
+            @endif
+            <form class="mt-4 flex flex-col gap-3 sm:flex-row" method="POST"
+                action="{{ route('artists.location.update', $artist, false) }}">
+                @csrf
+                @method('PATCH')
+                <label class="sr-only" for="artist-country">Country</label>
+                <select id="artist-country" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
+                    name="country_code">
+                    <option value="">Country not set</option>
+                    @foreach (config('countries') as $countryCode => $countryName)
+                        <option value="{{ $countryCode }}" @selected($artist->country_code === $countryCode)>{{ $countryName }}</option>
+                    @endforeach
+                </select>
+                <label class="sr-only" for="artist-location">City or locality</label>
+                <input id="artist-location" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
+                    type="text" name="location" maxlength="150" value="{{ $artist->location }}"
+                    placeholder="City or locality (optional)">
+                <button
+                    class="shrink-0 rounded-md border border-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash"
+                    type="submit">Save location</button>
+            </form>
+        </details>
         @if ($artist->spotify_id)
             <a class="mt-4 inline-block text-sm font-semibold text-ef-accent-strong hover:underline"
                 href="https://open.spotify.com/artist/{{ $artist->spotify_id }}" target="_blank" rel="noreferrer">Open in
@@ -39,19 +45,21 @@
     <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="artist-musicbrainz-discography">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 id="artist-musicbrainz-discography" class="text-xl font-semibold">MusicBrainz Discography</h2>
-                <p class="mt-2 max-w-2xl text-sm text-ef-muted">Import this artist’s albums and EPs into the catalogue and
-                    find Spotify editions where available.</p>
+                <h2 id="artist-musicbrainz-discography" class="text-xl font-semibold">MusicBrainz album metadata</h2>
+                <p class="mt-2 max-w-2xl text-sm text-ef-muted">Enrich existing albums with MusicBrainz release metadata
+                    without
+                    importing new albums or tracks.</p>
             </div>
             @if ($artist->musicbrainz_mbid)
                 <form method="POST" action="{{ route('artists.musicbrainz-discography.store', $artist, false) }}">
                     @csrf
                     <button
                         class="rounded-md border border-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash"
-                        type="submit">Refresh Discography</button>
+                        type="submit">Refresh album metadata</button>
                 </form>
             @else
-                <p class="text-sm text-ef-muted">A MusicBrainz artist ID is needed before this can be imported.</p>
+                <p class="text-sm text-ef-muted">A MusicBrainz artist ID is needed before existing albums can be enriched.
+                </p>
             @endif
         </div>
         @if ($artist->musicBrainzDiscographyImportRuns->isNotEmpty())
@@ -59,9 +67,9 @@
             <div class="mt-5 border-t border-ef-line pt-4 text-sm" aria-live="polite">
                 <p class="font-medium">Latest refresh: {{ ucfirst($discographyRun->status) }}</p>
                 @if ($discographyRun->status === 'completed')
-                    <p class="mt-1 text-ef-muted">{{ $discographyRun->fetched_count }} release groups ·
-                        {{ $discographyRun->matched_count }} Spotify matches · {{ $discographyRun->unmatched_count }}
-                        without a confident match</p>
+                    <p class="mt-1 text-ef-muted">{{ $discographyRun->fetched_count }} release groups checked ·
+                        {{ $discographyRun->matched_count }} existing albums matched ·
+                        {{ $discographyRun->unmatched_count }} not in the catalogue</p>
                 @elseif ($discographyRun->error)
                     <p class="mt-1 text-red-300">{{ $discographyRun->error }}</p>
                 @endif
@@ -69,13 +77,27 @@
         @endif
     </section>
 
-    <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="artist-genres">
-        <h2 id="artist-genres" class="text-2xl font-semibold">Genres</h2>
+    <section class="artist-genres-section border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="artist-genres">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="artist-genres" class="text-2xl font-semibold">Genres</h2>
+            <details class="artist-genres-editor">
+                <summary class="cursor-pointer text-sm font-semibold text-ef-accent-strong">Edit genres</summary>
+            </details>
+        </div>
         @if ($artist->acceptedGenres->isNotEmpty())
-            <ul class="mt-4 flex flex-wrap gap-2">
+            <ul class="artist-genres-list mt-4 flex flex-wrap gap-2">
                 @foreach ($artist->acceptedGenres->sortBy('name') as $genre)
-                    <li><a class="inline-block border border-ef-accent-line bg-ef-canvas px-3 py-2 text-sm text-ef-accent-soft hover:border-ef-accent hover:text-ef-text"
-                            href="{{ route('genres.show', $genre, false) }}">{{ $genre->name }}</a></li>
+                    <li class="inline-flex items-center border border-ef-accent-line bg-ef-canvas">
+                        <a class="inline-block px-3 py-2 text-sm text-ef-accent-soft hover:text-ef-text"
+                            href="{{ route('genres.show', $genre, false) }}">{{ $genre->name }}</a>
+                        <form class="genre-remove" method="POST"
+                            action="{{ route('artists.genres.destroy', [$artist, $genre], false) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button class="px-2 text-ef-muted hover:text-red-300" type="submit"
+                                aria-label="Remove {{ $genre->name }}" title="Remove {{ $genre->name }}">×</button>
+                        </form>
+                    </li>
                 @endforeach
             </ul>
         @else

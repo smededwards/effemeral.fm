@@ -15,7 +15,7 @@
         <label class="block text-sm font-medium text-ef-text" for="catalogue-search">Search artists and albums</label>
         <div class="mt-3 flex flex-col gap-3 sm:flex-row">
             <input id="catalogue-search" class="block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
-                type="search" name="q" value="{{ $search }}" placeholder="Cult of Luna, Mariner..." autofocus>
+                type="search" name="q" value="{{ $search }}" placeholder="Search by artist or album" autofocus>
             <button class="rounded-md bg-ef-accent px-4 py-2 font-medium text-ef-accent-ink hover:bg-ef-accent-hover"
                 type="submit">Search</button>
         </div>
@@ -117,15 +117,17 @@
                     </div>
                     <p class="mb-3 text-sm text-ef-muted">Select up to 50 albums on this page. Adding them updates the
                         Effemeral draft; Spotify is changed only after you review and confirm a sync.</p>
-                    <label class="mb-4 flex items-center gap-2 text-sm font-semibold text-ef-text" for="catalogue-select-all">
+                    <label class="mb-4 flex items-center gap-2 text-sm font-semibold text-ef-text"
+                        for="catalogue-select-all">
                         <input id="catalogue-select-all" type="checkbox">
                         <span>Select all albums on this page</span>
                     </label>
                     <ul class="space-y-3">
                         @foreach ($filteredAlbums as $album)
-                            <li class="flex gap-4 rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent">
-                                <input class="catalogue-album-checkbox mt-1" id="catalogue-album-{{ $album->id }}" type="checkbox"
-                                    name="album_ids[]" value="{{ $album->id }}">
+                            <li
+                                class="flex gap-4 rounded-lg border border-ef-line bg-ef-canvas p-4 hover:border-ef-accent">
+                                <input class="catalogue-album-checkbox mt-1" id="catalogue-album-{{ $album->id }}"
+                                    type="checkbox" name="album_ids[]" value="{{ $album->id }}">
                                 <label class="min-w-0 flex-1 cursor-pointer" for="catalogue-album-{{ $album->id }}">
                                     <span class="block font-semibold">{{ $album->displayTitle() }}</span>
                                     <span
@@ -182,8 +184,8 @@
                 <p class="text-sm font-medium text-ef-text">Find incomplete albums in this style</p>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                     <label class="block text-sm text-ef-muted">Genre
-                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="genre"
-                            required>
+                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
+                            name="genre" required>
                             <option value="">Choose a style</option>
                             @foreach ($catalogueGenres as $genre)
                                 <option value="{{ $genre->normalised_name }}" @selected(old('genre', $selectedArtist->acceptedGenres->first()?->normalised_name) === $genre->normalised_name)>
@@ -200,7 +202,8 @@
                         <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
                             name="listened_within">
                             @foreach ($recommendationListeningWindows as $value => $label)
-                                <option value="{{ $value }}" @selected($value === '1_year')>{{ $label }}</option>
+                                <option value="{{ $value }}" @selected($value === '1_year')>{{ $label }}
+                                </option>
                             @endforeach
                         </select>
                     </label>
@@ -239,7 +242,7 @@
                     <span>Unknown artist</span>
                 @endforelse
             </p>
-            <p class="mt-2 text-sm text-ef-muted">{{ $selectedAlbum->tracks->count() }} canonical
+            <p class="mt-2 text-sm text-ef-muted">{{ $selectedAlbum->releaseTracks->count() }} canonical
                 tracks{{ $selectedAlbum->release_date ? ' · ' . $selectedAlbum->release_date : '' }}</p>
             <p class="mt-5 text-sm text-ef-muted">This album is ready to become the context for genre, year, and
                 completion-aware discovery.</p>
@@ -250,8 +253,8 @@
                 <p class="text-sm font-medium text-ef-text">Find incomplete albums in this style</p>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                     <label class="block text-sm text-ef-muted">Genre
-                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text" name="genre"
-                            required>
+                        <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
+                            name="genre" required>
                             <option value="">Choose a style</option>
                             @foreach ($catalogueGenres as $genre)
                                 <option value="{{ $genre->normalised_name }}" @selected(old('genre', $selectedAlbum->artists->flatMap->acceptedGenres->first()?->normalised_name) === $genre->normalised_name)>
@@ -269,7 +272,8 @@
                         <select class="mt-2 block w-full rounded-md border-ef-line bg-ef-canvas text-ef-text"
                             name="listened_within">
                             @foreach ($recommendationListeningWindows as $value => $label)
-                                <option value="{{ $value }}" @selected($value === '1_year')>{{ $label }}</option>
+                                <option value="{{ $value }}" @selected($value === '1_year')>{{ $label }}
+                                </option>
                             @endforeach
                         </select>
                     </label>

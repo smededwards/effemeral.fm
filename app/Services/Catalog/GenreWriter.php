@@ -141,6 +141,20 @@ class GenreWriter
     }
 
     /**
+     * Suppress a genre for an artist across all imported and manual sources.
+     *
+     * @param  Artist  $artist  The artist being updated.
+     * @param  Genre  $genre  The genre being removed.
+     */
+    public function remove(Artist $artist, Genre $genre): void
+    {
+        DB::table('artist_genre')
+            ->where('artist_id', $artist->id)
+            ->where('genre_id', $genre->id)
+            ->update(['suppressed' => true, 'updated_at' => now()]);
+    }
+
+    /**
      * @param  array<mixed>  $genres  The raw genre values.
      * @return array<string, string> Normalised names keyed by their slug.
      */

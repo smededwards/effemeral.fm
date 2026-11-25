@@ -32,8 +32,8 @@ class AlbumSuggestionService
         $sort = $this->normaliseSort($sort);
         $albumQuery = Album::query()
             ->with('artists')
-            ->withCount('tracks')
-            ->whereHas('tracks')
+            ->withCount('releaseTracks as tracks_count')
+            ->whereHas('releaseTracks')
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($albumQuery) use ($search): void {
                     $albumQuery->where('title', 'like', '%'.$search.'%')
