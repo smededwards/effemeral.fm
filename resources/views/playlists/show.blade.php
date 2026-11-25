@@ -182,7 +182,8 @@
                             <form class="mt-3" method="POST"
                                 action="{{ route('album-playlists.spotify.recover', $albumPlaylist, false) }}">
                                 @csrf
-                                <button class="border border-amber-400 px-4 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-400/10"
+                                <button
+                                    class="border border-amber-400 px-4 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-400/10"
                                     type="submit">Reset stale sync</button>
                             </form>
                         </div>
