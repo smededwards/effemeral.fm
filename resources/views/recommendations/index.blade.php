@@ -25,8 +25,7 @@
                 @csrf
                 <label class="text-sm text-ef-muted" for="recommendation-listening-window">Exclude albums heard within
                     <select id="recommendation-listening-window"
-                        class="mt-2 block border border-ef-line bg-ef-canvas px-3 py-3 text-ef-text"
-                        name="listened_within">
+                        class="mt-2 block border border-ef-line bg-ef-canvas px-3 py-3 text-ef-text" name="listened_within">
                         @foreach ($recommendationListeningWindows as $value => $label)
                             <option value="{{ $value }}" @selected($value === '1_year')>{{ $label }}</option>
                         @endforeach

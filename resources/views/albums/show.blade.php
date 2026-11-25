@@ -24,7 +24,8 @@
                     @endforelse
                 </p>
                 <p class="mt-3 text-sm text-ef-muted">{{ $album->release_date ?: 'Release date unknown' }} ·
-                    {{ $album->tracks->count() }} of {{ $album->total_tracks ?? $album->tracks->count() }} tracks</p>
+                    {{ $album->releaseTracks->count() }} of {{ $album->total_tracks ?? $album->releaseTracks->count() }}
+                    tracks</p>
                 @if ($album->spotify_url)
                     <a class="mt-3 inline-block text-sm font-semibold text-ef-accent-strong hover:underline"
                         href="{{ $album->spotify_url }}" target="_blank" rel="noreferrer">Open in Spotify</a>
@@ -58,9 +59,9 @@
                 <span class="text-sm text-ef-muted">{{ $album->album_type ? ucfirst($album->album_type) : 'Album' }}</span>
             @endif
         </div>
-        @if ($album->tracks->isNotEmpty())
+        @if ($album->releaseTracks->isNotEmpty())
             <ol class="mt-3 divide-y divide-ef-line">
-                @foreach ($album->tracks as $track)
+                @foreach ($album->releaseTracks as $track)
                     <li class="flex items-center gap-4 py-3">
                         <span
                             class="w-10 shrink-0 text-right text-sm tabular-nums text-ef-muted">{{ $track->disc_number && $track->disc_number > 1 ? $track->disc_number . '–' : '' }}{{ $track->track_number ?? $loop->iteration }}</span>

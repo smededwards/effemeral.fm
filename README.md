@@ -47,6 +47,34 @@ Do not commit .env or provider credentials. Copy .env.example to .env and config
 
 For a private deployment, set `EFFEMERAL_ACCESS_USERNAME` and `EFFEMERAL_ACCESS_PASSWORD`. Local development remains open when the password is blank; production fails closed until a password is configured.
 
+## Command-line enrichment
+
+See the complete [CLI guide](docs/cli.md) for safe import, enrichment, status, retry, and playlist-sync workflows.
+
+See the [documentation index](docs/README.md) for the [application guide](docs/application.md), [integrations guide](docs/integrations.md), and [development guide](docs/development.md).
+
+Enrichment can be run in small, resumable batches from the application container:
+
+    docker compose exec laravel.test php artisan albums:enrich-spotify --scope=priority --limit=10 --pause-every=3 --pause=10
+    docker compose exec laravel.test php artisan artists:enrich-musicbrainz --limit=10
+
+Use `--after-id=ID` to continue after a known record, `--artist-id=ID` to target one artist, and `--dry-run` to list eligible records without creating a run or making provider requests. Spotify album enrichment defaults to priority ordering, persists progress, supports `--resume`, and can run continuously with `--continuous`. Its `priority` and `canonical` scopes exclude obvious live, demo, compilation, bootleg, remix, soundtrack, sampler, session, radio, unplugged, box-set, and special-release titles. MusicBrainz discography enrichment also accepts `--refresh` to include artists with a completed run. Spotify enrichment stops when its shared rate-limit or quota protection is active.
+
+Import operations are also available from the CLI:
+
+    docker compose exec laravel.test php artisan imports:status
+    docker compose exec laravel.test php artisan imports:clear-stale --dry-run
+    docker compose exec laravel.test php artisan lastfm:import --from=2024-01-01 --to=2024-12-31 --limit=100
+    docker compose exec laravel.test php artisan spotify:import-albums --limit=100
+    docker compose exec laravel.test php artisan spotify:import-playlists --limit=10 --only-new
+    docker compose exec laravel.test php artisan spotify:import-liked-tracks --limit=100
+    docker compose exec laravel.test php artisan playlists:sync 12
+    docker compose exec laravel.test php artisan playlists:sync 12 --destination=existing --spotify-playlist-id=spotify-id --confirm
+
+Use `--resume` for failed resumable Last.fm, saved-album, or playlist imports. Import commands run synchronously so progress and provider errors remain visible in the terminal.
+
+Playlist syncing previews changes by default. It only writes to Spotify when `--confirm` is supplied, and it refuses to sync incomplete albums.
+
 ## Verification
 
 Run the standard checks from the application container:
