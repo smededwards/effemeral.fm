@@ -9,6 +9,7 @@ use App\Services\Playlists\AlbumPlaylistExporter;
 use App\Services\Playlists\AlbumSuggestionService;
 use App\Services\Recommendations\PlaylistNameSuggester;
 use App\Services\Spotify\AlbumPlaylistSyncService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -58,6 +59,7 @@ class AlbumPlaylistController extends Controller
             'linkedSpotifyPlaylist' => $albumPlaylist->spotify_playlist_id === null
                 ? null
                 : SpotifyPlaylist::query()->where('spotify_playlist_id', $albumPlaylist->spotify_playlist_id)->first(),
+            'spotifySyncStale' => $this->spotifySyncIsStale($albumPlaylist),
         ]);
     }
 
@@ -155,6 +157,32 @@ class AlbumPlaylistController extends Controller
         session()->forget($this->syncPreviewSessionKey($albumPlaylist));
 
         return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Effemeral playlist synced to Spotify.');
+    }
+
+    /**
+     * Reset a stale local sync without changing Spotify.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist with the stale sync.
+     * @return RedirectResponse The playlist detail redirect.
+     */
+    public function recoverSpotifySync(AlbumPlaylist $albumPlaylist): RedirectResponse
+    {
+        if ($albumPlaylist->spotify_sync_status !== 'syncing') {
+            return back()->with('error', 'This playlist does not have an active Spotify sync to recover.');
+        }
+
+        if (! $this->spotifySyncIsStale($albumPlaylist)) {
+            return back()->with('error', 'This Spotify sync is still within its recovery window.');
+        }
+
+        $albumPlaylist->update([
+            'spotify_pending_track_uris' => null,
+            'spotify_sync_status' => 'failed',
+            'spotify_sync_started_at' => null,
+            'spotify_sync_error' => 'The Spotify sync was reset after the worker stopped responding. Review the changes and retry.',
+        ]);
+
+        return back()->with('success', 'The stale Spotify sync was reset. Review the changes before retrying.');
     }
 
     /**
@@ -430,6 +458,23 @@ class AlbumPlaylistController extends Controller
         return $albumPlaylist->spotify_sync_status === 'syncing'
             ? back()->with('error', 'Wait for the Spotify sync to finish before changing this playlist.')
             : null;
+    }
+
+    /**
+     * Determine whether a sync has exceeded the configured recovery window.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being checked.
+     * @return bool Whether the sync can be recovered.
+     */
+    private function spotifySyncIsStale(AlbumPlaylist $albumPlaylist): bool
+    {
+        if ($albumPlaylist->spotify_sync_status !== 'syncing' || $albumPlaylist->spotify_sync_started_at === null) {
+            return false;
+        }
+
+        return CarbonImmutable::parse((string) $albumPlaylist->spotify_sync_started_at)->lte(
+            now()->subSeconds((int) config('services.spotify.sync_stale_after_seconds', 900)),
+        );
     }
 
     private function syncPreviewSessionKey(AlbumPlaylist $albumPlaylist): string

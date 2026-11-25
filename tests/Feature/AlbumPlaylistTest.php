@@ -413,6 +413,40 @@ class AlbumPlaylistTest extends TestCase
         app(AlbumPlaylistSyncService::class)->sync($playlist, ['destination' => 'new']);
     }
 
+    public function test_a_stale_spotify_sync_can_be_reset_without_touching_spotify(): void
+    {
+        $playlist = AlbumPlaylist::query()->create([
+            'name' => 'Stale Draft',
+            'spotify_sync_status' => 'syncing',
+            'spotify_sync_started_at' => now()->subMinutes(20),
+            'spotify_pending_track_uris' => ['spotify:track:pending'],
+        ]);
+
+        $this->post(route('album-playlists.spotify.recover', $playlist))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'The stale Spotify sync was reset. Review the changes before retrying.');
+
+        $playlist->refresh();
+        $this->assertSame('failed', $playlist->spotify_sync_status);
+        $this->assertNull($playlist->spotify_sync_started_at);
+        $this->assertNull($playlist->spotify_pending_track_uris);
+    }
+
+    public function test_an_active_spotify_sync_cannot_be_reset(): void
+    {
+        $playlist = AlbumPlaylist::query()->create([
+            'name' => 'Active Draft',
+            'spotify_sync_status' => 'syncing',
+            'spotify_sync_started_at' => now()->subMinute(),
+        ]);
+
+        $this->post(route('album-playlists.spotify.recover', $playlist))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This Spotify sync is still within its recovery window.');
+
+        $this->assertSame('syncing', $playlist->fresh()->spotify_sync_status);
+    }
+
     private function createAlbum(string $title): Album
     {
         return Album::query()->create([

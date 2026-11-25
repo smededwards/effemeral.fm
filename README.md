@@ -45,6 +45,10 @@ Then start Effemeral:
 
 Do not commit .env or provider credentials. Copy .env.example to .env and configure the Last.fm and Spotify credentials locally.
 
+Spotify sync recovery is manual and local-only. If a worker stops responding, Effemeral exposes a reset after the configured
+`SPOTIFY_SYNC_STALE_AFTER_SECONDS` window (900 seconds by default); recovery does not delete, recreate, or modify the Spotify
+playlist.
+
 For a private deployment, set `EFFEMERAL_ACCESS_USERNAME` and `EFFEMERAL_ACCESS_PASSWORD`. Local development remains open when the password is blank; production fails closed until a password is configured.
 
 ## Command-line enrichment

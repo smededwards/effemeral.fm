@@ -156,6 +156,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - A usable playlist workflow needs multiple persistent playlists, album-level add/remove/include/reorder controls, and clear draft and Spotify sync states.
 - Prefer catalogue filters for genre, artist, country or region, release year, and listening completion. Completed albums are excluded from discovery by default, with manual inclusion available.
 - Keep Spotify sync explicit and review-first. Bidirectional Spotify-to-Effemeral playlist editing is deferred until the one-way create/update workflow is useful and validated.
+- Treat stale Spotify sync recovery as a local state repair only; it must never delete, recreate, or modify a Spotify playlist automatically.
 - The canonical catalogue is the artists, albums, and tracks tables, with source identifiers and collection membership. Do not add new features that depend only on embedded provider JSON when the canonical model can be used.
 - Importers must be idempotent, preserve source provenance, tolerate retries, and avoid creating cross-source duplicates. Existing compatibility tables should not be removed without a migration plan.
 - Discogs metadata, full discography expansion, deeper playlist-content analysis, deployment hardening, and multi-user support remain later slices. Do not imply they are implemented when they are only represented in the model or roadmap.

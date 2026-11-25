@@ -66,6 +66,7 @@ return [
         'token_endpoint' => env('SPOTIFY_TOKEN_ENDPOINT', 'https://accounts.spotify.com/api/token'),
         'rate_limit_cooldown_seconds' => (int) env('SPOTIFY_RATE_LIMIT_COOLDOWN_SECONDS', 60),
         'quota_cooldown_seconds' => (int) env('SPOTIFY_QUOTA_COOLDOWN_SECONDS', 300),
+        'sync_stale_after_seconds' => (int) env('SPOTIFY_SYNC_STALE_AFTER_SECONDS', 900),
         'scopes' => env('SPOTIFY_SCOPES', 'user-library-read playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public'),
         'import_allowed_owners' => array_values(array_filter(array_map(
             static fn (string $owner): string => trim($owner),

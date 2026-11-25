@@ -209,6 +209,7 @@ class AlbumPlaylistSyncService
                         'spotify_playlist_id' => $targetPlaylistId,
                         'spotify_playlist_url' => $spotifyUrl,
                         'spotify_sync_status' => 'syncing',
+                        'spotify_sync_started_at' => now(),
                         'spotify_sync_error' => null,
                         'spotify_pending_track_uris' => $preview['desired_uris'],
                     ]);
@@ -237,6 +238,7 @@ class AlbumPlaylistSyncService
                 'spotify_managed_track_uris' => $preview['managed_uris'],
                 'spotify_pending_track_uris' => null,
                 'spotify_sync_status' => 'synced',
+                'spotify_sync_started_at' => null,
                 'spotify_sync_error' => null,
                 'spotify_synced_at' => now(),
             ]);
@@ -246,6 +248,7 @@ class AlbumPlaylistSyncService
                 if ($albumPlaylist->spotify_sync_status === 'syncing') {
                     $albumPlaylist->update([
                         'spotify_sync_status' => 'failed',
+                        'spotify_sync_started_at' => null,
                         'spotify_sync_error' => $exception->getMessage(),
                     ]);
                 }
@@ -304,6 +307,7 @@ class AlbumPlaylistSyncService
             ->where('spotify_sync_status', '<>', 'syncing')
             ->update([
                 'spotify_sync_status' => 'syncing',
+                'spotify_sync_started_at' => now(),
                 'spotify_sync_error' => null,
                 'spotify_pending_track_uris' => $desiredUris,
             ]);
