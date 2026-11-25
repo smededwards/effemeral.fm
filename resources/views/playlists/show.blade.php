@@ -61,9 +61,6 @@
         <p class="border border-ef-accent-line bg-ef-surface p-4 text-sm text-ef-accent-strong" role="status">
             {{ session('success') }}</p>
     @endif
-    @if (session('error'))
-        <p class="border border-red-800 bg-ef-surface p-4 text-sm text-red-300" role="alert">{{ session('error') }}</p>
-    @endif
 
     <section class="border border-ef-line bg-ef-surface p-5 sm:p-6" aria-labelledby="playlist-workflow">
         <header class="border-b border-ef-line pb-5">
@@ -124,9 +121,8 @@
                             <ul class="divide-y divide-ef-line">
                                 @foreach ($albums as $album)
                                     <li class="flex items-start gap-3 py-4">
-                                        <input class="playlist-album-checkbox mt-1"
-                                            id="playlist-album-{{ $album->id }}" type="checkbox" name="album_ids[]"
-                                            value="{{ $album->id }}">
+                                        <input class="playlist-album-checkbox mt-1" id="playlist-album-{{ $album->id }}"
+                                            type="checkbox" name="album_ids[]" value="{{ $album->id }}">
                                         <label class="min-w-0 flex-1 cursor-pointer"
                                             for="playlist-album-{{ $album->id }}">
                                             <span class="font-semibold">{{ $album->displayTitle() }}</span>
@@ -172,6 +168,47 @@
                 @if ($albumPlaylist->spotify_sync_error)
                     <p class="mt-4 border-l-4 border-red-700 bg-ef-canvas px-4 py-3 text-sm text-red-300" role="alert">
                         {{ $albumPlaylist->spotify_sync_error }}</p>
+                @endif
+
+                @if ($albumPlaylist->albums->isNotEmpty() && !$hasSpotifyTracks)
+                    <section class="mt-4 border border-amber-500/60 bg-ef-canvas p-4"
+                        aria-labelledby="spotify-track-help">
+                        <h4 id="spotify-track-help" class="text-sm font-semibold text-amber-200">Missing Spotify tracks
+                        </h4>
+                        <p class="mt-2 text-xs leading-5 text-ef-muted">Review an album to enrich its tracks, or remove it
+                            from this playlist. The catalogue record will remain available.</p>
+                        <div class="mt-3 flex justify-end">
+                            <form method="POST"
+                                action="{{ route('album-playlists.albums.destroy-all', $albumPlaylist, false) }}"
+                                data-confirm="Remove all albums from this playlist? The catalogue records will remain available.">
+                                @csrf
+                                @method('DELETE')
+                                <button
+                                    class="border border-red-700 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-700/10"
+                                    type="submit">Remove All</button>
+                            </form>
+                        </div>
+                        <ul class="mt-3 divide-y divide-ef-line">
+                            @foreach ($albumPlaylist->albums as $album)
+                                <li class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <a class="font-semibold text-ef-accent-strong hover:underline"
+                                        href="{{ route('albums.show', $album, false) }}">{{ $album->displayTitle() }}</a>
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <a class="text-xs font-semibold text-ef-accent-strong hover:underline"
+                                            href="{{ route('albums.show', $album, false) }}">Review album</a>
+                                        <form method="POST"
+                                            action="{{ route('album-playlists.albums.destroy', [$albumPlaylist, $album], false) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button
+                                                class="border border-ef-line px-3 py-2 text-xs font-semibold text-ef-muted hover:border-red-700 hover:text-red-300"
+                                                type="submit">Remove</button>
+                                        </form>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
                 @endif
 
                 @if ($albumPlaylist->spotify_sync_status === 'syncing')

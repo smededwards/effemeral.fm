@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Album;
 use App\Models\AlbumPlaylist;
 use App\Models\SpotifyPlaylist;
+use App\Models\Track;
 use App\Services\Playlists\AlbumPlaylistExporter;
 use App\Services\Playlists\AlbumSuggestionService;
 use App\Services\Recommendations\PlaylistNameSuggester;
@@ -46,9 +47,23 @@ class AlbumPlaylistController extends Controller
             (string) $request->query('q', ''),
             (string) $request->query('sort', ''),
         );
+        $albumPlaylist->load('albums.artists', 'albums.releaseTracks');
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Album> $playlistAlbums */
+        $playlistAlbums = $albumPlaylist->albums;
+        $hasSpotifyTracks = $playlistAlbums->contains(function (Album $album): bool {
+            /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $releaseTracks */
+            $releaseTracks = $album->releaseTracks;
+
+            return $releaseTracks->contains(
+                fn (Track $track): bool => (is_string($track->spotify_uri)
+                    && str_starts_with($track->spotify_uri, 'spotify:track:'))
+                    || (is_string($track->spotify_id) && $track->spotify_id !== ''),
+            );
+        });
 
         return view('playlists.show', [
-            'albumPlaylist' => $albumPlaylist->load('albums.artists'),
+            'albumPlaylist' => $albumPlaylist,
+            'hasSpotifyTracks' => $hasSpotifyTracks,
             'search' => trim((string) $request->query('q', '')),
             'artistSearch' => $suggestions['artist_search'],
             'sort' => $suggestions['sort'],
@@ -389,6 +404,26 @@ class AlbumPlaylistController extends Controller
         $this->markSyncPending($albumPlaylist);
 
         return to_route('album-playlists.show', $albumPlaylist)->with('success', 'Album removed from playlist.');
+    }
+
+    /**
+     * Remove every album from a playlist without deleting the albums themselves.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being cleared.
+     * @return RedirectResponse The playlist detail redirect.
+     */
+    public function removeAllAlbums(AlbumPlaylist $albumPlaylist): RedirectResponse
+    {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
+        DB::transaction(function () use ($albumPlaylist): void {
+            $albumPlaylist->albums()->detach();
+            $this->markSyncPending($albumPlaylist);
+        });
+
+        return to_route('album-playlists.show', $albumPlaylist)->with('success', 'All albums removed from playlist.');
     }
 
     /**
