@@ -6,15 +6,9 @@ use App\Jobs\ImportMusicBrainzArtistDiscography;
 use App\Models\Album;
 use App\Models\Artist;
 use App\Models\MusicBrainzDiscographyImportRun;
-use App\Models\RecommendationRun;
-use App\Models\Track;
-use App\Services\Catalog\CatalogWriter;
 use App\Services\MusicBrainz\MusicBrainzClient;
-use App\Services\Spotify\SpotifyClient;
-use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Sleep;
@@ -24,12 +18,32 @@ class MusicBrainzDiscographyTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_discography_refresh_rejects_musicbrainz_only_artists(): void
+    {
+        Queue::fake();
+        $artist = Artist::query()->create([
+            'name' => 'MusicBrainz Only Artist',
+            'normalised_name' => 'musicbrainz only artist',
+            'musicbrainz_mbid' => 'artist-mbid',
+        ]);
+
+        $this->post(route('artists.musicbrainz-discography.store', $artist))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        Queue::assertNothingPushed();
+        $this->assertDatabaseMissing('music_brainz_discography_import_runs', [
+            'artist_id' => $artist->id,
+        ]);
+    }
+
     public function test_artist_discography_refresh_queues_for_artists_with_a_musicbrainz_id(): void
     {
         Queue::fake();
         $artist = Artist::query()->create([
             'name' => 'Baroness',
             'normalised_name' => 'baroness',
+            'spotify_id' => 'spotify-baroness',
             'musicbrainz_mbid' => 'artist-mbid',
         ]);
 
@@ -44,14 +58,14 @@ class MusicBrainzDiscographyTest extends TestCase
         ]);
         $this->get(route('artists.show', $artist))
             ->assertOk()
-            ->assertSee('Refresh Discography')
+            ->assertSee('Refresh album metadata')
             ->assertSee('Latest refresh: Queued');
         $this->post(route('artists.musicbrainz-discography.store', $artist))
             ->assertSessionHas('error', 'A MusicBrainz discography import is already in progress for this artist.');
         Queue::assertPushed(ImportMusicBrainzArtistDiscography::class, 1);
     }
 
-    public function test_refresh_excludes_non_canonical_musicbrainz_release_groups(): void
+    public function test_refresh_matches_existing_albums_without_creating_new_catalogue_records(): void
     {
         Sleep::fake();
         Http::preventStrayRequests();
@@ -59,8 +73,15 @@ class MusicBrainzDiscographyTest extends TestCase
         $artist = Artist::query()->create([
             'name' => 'Baroness',
             'normalised_name' => 'baroness',
+            'spotify_id' => 'spotify-baroness',
             'musicbrainz_mbid' => 'artist-mbid',
         ]);
+        $existingAlbum = Album::query()->create([
+            'title' => 'Studio Album',
+            'normalised_title' => 'studio album',
+            'spotify_id' => 'spotify-studio-album',
+        ]);
+        $existingAlbum->artists()->attach($artist->id);
         $run = MusicBrainzDiscographyImportRun::query()->create(['artist_id' => $artist->id, 'status' => 'queued']);
         $releaseGroups = [
             ['id' => 'studio-album', 'title' => 'Studio Album', 'primary-type' => 'Album'],
@@ -69,7 +90,7 @@ class MusicBrainzDiscographyTest extends TestCase
             ['id' => 'compilation', 'title' => 'Compilation', 'primary-type' => 'Album', 'secondary-types' => ['Compilation']],
             ['id' => 'ep', 'title' => 'Eligible EP', 'primary-type' => 'EP'],
         ];
-        Http::fake(function (Request $request) use ($releaseGroups): PromiseInterface {
+        Http::fake(function (Request $request) use ($releaseGroups) {
             if (str_contains($request->url(), '/release-group?')) {
                 return Http::response(['release-group-count' => count($releaseGroups), 'release-groups' => $releaseGroups]);
             }
@@ -81,21 +102,20 @@ class MusicBrainzDiscographyTest extends TestCase
             return Http::response([], 404);
         });
 
-        (new ImportMusicBrainzArtistDiscography($run->id))->handle(
-            app(MusicBrainzClient::class),
-            app(SpotifyClient::class),
-            app(CatalogWriter::class),
-        );
+        (new ImportMusicBrainzArtistDiscography($run->id))->handle(app(MusicBrainzClient::class));
 
         $this->assertDatabaseHas('albums', ['musicbrainz_release_group_mbid' => 'studio-album']);
-        $this->assertDatabaseHas('albums', ['musicbrainz_release_group_mbid' => 'ep']);
+        $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'ep']);
         $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'live-album']);
         $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'demo-album']);
         $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'compilation']);
         $this->assertSame(2, $run->fresh()->fetched_count);
+        $this->assertSame(1, $run->fresh()->matched_count);
+        $this->assertSame(1, $run->fresh()->unmatched_count);
+        $this->assertSame(1, Album::query()->count());
     }
 
-    public function test_refresh_imports_album_and_ep_matches_without_marking_them_saved_and_creates_a_draft(): void
+    public function test_refresh_updates_existing_album_metadata_without_requesting_spotify_data(): void
     {
         Sleep::fake();
         Http::preventStrayRequests();
@@ -103,148 +123,42 @@ class MusicBrainzDiscographyTest extends TestCase
         $artist = Artist::query()->create([
             'name' => 'Baroness',
             'normalised_name' => 'baroness',
+            'spotify_id' => 'spotify-baroness',
             'musicbrainz_mbid' => 'artist-mbid',
         ]);
+        $album = Album::query()->create([
+            'title' => 'Blue Record',
+            'normalised_title' => 'blue record',
+            'spotify_id' => 'existing-spotify-id',
+        ]);
+        $album->artists()->attach($artist->id);
         $run = MusicBrainzDiscographyImportRun::query()->create(['artist_id' => $artist->id, 'status' => 'queued']);
         $releaseGroups = [
             ['id' => 'album-group', 'title' => 'Blue Record', 'primary-type' => 'Album', 'first-release-date' => '2009-10-13'],
             ['id' => 'ep-group', 'title' => 'Bunker Sessions', 'primary-type' => 'EP', 'first-release-date' => '2010'],
             ['id' => 'single-group', 'title' => 'Tour Single', 'primary-type' => 'Single'],
         ];
-        Http::fake(function (Request $request) use ($releaseGroups): PromiseInterface {
+        Http::fake(function (Request $request) use ($releaseGroups) {
             if (str_contains($request->url(), '/release-group?')) {
                 return Http::response(['release-group-count' => count($releaseGroups), 'release-groups' => $releaseGroups]);
-            }
-
-            if (str_contains($request->url(), '/search?')) {
-                if (str_contains($request->url(), 'Bunker')) {
-                    return Http::response(['albums' => ['items' => []]]);
-                }
-
-                return Http::response(['albums' => ['items' => [
-                    $this->spotifyAlbum('single-id', 'Blue Record', 'single'),
-                    $this->spotifyAlbum('remaster-id', 'Blue Record Remastered'),
-                    $this->spotifyAlbum('original-id', 'Blue Record'),
-                ]]]);
-            }
-
-            if (str_contains($request->url(), '/albums/original-id/tracks?')) {
-                return Http::response(['items' => [[
-                    'id' => 'track-id',
-                    'name' => 'Track One',
-                    'uri' => 'spotify:track:track-id',
-                    'track_number' => 1,
-                    'disc_number' => 1,
-                    'duration_ms' => 180000,
-                ]], 'next' => null]);
             }
 
             return Http::response([], 404);
         });
 
         $job = new ImportMusicBrainzArtistDiscography($run->id);
-        $job->handle(app(MusicBrainzClient::class), app(SpotifyClient::class), app(CatalogWriter::class));
+        $job->handle(app(MusicBrainzClient::class));
 
         $matchedAlbum = Album::query()->where('musicbrainz_release_group_mbid', 'album-group')->firstOrFail();
-        $this->assertSame('original-id', $matchedAlbum->spotify_id);
+        $this->assertSame('existing-spotify-id', $matchedAlbum->spotify_id);
         $this->assertSame('album', $matchedAlbum->album_type);
-        $this->assertSame('spotify:track:track-id', $matchedAlbum->tracks()->value('spotify_uri'));
-        $this->assertDatabaseMissing('spotify_album_collections', ['album_id' => $matchedAlbum->id]);
-        $this->assertDatabaseHas('albums', [
-            'musicbrainz_release_group_mbid' => 'ep-group',
-            'album_type' => 'ep',
-            'spotify_id' => null,
-        ]);
+        $this->assertSame('2009-10-13', $matchedAlbum->release_date);
+        $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'ep-group']);
         $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'single-group']);
         $this->assertSame(2, $run->fresh()->fetched_count);
         $this->assertSame(1, $run->fresh()->matched_count);
         $this->assertSame(1, $run->fresh()->unmatched_count);
-
-        $response = $this->post(route('catalogue.discography'), ['artist_id' => $artist->id]);
-        $recommendationRun = RecommendationRun::query()->latest()->firstOrFail();
-        $recommendation = $recommendationRun->albumRecommendations()->firstOrFail();
-        $response->assertRedirect(route('recommendations.review.page', $recommendationRun));
-        $this->assertSame($matchedAlbum->id, $recommendation->album_id);
-        $this->assertNull($recommendation->spotify_saved_album_id);
-        $this->get(route('recommendations.review.page', $recommendationRun))->assertOk()->assertSee('Blue Record');
-
-        $job->handle(app(MusicBrainzClient::class), app(SpotifyClient::class), app(CatalogWriter::class));
-        $this->assertDatabaseCount('albums', 2);
-        $this->assertDatabaseCount('tracks', 1);
-        $this->assertDatabaseCount('spotify_saved_albums', 0);
-    }
-
-    public function test_shared_spotify_track_remains_associated_with_single_and_album_releases(): void
-    {
-        Sleep::fake();
-        Http::preventStrayRequests();
-        config()->set('services.spotify.access_token', 'test-token');
-        $artist = Artist::query()->create([
-            'name' => 'Skaphos',
-            'normalised_name' => 'skaphos',
-            'musicbrainz_mbid' => 'artist-mbid',
-            'spotify_id' => 'skaphos-spotify',
-        ]);
-        $single = Album::query()->create([
-            'title' => 'Mireborn',
-            'normalised_title' => 'mireborn',
-            'album_type' => 'single',
-            'spotify_id' => 'single-id',
-            'total_tracks' => 1,
-        ]);
-        $single->artists()->attach($artist->id);
-        $track = $single->tracks()->create([
-            'title' => 'Mireborn',
-            'normalised_title' => 'mireborn',
-            'spotify_id' => 'shared-track-id',
-            'spotify_uri' => 'spotify:track:shared-track-id',
-            'track_number' => 1,
-        ]);
-        $run = MusicBrainzDiscographyImportRun::query()->create(['artist_id' => $artist->id, 'status' => 'queued']);
-        Http::fake(function (Request $request): PromiseInterface|Response {
-            if (str_contains($request->url(), '/release-group?')) {
-                return Http::response([
-                    'release-group-count' => 1,
-                    'release-groups' => [[
-                        'id' => 'descent-group',
-                        'title' => 'The Descent',
-                        'primary-type' => 'Album',
-                        'first-release-date' => '2026-04-10',
-                    ]],
-                ]);
-            }
-
-            if (str_contains($request->url(), '/search?')) {
-                return Http::response(['albums' => ['items' => [
-                    $this->spotifyAlbum('descent-single-id', 'The Descent', 'single', 'Skaphos'),
-                    $this->spotifyAlbum('descent-album-id', 'The Descent', 'album', 'Skaphos'),
-                ]]]);
-            }
-
-            if (str_contains($request->url(), '/albums/descent-album-id/tracks?')) {
-                return Http::response(['items' => [[
-                    'id' => 'shared-track-id',
-                    'name' => 'Mireborn',
-                    'uri' => 'spotify:track:shared-track-id',
-                    'track_number' => 1,
-                    'disc_number' => 1,
-                    'duration_ms' => 180000,
-                ]], 'next' => null]);
-            }
-
-            return Http::response([], 404);
-        });
-
-        (new ImportMusicBrainzArtistDiscography($run->id))->handle(
-            app(MusicBrainzClient::class),
-            app(SpotifyClient::class),
-            app(CatalogWriter::class),
-        );
-
-        $album = Album::query()->where('spotify_id', 'descent-album-id')->firstOrFail();
-        $this->assertTrue($single->fresh()->releaseTracks()->whereKey($track->id)->exists());
-        $this->assertTrue($album->releaseTracks()->whereKey($track->id)->exists());
-        $this->assertSame(1, Track::query()->where('spotify_id', 'shared-track-id')->count());
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'api.spotify.com'));
     }
 
     public function test_musicbrainz_release_group_browse_paginates_and_excludes_non_album_types(): void
@@ -253,6 +167,7 @@ class MusicBrainzDiscographyTest extends TestCase
         $artist = Artist::query()->create([
             'name' => 'Baroness',
             'normalised_name' => 'baroness',
+            'spotify_id' => 'spotify-baroness',
             'musicbrainz_mbid' => 'artist-mbid',
         ]);
         $page = array_fill(0, 100, ['id' => 'album-group', 'primary-type' => 'Album']);
@@ -269,7 +184,7 @@ class MusicBrainzDiscographyTest extends TestCase
         Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'offset=100'));
     }
 
-    public function test_musicbrainz_artist_metadata_includes_location_country_and_genres(): void
+    public function test_musicbrainz_artist_metadata_includes_location_and_cross_references(): void
     {
         Sleep::fake();
         $artist = Artist::query()->create([
@@ -294,7 +209,8 @@ class MusicBrainzDiscographyTest extends TestCase
 
         $this->assertSame('US', $metadata['country_code']);
         $this->assertSame('Savannah', $metadata['location']);
-        $this->assertSame(['sludge metal', 'metal'], $metadata['genres']);
+        $this->assertSame([], $metadata['aliases']);
+        $this->assertSame([], $metadata['relationships']);
     }
 
     public function test_persistent_musicbrainz_rate_limits_mark_the_refresh_as_failed(): void
@@ -315,36 +231,11 @@ class MusicBrainzDiscographyTest extends TestCase
         $run = MusicBrainzDiscographyImportRun::query()->create(['artist_id' => $artist->id, 'status' => 'queued']);
 
         try {
-            (new ImportMusicBrainzArtistDiscography($run->id))->handle(
-                app(MusicBrainzClient::class),
-                app(SpotifyClient::class),
-                app(CatalogWriter::class),
-            );
+            (new ImportMusicBrainzArtistDiscography($run->id))->handle(app(MusicBrainzClient::class));
             $this->fail('The refresh should fail after MusicBrainz keeps rate-limiting the request.');
         } catch (\RuntimeException) {
             $this->assertSame('failed', $run->fresh()->status);
             $this->assertStringContainsString('rate limit persisted', $run->fresh()->error);
         }
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function spotifyAlbum(
-        string $id,
-        string $title,
-        string $type = 'album',
-        string $artistName = 'Baroness',
-    ): array {
-        return [
-            'id' => $id,
-            'name' => $title,
-            'album_type' => $type,
-            'total_tracks' => 1,
-            'release_date' => '2009-10-13',
-            'artists' => [['id' => 'artist-spotify', 'name' => $artistName]],
-            'external_urls' => ['spotify' => 'https://open.spotify.com/album/'.$id],
-            'images' => [],
-        ];
     }
 }

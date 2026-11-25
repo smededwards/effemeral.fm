@@ -67,6 +67,14 @@ return [
         'rate_limit_cooldown_seconds' => (int) env('SPOTIFY_RATE_LIMIT_COOLDOWN_SECONDS', 60),
         'quota_cooldown_seconds' => (int) env('SPOTIFY_QUOTA_COOLDOWN_SECONDS', 300),
         'scopes' => env('SPOTIFY_SCOPES', 'user-library-read playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public'),
+        'import_allowed_owners' => array_values(array_filter(array_map(
+            static fn (string $owner): string => trim($owner),
+            explode(',', (string) env('SPOTIFY_IMPORT_ALLOWED_OWNERS', '')),
+        ))),
+        'import_excluded_artists' => array_values(array_filter(array_map(
+            static fn (string $artist): string => trim($artist),
+            explode(',', (string) env('SPOTIFY_IMPORT_EXCLUDED_ARTISTS', '')),
+        ))),
     ],
 
 ];

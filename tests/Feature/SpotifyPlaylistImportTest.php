@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\ImportSpotifyPlaylists;
 use App\Models\Album;
+use App\Models\SpotifyConnection;
 use App\Models\SpotifyPlaylist;
 use App\Models\SpotifyPlaylistImportRun;
 use App\Models\SpotifyPlaylistItem;
@@ -17,6 +18,18 @@ use Tests\TestCase;
 class SpotifyPlaylistImportTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        SpotifyConnection::query()->create([
+            'access_token' => 'test-access-token',
+            'refresh_token' => 'test-refresh-token',
+            'spotify_user_id' => 'owner-id',
+            'display_name' => 'Test owner',
+        ]);
+    }
 
     public function test_a_playlist_import_can_be_queued(): void
     {
@@ -154,6 +167,87 @@ class SpotifyPlaylistImportTest extends TestCase
         $this->assertSame(1, $playlistItemRequests);
     }
 
+    public function test_excluded_artists_do_not_enter_the_catalogue_from_owned_playlists(): void
+    {
+        config()->set('services.spotify.import_excluded_artists', ['mötley crüe']);
+        config()->set('services.spotify.access_token', 'test-token');
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/me/playlists')) {
+                return Http::response([
+                    'next' => null,
+                    'total' => 1,
+                    'items' => [[
+                        'id' => 'owned-playlist',
+                        'name' => 'Owned playlist',
+                        'owner' => ['id' => 'owner-id'],
+                        'tracks' => ['total' => 1],
+                    ]],
+                ]);
+            }
+
+            return Http::response(['items' => [[
+                'track' => [
+                    'id' => 'excluded-track',
+                    'name' => 'Wild Side',
+                    'album' => [
+                        'id' => 'excluded-album',
+                        'name' => 'Girls, Girls, Girls (Deluxe Version)',
+                        'artists' => [['id' => 'motley-crue', 'name' => 'Mötley Crüe']],
+                    ],
+                ],
+            ]]]);
+        });
+
+        $run = SpotifyPlaylistImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'queued',
+        ]);
+
+        (new ImportSpotifyPlaylists($run->id))->handle(app(SpotifyClient::class));
+
+        $this->assertDatabaseMissing('albums', ['spotify_id' => 'excluded-album']);
+        $this->assertDatabaseMissing('spotify_playlist_items', ['spotify_track_id' => 'excluded-track']);
+        $this->assertDatabaseHas('spotify_playlist_import_runs', [
+            'id' => $run->id,
+            'status' => 'completed',
+            'skipped_count' => 1,
+        ]);
+    }
+
+    public function test_followed_playlists_owned_by_other_users_are_not_imported(): void
+    {
+        config()->set('services.spotify.access_token', 'test-token');
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/me/playlists')) {
+                return Http::response([
+                    'next' => null,
+                    'total' => 1,
+                    'items' => [[
+                        'id' => 'followed-playlist',
+                        'name' => 'Public playlist I follow',
+                        'owner' => ['id' => 'other-user'],
+                    ]],
+                ]);
+            }
+
+            $this->fail('The importer requested items for a playlist owned by another user.');
+        });
+
+        $run = SpotifyPlaylistImportRun::query()->create([
+            'source' => 'spotify',
+            'status' => 'queued',
+        ]);
+
+        (new ImportSpotifyPlaylists($run->id))->handle(app(SpotifyClient::class));
+
+        $this->assertDatabaseMissing('spotify_playlists', ['spotify_playlist_id' => 'followed-playlist']);
+        $this->assertDatabaseHas('spotify_playlist_import_runs', [
+            'id' => $run->id,
+            'status' => 'completed',
+            'skipped_count' => 1,
+        ]);
+    }
+
     public function test_a_bounded_new_playlist_import_skips_existing_playlists(): void
     {
         config()->set('services.spotify.access_token', 'test-token');
@@ -169,9 +263,9 @@ class SpotifyPlaylistImportTest extends TestCase
                     'next' => null,
                     'total' => 3,
                     'items' => [
-                        ['id' => 'existing-playlist', 'name' => 'Existing playlist'],
-                        ['id' => 'new-playlist-one', 'name' => 'New playlist one'],
-                        ['id' => 'new-playlist-two', 'name' => 'New playlist two'],
+                        ['id' => 'existing-playlist', 'name' => 'Existing playlist', 'owner' => ['id' => 'owner-id']],
+                        ['id' => 'new-playlist-one', 'name' => 'New playlist one', 'owner' => ['id' => 'owner-id']],
+                        ['id' => 'new-playlist-two', 'name' => 'New playlist two', 'owner' => ['id' => 'owner-id']],
                     ],
                 ]);
             }
@@ -229,7 +323,7 @@ class SpotifyPlaylistImportTest extends TestCase
                 return str_contains($request->url(), 'offset=0')
                     ? Http::response([
                         'total' => 2,
-                        'items' => [['id' => 'first-playlist', 'name' => 'First playlist', 'tracks' => ['total' => 0]]],
+                        'items' => [['id' => 'first-playlist', 'name' => 'First playlist', 'owner' => ['id' => 'owner-id'], 'tracks' => ['total' => 0]]],
                     ])
                     : Http::response(['error' => ['reason' => 'QUOTA_EXCEEDED']], 429);
             }
@@ -304,6 +398,7 @@ class SpotifyPlaylistImportTest extends TestCase
                     'items' => [[
                         'id' => 'playlist-id',
                         'name' => 'Updated playlist',
+                        'owner' => ['id' => 'owner-id'],
                         'tracks' => ['total' => 1],
                     ]],
                 ]);

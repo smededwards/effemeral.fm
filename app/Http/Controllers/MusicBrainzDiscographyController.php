@@ -21,8 +21,8 @@ class MusicBrainzDiscographyController extends Controller
      */
     public function store(Artist $artist): RedirectResponse
     {
-        if ($artist->musicbrainz_mbid === null) {
-            return back()->with('error', 'Import the artist’s MusicBrainz identity before enriching their discography.');
+        if ($artist->musicbrainz_mbid === null || ! Artist::query()->withSourceEvidence()->whereKey($artist->id)->exists()) {
+            return back()->with('error', 'The artist needs MusicBrainz identity and Last.fm or Spotify source evidence before enrichment.');
         }
 
         $run = DB::transaction(function () use ($artist): ?MusicBrainzDiscographyImportRun {

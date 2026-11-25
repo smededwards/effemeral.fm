@@ -66,10 +66,12 @@ After a quota error, do not repeatedly launch new runs. Check status, wait for t
 
 ## MusicBrainz
 
-MusicBrainz enrichment is split into two commands:
+MusicBrainz enrichment is deliberately limited to context for records already in Effemeral:
 
-1. `artists:import-musicbrainz` adds or refreshes artist IDs, country, location, and metadata for existing artists.
-2. `artists:enrich-musicbrainz` matches eligible MusicBrainz release groups to existing catalogue artists and albums.
+1. `artists:import-musicbrainz` adds or refreshes artist IDs, country, location, aliases and relationships for existing artists.
+2. `artists:enrich-musicbrainz` matches MusicBrainz release groups to existing catalogue albums and adds release metadata.
+
+MusicBrainz enrichment does not create artists, albums or tracks. An artist must already have Last.fm or Spotify source evidence before a MusicBrainz ID can be added or refreshed. A MusicBrainz ID alone is never treated as proof that an artist belongs in the catalogue. Album enrichment also requires an existing album with Last.fm or Spotify evidence, so MusicBrainz release groups cannot create empty album shells. Spotify and Last.fm remain the sources for catalogue track data and track credits. A release group that has no existing Effemeral album is reported as unmatched and is not imported.
 
 The discography process excludes release types that do not belong in the canonical album catalogue, including live recordings, compilations, demos, bootlegs, b-sides, and special releases. It is not a general-purpose import of every MusicBrainz release.
 
@@ -80,11 +82,16 @@ docker compose exec laravel.test php artisan artists:import-musicbrainz --known-
 docker compose exec laravel.test php artisan artists:enrich-musicbrainz --limit=10
 ```
 
-MusicBrainz is the preferred source for artist country and location. Manual edits take precedence over later provider refreshes.
+MusicBrainz is the preferred source for artist country and location. Manual edits take precedence over later provider refreshes. Artist aliases and relationships are stored as provider context and never merge canonical artists automatically.
 
 ## Matching and identity
 
 Matching prefers provider IDs, then normalized artist and album identity. The catalogue also stores internal EFM identifiers for artists, albums, tracks, genres, and playlists. Internal IDs are stable application identifiers; provider IDs remain useful for cross-source matching and external links.
+
+Album reconciliation is conservative. Empty duplicate album shells can be merged
+after a dry run, but records with provider IDs, tracks or listening references
+remain separate until they are reviewed. Retired album EFMIDs are retained as
+aliases when a safe merge is applied.
 
 Artists with similar names must not be merged solely because their display names match. Provider IDs, MusicBrainz IDs, Spotify IDs, and album relationships keep distinct artists separate.
 

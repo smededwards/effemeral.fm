@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
- * Enriches existing artists with canonical MusicBrainz discographies.
+ * Enriches existing catalogue albums with MusicBrainz release metadata.
  */
 #[Signature('artists:enrich-musicbrainz {--artist-id= : Only process one artist ID} {--after-id=0 : Start after this artist ID} {--limit=10 : Stop after this many artists} {--refresh : Include artists with a completed discography run} {--dry-run : List eligible artists without requesting provider data}')]
-#[Description('Enrich existing artist discographies with MusicBrainz data')]
+#[Description('Match existing albums with MusicBrainz release metadata')]
 class EnrichMusicBrainzDiscographies extends Command
 {
     /**
@@ -93,6 +93,7 @@ class EnrichMusicBrainzDiscographies extends Command
     private function eligibleArtists(): Builder
     {
         return Artist::query()
+            ->withSourceEvidence()
             ->whereNotNull('musicbrainz_mbid')
             ->when($this->option('artist-id'), fn ($query, $artistId) => $query->whereKey((int) $artistId))
             ->when((int) $this->option('after-id') > 0, fn ($query) => $query->where('id', '>', (int) $this->option('after-id')))
