@@ -12,7 +12,8 @@
     <section class="rounded-xl border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="catalogue-styles-heading">
         <div class="flex flex-wrap items-end justify-between gap-3 border-b border-ef-line pb-4">
             <div>
-                <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Accepted catalogue data</p>
+                <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Accepted catalogue data
+                </p>
                 <h2 id="catalogue-styles-heading" class="mt-2 text-2xl font-semibold">All styles</h2>
             </div>
             <span class="text-sm text-ef-muted">{{ number_format($genres->count()) }} styles</span>

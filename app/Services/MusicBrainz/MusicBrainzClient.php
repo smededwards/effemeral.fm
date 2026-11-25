@@ -103,13 +103,54 @@ class MusicBrainzClient
 
             $groups = array_merge($groups, array_values(array_filter(
                 $page,
-                fn (mixed $group): bool => is_array($group)
-                    && in_array(mb_strtolower((string) ($group['primary-type'] ?? '')), ['album', 'ep'], true),
+                fn (mixed $group): bool => is_array($group) && $this->isEligibleReleaseGroup($group),
             )));
             $offset += count($page);
         } while ($offset < $total);
 
         return $groups;
+    }
+
+    /**
+     * Keep standard albums and EPs while excluding non-canonical release groups.
+     *
+     * @param  array<string, mixed>  $group  The MusicBrainz release group.
+     */
+    private function isEligibleReleaseGroup(array $group): bool
+    {
+        $primaryType = mb_strtolower((string) ($group['primary-type'] ?? ''));
+        if (! in_array($primaryType, ['album', 'ep'], true)) {
+            return false;
+        }
+
+        $excludedTypes = [
+            'audio drama',
+            'audiobook',
+            'bootleg',
+            'broadcast',
+            'box set',
+            'compilation',
+            'concert film',
+            'demo',
+            'dj-mix',
+            'field recording',
+            'holiday',
+            'interview',
+            'live',
+            'mixtape',
+            'other',
+            'promo',
+            'remix',
+            'soundtrack',
+            'spokenword',
+            'video',
+        ];
+
+        return collect($group['secondary-types'] ?? [])
+            ->filter(fn (mixed $type): bool => is_string($type))
+            ->map(fn (string $type): string => mb_strtolower(trim($type)))
+            ->intersect($excludedTypes)
+            ->isEmpty();
     }
 
     /**

@@ -51,6 +51,16 @@ class Album extends Model
     }
 
     /**
+     * Return every canonical track released on this album, including tracks shared with another release.
+     */
+    public function releaseTracks(): BelongsToMany
+    {
+        return $this->belongsToMany(Track::class, 'album_track_releases')
+            ->withPivot('disc_number', 'track_number')
+            ->withTimestamps();
+    }
+
+    /**
      * Return saved-album and playlist collection memberships.
      */
     public function spotifyCollections(): HasMany

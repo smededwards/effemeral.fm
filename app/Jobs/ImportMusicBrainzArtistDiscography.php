@@ -61,9 +61,10 @@ class ImportMusicBrainzArtistDiscography implements ShouldQueue
                         ->first();
                 $wasExisting = $album !== null;
                 $spotifyTracksRequested = false;
+                $releaseType = mb_strtolower((string) ($releaseGroup['primary-type'] ?? 'album'));
                 $spotifyAlbum = $album?->spotify_id !== null
                     ? null
-                    : $this->spotifyMatch($spotify->searchAlbums($artist->name, $title), $artist->name, $title);
+                    : $this->spotifyMatch($spotify->searchAlbums($artist->name, $title), $artist->name, $title, $releaseType);
 
                 if ($spotifyAlbum !== null) {
                     $spotifyId = $spotifyAlbum['id'] ?? null;
@@ -86,7 +87,7 @@ class ImportMusicBrainzArtistDiscography implements ShouldQueue
                     $album = $this->createMusicBrainzAlbum($artist, $releaseGroup, $title, $releaseGroupId);
                 }
 
-                $spotifyTrackCount = $album->tracks()->whereNotNull('spotify_uri')->count();
+                $spotifyTrackCount = $album->releaseTracks()->whereNotNull('tracks.spotify_uri')->count();
                 if ($album->spotify_id !== null && ! $spotifyTracksRequested
                     && ($spotifyTrackCount === 0 || ($album->total_tracks !== null && $spotifyTrackCount < $album->total_tracks))) {
                     $catalog->spotifyAlbumTracks($album, $spotify->albumTracks($album->spotify_id));
@@ -101,7 +102,7 @@ class ImportMusicBrainzArtistDiscography implements ShouldQueue
                 $album->save();
                 $album->artists()->syncWithoutDetaching([$artist->id]);
 
-                if ($album->spotify_id !== null && $album->tracks()->where('spotify_uri', 'like', 'spotify:track:%')->exists()) {
+                if ($album->spotify_id !== null && $album->releaseTracks()->where('tracks.spotify_uri', 'like', 'spotify:track:%')->exists()) {
                     $matched++;
                 } else {
                     $unmatched++;
@@ -146,12 +147,14 @@ class ImportMusicBrainzArtistDiscography implements ShouldQueue
      * @param  list<array<string, mixed>>  $results
      * @return array<string, mixed>|null
      */
-    private function spotifyMatch(array $results, string $artistName, string $title): ?array
+    private function spotifyMatch(array $results, string $artistName, string $title, string $releaseType): ?array
     {
         $expectedTitle = $this->editionTitle($title);
+        $expectedSpotifyType = $releaseType === 'ep' ? 'album' : $releaseType;
         $matches = collect($results)
             ->filter(fn (array $album): bool => is_string($album['id'] ?? null) && $album['id'] !== ''
                 && $this->editionTitle((string) ($album['name'] ?? '')) === $expectedTitle
+                && ($album['album_type'] ?? $expectedSpotifyType) === $expectedSpotifyType
                 && collect($album['artists'] ?? [])->contains(fn (mixed $artist): bool => is_array($artist)
                     && $this->normalise((string) ($artist['name'] ?? '')) === $this->normalise($artistName)))
             ->unique('id')
