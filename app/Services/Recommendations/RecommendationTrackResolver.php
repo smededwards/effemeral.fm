@@ -23,9 +23,9 @@ class RecommendationTrackResolver
         /** @var SpotifySavedAlbum|null $legacyAlbum */
         $legacyAlbum = $recommendation->getRelation('spotifySavedAlbum');
 
-        if ($album !== null && $album->getRelation('tracks')->isNotEmpty()) {
+        if ($album !== null && $album->getRelation('releaseTracks')->isNotEmpty()) {
             /** @var Collection<int, Track> $tracks */
-            $tracks = $album->getRelation('tracks');
+            $tracks = $album->getRelation('releaseTracks');
 
             return $tracks
                 ->pluck('spotify_uri')

@@ -20,8 +20,7 @@
                 <p class="mt-2 text-sm text-ef-muted">Add albums in Effemeral, review the order, then sync when it is ready.
                 </p>
             </div>
-            <form class="flex w-full sm:w-auto" method="POST"
-                action="{{ route('album-playlists.store', [], false) }}">
+            <form class="flex w-full sm:w-auto" method="POST" action="{{ route('album-playlists.store', [], false) }}">
                 @csrf
                 <button class="bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
                     type="submit">Create Playlist</button>

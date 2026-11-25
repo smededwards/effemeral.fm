@@ -141,6 +141,24 @@ class CatalogWriter
                     'track_number' => $trackNumber,
                 ]);
             } else {
+                if ($track->album_id !== $album->id) {
+                    $track->releases()->syncWithoutDetaching([
+                        $album->id => [
+                            'disc_number' => $discNumber,
+                            'track_number' => $trackNumber,
+                        ],
+                    ]);
+                    $track->fill([
+                        'title' => $trackData['name'],
+                        'normalised_title' => $normalisedTitle,
+                        'spotify_uri' => $trackData['uri'] ?? null,
+                        'duration_ms' => $trackData['duration_ms'] ?? null,
+                    ])->save();
+                    $this->identityWriter->syncTrack($track);
+
+                    continue;
+                }
+
                 $conflictingTrackExists = Track::query()
                     ->where('album_id', $album->id)
                     ->where('normalised_title', $normalisedTitle)
@@ -175,6 +193,12 @@ class CatalogWriter
             ]);
             try {
                 $track->save();
+                $track->releases()->syncWithoutDetaching([
+                    $album->id => [
+                        'disc_number' => $discNumber,
+                        'track_number' => $trackNumber,
+                    ],
+                ]);
                 $this->identityWriter->syncTrack($track);
             } catch (QueryException $exception) {
                 if ($exception->getCode() !== '23000'

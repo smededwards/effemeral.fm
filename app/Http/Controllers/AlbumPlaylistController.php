@@ -232,10 +232,10 @@ class AlbumPlaylistController extends Controller
         $recentSuggestions = is_array($recentSuggestions) ? array_values($recentSuggestions) : [];
         /** @var \Illuminate\Database\Eloquent\Collection<int, Album> $albums */
         $albums = $albumPlaylist->albums()
-            ->with('tracks')
+            ->with('releaseTracks')
             ->get();
         $albumTitlesAndTracks = $albums
-            ->flatMap(fn (Album $album): array => [$album->title, ...$album->tracks->pluck('title')->all()]);
+            ->flatMap(fn (Album $album): array => [$album->title, ...$album->releaseTracks->pluck('title')->all()]);
         $name = $this->playlistNameSuggester->suggestFromTitles(
             $albumTitlesAndTracks,
             $albumPlaylist->name,
@@ -269,7 +269,7 @@ class AlbumPlaylistController extends Controller
             return back()->with('error', 'That album is already in this playlist.');
         }
 
-        if (! Album::query()->whereKey($validated['album_id'])->whereHas('tracks')->exists()) {
+        if (! Album::query()->whereKey($validated['album_id'])->whereHas('releaseTracks')->exists()) {
             return back()->with('error', 'Only albums with Spotify tracks can be added to a playlist.');
         }
 
@@ -308,7 +308,7 @@ class AlbumPlaylistController extends Controller
 
         $playableAlbumCount = Album::query()
             ->whereKey($validated['album_ids'])
-            ->whereHas('tracks')
+            ->whereHas('releaseTracks')
             ->count();
 
         if ($playableAlbumCount !== count($validated['album_ids'])) {

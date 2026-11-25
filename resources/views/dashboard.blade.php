@@ -42,8 +42,7 @@
                 <h2 id="saved-playlists-heading" class="mt-2 text-2xl font-semibold tracking-[-0.03em]">Your Playlists</h2>
                 <p class="mt-2 text-sm text-ef-muted">Open any playlist to add, remove, arrange, and sync albums.</p>
             </div>
-            <form class="flex w-full sm:w-auto" method="POST"
-                action="{{ route('album-playlists.store', [], false) }}">
+            <form class="flex w-full sm:w-auto" method="POST" action="{{ route('album-playlists.store', [], false) }}">
                 @csrf
                 <button
                     class="whitespace-nowrap bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover"
@@ -70,15 +69,16 @@
                             @endif
                         </div>
                         <a class="inline-flex shrink-0 items-center font-semibold text-ef-accent-strong hover:underline"
-                            href="{{ route('album-playlists.show', $albumPlaylist, false) }}">Manage <span
-                                class="ml-2" aria-hidden="true">→</span></a>
+                            href="{{ route('album-playlists.show', $albumPlaylist, false) }}">Manage <span class="ml-2"
+                                aria-hidden="true">→</span></a>
                     </li>
                 @endforeach
             </ul>
         @else
             <div class="mt-6 border border-dashed border-ef-line p-8 text-center">
                 <h3 class="text-lg font-semibold">Start Your First Playlist</h3>
-                <p class="mt-2 text-sm text-ef-muted">Create a playlist above, then discover albums and add them in full.</p>
+                <p class="mt-2 text-sm text-ef-muted">Create a playlist above, then discover albums and add them in full.
+                </p>
             </div>
         @endif
     </section>

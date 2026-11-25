@@ -28,7 +28,7 @@ class AlbumCompletionService
         $legacyAlbums = SpotifySavedAlbum::query()->get()->keyBy('spotify_album_id');
         $heardTrackIds = $this->heardTrackIds($window);
         $canonicalAlbums = Album::query()
-            ->with(['artists', 'tracks', 'spotifyCollections'])
+            ->with(['artists', 'releaseTracks', 'spotifyCollections'])
             ->whereHas('spotifyCollections', fn ($query) => $query->where('collection_type', 'saved'))
             ->get();
 
@@ -37,7 +37,7 @@ class AlbumCompletionService
             $incompleteAlbums = $canonicalAlbums
                 ->map(function (Album $album) use ($heardTrackIds, $legacyAlbums): ?array {
                     /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
-                    $tracks = $album->getRelation('tracks');
+                    $tracks = $album->getRelation('releaseTracks');
                     /** @var \Illuminate\Database\Eloquent\Collection<int, Artist> $artists */
                     $artists = $album->getRelation('artists');
                     $legacyAlbum = $legacyAlbums->get($album->spotify_id);
@@ -130,12 +130,12 @@ class AlbumCompletionService
      */
     public function progress(SpotifySavedAlbum $savedAlbum): array
     {
-        $canonicalAlbum = Album::query()->with('tracks')->where('spotify_id', $savedAlbum->spotify_album_id)->first();
+        $canonicalAlbum = Album::query()->with('releaseTracks')->where('spotify_id', $savedAlbum->spotify_album_id)->first();
 
-        if ($canonicalAlbum !== null && $canonicalAlbum->tracks->isNotEmpty()) {
+        if ($canonicalAlbum !== null && $canonicalAlbum->releaseTracks->isNotEmpty()) {
             $heardTrackIds = Scrobble::query()->whereNotNull('track_id')->pluck('track_id')->flip();
             /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
-            $tracks = $canonicalAlbum->getRelation('tracks');
+            $tracks = $canonicalAlbum->getRelation('releaseTracks');
             $total = $tracks->count();
             $heard = $tracks->filter(fn (Track $track): bool => $heardTrackIds->has($track->id))->count();
 

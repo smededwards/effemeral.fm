@@ -179,7 +179,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
                                 );
                                 $spotifyTrackId = $track['id'] ?? null;
                                 if (! array_key_exists($album->id, $trackIdsByAlbum)) {
-                                    $trackIdsByAlbum[$album->id] = $album->tracks()->pluck('id', 'spotify_id')->all();
+                                    $trackIdsByAlbum[$album->id] = $album->releaseTracks()->pluck('tracks.id', 'tracks.spotify_id')->all();
                                 }
                                 $playlist->items()->create([
                                     'album_id' => $album->id,
@@ -206,7 +206,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
                             foreach ($albumIds as $albumId) {
                                 $album = Album::query()->where('spotify_id', $albumId)->first();
                                 if ($album === null || ($album->total_tracks !== null
-                                    && $album->tracks()->whereNotNull('spotify_uri')->count() === $album->total_tracks)) {
+                                    && $album->releaseTracks()->whereNotNull('tracks.spotify_uri')->count() === $album->total_tracks)) {
                                     continue;
                                 }
 

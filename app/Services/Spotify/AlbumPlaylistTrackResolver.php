@@ -21,7 +21,10 @@ class AlbumPlaylistTrackResolver
         $albums = $albumPlaylist->albums()
             ->with([
                 'artists',
-                'tracks' => fn ($query) => $query->orderBy('disc_number')->orderBy('track_number')->orderBy('id'),
+                'releaseTracks' => fn ($query) => $query
+                    ->orderBy('album_track_releases.disc_number')
+                    ->orderBy('album_track_releases.track_number')
+                    ->orderBy('tracks.id'),
             ])
             ->get();
         $uris = [];
@@ -30,7 +33,7 @@ class AlbumPlaylistTrackResolver
 
         foreach ($albums as $album) {
             /** @var \Illuminate\Database\Eloquent\Collection<int, Track> $tracks */
-            $tracks = $album->tracks;
+            $tracks = $album->releaseTracks;
             $albumTracks = $tracks
                 ->map(function (Track $track): ?array {
                     $uri = $track->spotify_uri;

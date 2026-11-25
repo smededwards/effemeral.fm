@@ -37,7 +37,7 @@ class RecommendationPlaylistController extends Controller
          * @var Collection<int, AlbumRecommendation> $recommendations
          */
         $recommendations = $recommendationRun->albumRecommendations()
-            ->with('album.tracks', 'album.artists', 'spotifySavedAlbum')
+            ->with('album.releaseTracks', 'album.artists', 'spotifySavedAlbum')
             ->get();
         $reviewAlbums = $recommendations->map(function (AlbumRecommendation $recommendation): array {
             return [
@@ -77,7 +77,7 @@ class RecommendationPlaylistController extends Controller
              * @var Collection<int, AlbumRecommendation> $recommendations
              */
             $recommendations = $selectedRun->albumRecommendations()
-                ->with('album.tracks', 'album.artists', 'spotifySavedAlbum')
+                ->with('album.releaseTracks', 'album.artists', 'spotifySavedAlbum')
                 ->get();
             $playlists = SpotifyPlaylist::query()
                 ->when($selectedPlaylist !== null, fn ($query) => $query->whereKey($selectedPlaylist->id))
@@ -179,7 +179,7 @@ class RecommendationPlaylistController extends Controller
          * @var Collection<int, AlbumRecommendation> $recommendations
          */
         $recommendations = $recommendationRun->albumRecommendations()
-            ->with('album.tracks', 'spotifySavedAlbum')
+            ->with('album.releaseTracks', 'spotifySavedAlbum')
             ->where('included', true)
             ->get();
         $trackUris = [];

@@ -86,7 +86,8 @@
                     <label class="text-sm text-ef-muted">Sort by
                         <select class="mt-2 block border border-ef-line bg-ef-canvas px-2 py-3 text-sm text-ef-text"
                             name="sort">
-                            <option value="relevance" @selected($sort === 'relevance')>{{ $artistSearch ? 'Release order' : 'Relevance and newest' }}</option>
+                            <option value="relevance" @selected($sort === 'relevance')>
+                                {{ $artistSearch ? 'Release order' : 'Relevance and newest' }}</option>
                             <option value="release_oldest" @selected($sort === 'release_oldest')>Oldest release</option>
                             <option value="release_newest" @selected($sort === 'release_newest')>Newest release</option>
                             <option value="recently_added" @selected($sort === 'recently_added')>Recently added</option>
@@ -96,7 +97,8 @@
                         type="submit">Search Catalogue</button>
                 </form>
                 @if ($search !== '')
-                    <div class="mt-4 flex flex-col gap-2 border-b border-ef-line pb-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div
+                        class="mt-4 flex flex-col gap-2 border-b border-ef-line pb-3 sm:flex-row sm:items-center sm:justify-between">
                         <p class="text-xs font-semibold tracking-[0.14em] text-ef-accent-strong uppercase">
                             {{ $artistSearch ? 'Artist discography' : 'Related albums' }}
                         </p>
@@ -122,14 +124,16 @@
                             <ul class="divide-y divide-ef-line">
                                 @foreach ($albums as $album)
                                     <li class="flex items-start gap-3 py-4">
-                                        <input class="playlist-album-checkbox mt-1" id="playlist-album-{{ $album->id }}"
-                                            type="checkbox" name="album_ids[]" value="{{ $album->id }}">
+                                        <input class="playlist-album-checkbox mt-1"
+                                            id="playlist-album-{{ $album->id }}" type="checkbox" name="album_ids[]"
+                                            value="{{ $album->id }}">
                                         <label class="min-w-0 flex-1 cursor-pointer"
                                             for="playlist-album-{{ $album->id }}">
                                             <span class="font-semibold">{{ $album->displayTitle() }}</span>
                                             <span class="mt-1 block text-sm text-ef-muted">
                                                 {{ $album->artists->pluck('name')->implode(', ') ?: 'Unknown artist' }} ·
-                                                {{ $album->release_date ? substr($album->release_date, 0, 4) : 'Release year unknown' }} ·
+                                                {{ $album->release_date ? substr($album->release_date, 0, 4) : 'Release year unknown' }}
+                                                ·
                                                 {{ ucfirst($album->album_type ?: 'Album') }} · {{ $album->tracks_count }}
                                                 {{ $album->tracks_count === 1 ? 'track' : 'tracks' }}</span>
                                         </label>
