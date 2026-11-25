@@ -10,6 +10,7 @@ use App\Services\Playlists\AlbumPlaylistExporter;
 use App\Services\Playlists\AlbumSuggestionService;
 use App\Services\Recommendations\PlaylistNameSuggester;
 use App\Services\Spotify\AlbumPlaylistSyncService;
+use App\Services\Spotify\AlbumPlaylistTrackResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,10 +28,12 @@ class AlbumPlaylistController extends Controller
      * Create the playlist controller.
      *
      * @param  PlaylistNameSuggester  $playlistNameSuggester  The playlist-name suggestion service.
+     * @param  AlbumPlaylistTrackResolver  $trackResolver  The Spotify track resolver.
      */
     public function __construct(
         private PlaylistNameSuggester $playlistNameSuggester,
         private AlbumSuggestionService $albumSuggestionService,
+        private AlbumPlaylistTrackResolver $trackResolver,
     ) {}
 
     /**
@@ -424,6 +427,44 @@ class AlbumPlaylistController extends Controller
         });
 
         return to_route('album-playlists.show', $albumPlaylist)->with('success', 'All albums removed from playlist.');
+    }
+
+    /**
+     * Remove the incomplete albums shown in a Spotify sync preview.
+     *
+     * @param  Request  $request  The incomplete album IDs to remove.
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being edited.
+     * @return RedirectResponse The playlist detail redirect.
+     */
+    public function removeIncompleteAlbums(Request $request, AlbumPlaylist $albumPlaylist): RedirectResponse
+    {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
+        $validated = $request->validate([
+            'album_ids' => ['required', 'array', 'min:1'],
+            'album_ids.*' => ['integer', 'distinct'],
+        ]);
+        $incompleteAlbumIds = collect($this->trackResolver->resolve($albumPlaylist)['albums'])
+            ->filter(fn (array $album): bool => $album['available_tracks'] < $album['total_tracks'])
+            ->pluck('album_id')
+            ->all();
+        $albumIds = array_values(array_intersect($validated['album_ids'], $incompleteAlbumIds));
+
+        if ($albumIds === []) {
+            return to_route('album-playlists.show', $albumPlaylist)
+                ->with('error', 'No incomplete albums were selected.');
+        }
+
+        DB::transaction(function () use ($albumPlaylist, $albumIds): void {
+            $albumPlaylist->albums()->detach($albumIds);
+            $this->saveOrder($albumPlaylist);
+            $this->markSyncPending($albumPlaylist);
+        });
+
+        return to_route('album-playlists.show', $albumPlaylist)
+            ->with('success', count($albumIds).' incomplete album'.(count($albumIds) === 1 ? '' : 's').' removed from playlist.');
     }
 
     /**

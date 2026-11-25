@@ -354,14 +354,18 @@ class DashboardController extends Controller
      */
     public function playlists(Request $request): View
     {
+        $playlistSearch = trim((string) $request->query('playlist_search'));
         $playlistSort = $this->playlistSort($request->query('playlist_sort'));
+        $albumPlaylists = AlbumPlaylist::query()
+            ->withCount('albums')
+            ->when(
+                $playlistSearch !== '',
+                fn ($query) => $query->where('name', 'like', '%'.$playlistSearch.'%'),
+            );
 
         return view('playlists.index', [
-            'albumPlaylists' => $this->sortPlaylists(
-                AlbumPlaylist::query()->withCount('albums'),
-                $playlistSort,
-                'updated_at',
-            )->get(),
+            'albumPlaylists' => $this->sortPlaylists($albumPlaylists, $playlistSort, 'updated_at')->get(),
+            'playlistSearch' => $playlistSearch,
             'playlistSort' => $playlistSort,
         ]);
     }

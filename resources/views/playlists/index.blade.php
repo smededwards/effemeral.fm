@@ -34,16 +34,26 @@
                 <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Your Collection</p>
                 <h2 id="playlist-list" class="mt-2 text-2xl font-semibold">Your Playlists</h2>
             </div>
-            <form method="GET" action="{{ route('playlists.index', [], false) }}">
+            <form class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row" method="GET"
+                action="{{ route('playlists.index', [], false) }}">
+                <label class="sr-only" for="playlist-search">Search playlists</label>
+                <input id="playlist-search" name="playlist_search" value="{{ $playlistSearch }}"
+                    placeholder="Search playlists" type="search">
                 <label class="sr-only" for="playlist-sort">Sort playlists</label>
-                <select id="playlist-sort" class="min-w-48" name="playlist_sort" onchange="this.form.submit()">
+                <select id="playlist-sort" class="min-w-48" name="playlist_sort">
                     <option value="recent" @selected($playlistSort === 'recent')>Recently Updated</option>
                     <option value="oldest" @selected($playlistSort === 'oldest')>Oldest Updated</option>
                     <option value="a_z" @selected($playlistSort === 'a_z')>A–Z</option>
                     <option value="z_a" @selected($playlistSort === 'z_a')>Z–A</option>
                 </select>
+                <button
+                    class="border border-ef-line px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:border-ef-accent"
+                    type="submit">Apply</button>
             </form>
         </div>
+        @if ($playlistSearch !== '')
+            <p class="mt-4 text-sm text-ef-muted">Showing playlists matching “{{ $playlistSearch }}”.</p>
+        @endif
         @if ($albumPlaylists->isNotEmpty())
             <ul class="mt-4 divide-y divide-ef-line">
                 @foreach ($albumPlaylists as $albumPlaylist)
@@ -62,7 +72,9 @@
                 @endforeach
             </ul>
         @else
-            <p class="mt-5 text-sm text-ef-muted">No Effemeral playlists yet. Create one to start arranging full albums.</p>
+            <p class="mt-5 text-sm text-ef-muted">
+                {{ $playlistSearch !== '' ? 'No playlists match your search.' : 'No Effemeral playlists yet. Create one to start arranging full albums.' }}
+            </p>
         @endif
     </section>
 @endsection
