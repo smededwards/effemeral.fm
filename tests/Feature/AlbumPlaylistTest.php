@@ -31,6 +31,23 @@ class AlbumPlaylistTest extends TestCase
         $this->assertSame('New Releases', $playlist->fresh()->name);
     }
 
+    public function test_playlist_index_can_search_by_name_while_preserving_sorting(): void
+    {
+        $matchingPlaylist = AlbumPlaylist::query()->create(['name' => 'Mourning Earth']);
+        AlbumPlaylist::query()->create(['name' => 'Silver Estuary']);
+
+        $this->get(route('playlists.index', [
+            'playlist_search' => 'mourning',
+            'playlist_sort' => 'a_z',
+        ]))
+            ->assertOk()
+            ->assertSee($matchingPlaylist->name)
+            ->assertDontSee('Silver Estuary')
+            ->assertSee('name="playlist_search"', false)
+            ->assertSee('value="mourning"', false)
+            ->assertSee('value="a_z"', false);
+    }
+
     public function test_user_can_delete_a_playlist_without_deleting_the_spotify_destination(): void
     {
         $playlist = AlbumPlaylist::query()->create([
@@ -432,6 +449,40 @@ class AlbumPlaylistTest extends TestCase
 
         $this->assertFalse($preview['sync_allowed']);
         $this->assertSame([['album_id' => $album->id, 'title' => 'Incomplete Album', 'artist' => 'Unknown artist', 'available_tracks' => 1, 'total_tracks' => 2]], $preview['incomplete_albums']);
+    }
+
+    public function test_sync_review_can_remove_all_incomplete_albums_without_removing_complete_albums(): void
+    {
+        $incompleteAlbum = $this->createAlbumWithTrack('Incomplete Album', 'spotify:track:available');
+        $incompleteAlbum->update(['total_tracks' => 2]);
+        $completeAlbum = $this->createAlbumWithTrack('Complete Album', 'spotify:track:complete');
+        $completeAlbum->update(['total_tracks' => 1]);
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Incomplete Draft']);
+        $playlist->albums()->attach([
+            $incompleteAlbum->id => ['position' => 1],
+            $completeAlbum->id => ['position' => 2],
+        ]);
+
+        $this->post(route('album-playlists.spotify.preview', $playlist), ['destination' => 'new'])
+            ->assertOk()
+            ->assertSee('Remove All')
+            ->assertSee('>Confirm</button>', false)
+            ->assertSee(route('album-playlists.incomplete-albums.destroy', $playlist, false), false);
+
+        $this->delete(route('album-playlists.incomplete-albums.destroy', $playlist), [
+            'album_ids' => [$incompleteAlbum->id, $completeAlbum->id],
+        ])
+            ->assertRedirect(route('album-playlists.show', $playlist))
+            ->assertSessionHas('success', '1 incomplete album removed from playlist.');
+
+        $this->assertDatabaseMissing('album_playlist_items', [
+            'album_playlist_id' => $playlist->id,
+            'album_id' => $incompleteAlbum->id,
+        ]);
+        $this->assertDatabaseHas('album_playlist_items', [
+            'album_playlist_id' => $playlist->id,
+            'album_id' => $completeAlbum->id,
+        ]);
     }
 
     public function test_spotify_sync_rechecks_incomplete_albums_without_trusting_the_preview(): void

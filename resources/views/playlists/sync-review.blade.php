@@ -38,12 +38,36 @@
         </div>
     </dl>
 
+    <div class="flex flex-col-reverse gap-3 border-b border-ef-line pb-6 pt-5 sm:flex-row sm:justify-end">
+        <a class="border border-ef-line px-5 py-3 text-center text-sm font-semibold text-ef-text hover:border-ef-accent"
+            href="{{ route('album-playlists.show', $albumPlaylist, false) }}">Cancel</a>
+        <form method="POST" action="{{ route('album-playlists.spotify.sync', $albumPlaylist, false) }}">
+            @csrf
+            <button
+                class="w-full bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                type="submit" @disabled(!$preview['sync_allowed'])>Confirm</button>
+        </form>
+    </div>
+
     @if (!$preview['sync_allowed'])
         <section class="border border-amber-500/60 bg-ef-surface p-5 sm:p-6" aria-labelledby="sync-blocked">
             <p class="text-xs font-semibold tracking-[0.16em] text-amber-300 uppercase">Sync blocked</p>
             <h2 id="sync-blocked" class="mt-2 text-xl font-semibold">Complete every album first</h2>
             <p class="mt-2 text-sm text-ef-muted">Spotify tracks are missing from the albums below. Add the missing
                 tracks to the catalogue before syncing this playlist.</p>
+            <div class="mt-3 flex justify-end">
+                <form method="POST"
+                    action="{{ route('album-playlists.incomplete-albums.destroy', $albumPlaylist, false) }}"
+                    data-confirm="Remove all incomplete albums from this playlist? The catalogue records will remain available.">
+                    @csrf
+                    @method('DELETE')
+                    @foreach ($preview['incomplete_albums'] as $album)
+                        <input type="hidden" name="album_ids[]" value="{{ $album['album_id'] }}">
+                    @endforeach
+                    <button class="border border-red-700 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-700/10"
+                        type="submit">Remove All</button>
+                </form>
+            </div>
             <ul class="mt-4 divide-y divide-ef-line">
                 @foreach ($preview['incomplete_albums'] as $album)
                     <li class="flex items-center justify-between gap-4 py-3 text-sm">
@@ -151,14 +175,4 @@
         </section>
     </div>
 
-    <div class="flex flex-col-reverse gap-3 border-t border-ef-line pt-6 sm:flex-row sm:justify-end">
-        <a class="border border-ef-line px-5 py-3 text-center text-sm font-semibold text-ef-text hover:border-ef-accent"
-            href="{{ route('album-playlists.show', $albumPlaylist, false) }}">Cancel</a>
-        <form method="POST" action="{{ route('album-playlists.spotify.sync', $albumPlaylist, false) }}">
-            @csrf
-            <button
-                class="w-full bg-ef-accent px-5 py-3 text-sm font-semibold text-ef-accent-ink hover:bg-ef-accent-hover disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                type="submit" @disabled(!$preview['sync_allowed'])>Confirm and Sync to Spotify</button>
-        </form>
-    </div>
 @endsection
