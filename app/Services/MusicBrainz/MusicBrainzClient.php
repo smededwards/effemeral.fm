@@ -18,13 +18,19 @@ class MusicBrainzClient
      * Resolve an artist's origin metadata without guessing ambiguous matches.
      *
      * @param  Artist  $artist  The existing artist to enrich.
-     * @return array{musicbrainz_mbid: string, location: ?string, country_code: ?string, genres: list<string>}|null
+     * @return array{
+     *     musicbrainz_mbid: string,
+     *     location: ?string,
+     *     country_code: ?string,
+     *     aliases: list<array{name: string, locale: ?string, type: ?string}>,
+     *     relationships: list<array{target_id: string, target_name: string, type: string, attributes: list<string>}>
+     * }|null
      */
     public function artistMetadata(Artist $artist): ?array
     {
         $musicbrainzId = $artist->musicbrainz_mbid ?: $artist->lastfm_mbid;
         $payload = $musicbrainzId !== null
-            ? $this->get('artist/'.rawurlencode($musicbrainzId), ['fmt' => 'json', 'inc' => 'genres'])
+            ? $this->get('artist/'.rawurlencode($musicbrainzId), ['fmt' => 'json', 'inc' => 'aliases+artist-rels'])
             : null;
 
         if ($payload !== null && $this->normalise((string) ($payload['name'] ?? '')) !== $this->normalise($artist->name)) {
@@ -42,23 +48,38 @@ class MusicBrainzClient
             return null;
         }
 
-        if (! array_key_exists('genres', $payload)) {
-            $payload = $this->get('artist/'.rawurlencode($musicbrainzId), [
-                'fmt' => 'json',
-                'inc' => 'genres',
-            ]) ?? $payload;
-        }
-
         $countryCode = strtoupper((string) ($payload['country'] ?? ''));
 
         return [
             'musicbrainz_mbid' => $musicbrainzId,
             'location' => $this->areaName($payload, 'begin-area.name'),
             'country_code' => preg_match('/^[A-Z]{2}$/', $countryCode) === 1 ? $countryCode : null,
-            'genres' => collect($payload['genres'] ?? [])
-                ->filter(fn (mixed $genre): bool => is_array($genre) && is_string($genre['name'] ?? null))
-                ->sortByDesc(fn (array $genre): int => (int) ($genre['count'] ?? 0))
-                ->pluck('name')
+            'aliases' => collect($payload['aliases'] ?? [])
+                ->filter(fn (mixed $alias): bool => is_array($alias) && is_string($alias['name'] ?? null))
+                ->map(fn (array $alias): array => [
+                    'name' => trim((string) $alias['name']),
+                    'locale' => is_string($alias['locale'] ?? null) ? $alias['locale'] : null,
+                    'type' => is_string($alias['type'] ?? null) ? $alias['type'] : null,
+                ])
+                ->filter(fn (array $alias): bool => $this->normalise($alias['name']) !== $this->normalise($artist->name))
+                ->unique(fn (array $alias): string => $this->normalise($alias['name']))
+                ->values()
+                ->all(),
+            'relationships' => collect($payload['relations'] ?? [])
+                ->filter(fn (mixed $relation): bool => is_array($relation)
+                    && is_string(data_get($relation, 'artist.id'))
+                    && is_string(data_get($relation, 'artist.name'))
+                    && is_string($relation['type'] ?? null))
+                ->map(fn (array $relation): array => [
+                    'target_id' => (string) data_get($relation, 'artist.id'),
+                    'target_name' => (string) data_get($relation, 'artist.name'),
+                    'type' => (string) $relation['type'],
+                    'attributes' => collect($relation['attributes'] ?? [])
+                        ->filter(fn (mixed $attribute): bool => is_string($attribute))
+                        ->values()
+                        ->all(),
+                ])
+                ->unique(fn (array $relation): string => $relation['target_id'].'|'.$relation['type'])
                 ->values()
                 ->all(),
         ];

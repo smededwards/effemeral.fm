@@ -119,6 +119,10 @@ Use `--artist-id` for a focused check. Use `--after-id` only when deliberately s
 
 MusicBrainz enriches existing artists with identity, country, location, and related metadata. It does not need to expand the entire MusicBrainz discography for routine enrichment.
 
+The artist must already have Last.fm or Spotify source evidence. A MusicBrainz
+ID by itself is not enough to import or retain an artist, and it is never
+treated as catalogue provenance.
+
 Preview candidates:
 
 ```bash
@@ -140,6 +144,68 @@ Target one artist or include artists with a completed previous run:
 docker compose exec laravel.test php artisan artists:enrich-musicbrainz --artist-id=123
 docker compose exec laravel.test php artisan artists:enrich-musicbrainz --limit=10 --refresh
 ```
+
+Discography enrichment only matches existing albums that already have Last.fm
+or Spotify evidence. It does not create album shells from MusicBrainz release
+groups, import tracks, or expand an artist's external discography.
+
+## Catalogue reconciliation
+
+Before merging duplicate album records, run the reconciliation command without
+`--apply`. The default is a dry run. It marks only empty album shells, or an
+empty shell beside one provider-backed canonical record, as safe. Albums with
+tracks, listening history, liked-track references, recommendations or multiple
+provider-backed records remain for manual review.
+
+```bash
+docker compose exec laravel.test php artisan catalog:reconcile-albums
+```
+
+After reviewing the `SAFE` groups, apply only those merges:
+
+```bash
+docker compose exec laravel.test php artisan catalog:reconcile-albums --apply
+```
+
+The command keeps the provider-backed record when one exists, otherwise the
+oldest album record and its EFMID. It moves safe Spotify collection and
+playlist references, and stores retired EFMIDs as aliases. It does not merge
+distinct provider-backed records or infer that two different releases are the
+same album from title alone.
+
+Spotify playlist imports process only playlists owned by the connected account.
+To exclude specific artists, add a comma-separated list of exact Spotify artist
+names or IDs to `SPOTIFY_IMPORT_EXCLUDED_ARTISTS` before importing:
+
+```dotenv
+SPOTIFY_IMPORT_EXCLUDED_ARTISTS=Mötley Crüe,spotify-artist-id
+```
+
+To retain playlists from approved external Spotify accounts, set their owner
+IDs in `SPOTIFY_IMPORT_ALLOWED_OWNERS`. Your connected account is always
+allowed automatically:
+
+```dotenv
+SPOTIFY_IMPORT_ALLOWED_OWNERS=arcticdrones,thesoundsofspotify,h11io8qoeta4gtims2qqh85bw
+```
+
+To remove previously imported playlists outside that allowlist, preview the
+local-only cleanup first:
+
+```bash
+docker compose exec laravel.test php artisan spotify:purge-playlists
+```
+
+Apply it only after reviewing the totals:
+
+```bash
+docker compose exec laravel.test php artisan spotify:purge-playlists --apply
+```
+
+The purge never changes Spotify. It removes unapproved local playlist records
+and album/track records unique to them, while retaining albums shared with an
+approved playlist, saved or liked Spotify content, Last.fm history, or an
+Effemeral playlist.
 
 ## Last.fm import
 

@@ -45,19 +45,21 @@
     <section class="border border-ef-line bg-ef-surface p-6 sm:p-8" aria-labelledby="artist-musicbrainz-discography">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 id="artist-musicbrainz-discography" class="text-xl font-semibold">MusicBrainz Discography</h2>
-                <p class="mt-2 max-w-2xl text-sm text-ef-muted">Import this artist’s albums and EPs into the catalogue and
-                    find Spotify editions where available.</p>
+                <h2 id="artist-musicbrainz-discography" class="text-xl font-semibold">MusicBrainz album metadata</h2>
+                <p class="mt-2 max-w-2xl text-sm text-ef-muted">Enrich existing albums with MusicBrainz release metadata
+                    without
+                    importing new albums or tracks.</p>
             </div>
             @if ($artist->musicbrainz_mbid)
                 <form method="POST" action="{{ route('artists.musicbrainz-discography.store', $artist, false) }}">
                     @csrf
                     <button
                         class="rounded-md border border-ef-accent px-4 py-2 text-sm font-semibold text-ef-accent-strong hover:bg-ef-accent-wash"
-                        type="submit">Refresh Discography</button>
+                        type="submit">Refresh album metadata</button>
                 </form>
             @else
-                <p class="text-sm text-ef-muted">A MusicBrainz artist ID is needed before this can be imported.</p>
+                <p class="text-sm text-ef-muted">A MusicBrainz artist ID is needed before existing albums can be enriched.
+                </p>
             @endif
         </div>
         @if ($artist->musicBrainzDiscographyImportRuns->isNotEmpty())
@@ -65,9 +67,9 @@
             <div class="mt-5 border-t border-ef-line pt-4 text-sm" aria-live="polite">
                 <p class="font-medium">Latest refresh: {{ ucfirst($discographyRun->status) }}</p>
                 @if ($discographyRun->status === 'completed')
-                    <p class="mt-1 text-ef-muted">{{ $discographyRun->fetched_count }} release groups ·
-                        {{ $discographyRun->matched_count }} Spotify matches · {{ $discographyRun->unmatched_count }}
-                        without a confident match</p>
+                    <p class="mt-1 text-ef-muted">{{ $discographyRun->fetched_count }} release groups checked ·
+                        {{ $discographyRun->matched_count }} existing albums matched ·
+                        {{ $discographyRun->unmatched_count }} not in the catalogue</p>
                 @elseif ($discographyRun->error)
                     <p class="mt-1 text-red-300">{{ $discographyRun->error }}</p>
                 @endif

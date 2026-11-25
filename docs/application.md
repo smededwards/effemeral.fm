@@ -6,7 +6,7 @@ Effemeral helps you discover full albums, decide which ones you want to hear, or
 
 The catalogue is the centre of the application. Imports supply listening history and supporting catalogue information; they are not the main destination.
 
-Last.fm is the source of truth for listening history. Spotify supplies catalogue and playlist context and is the destination for an explicit playlist sync. MusicBrainz adds artist identity and origin metadata and can enrich existing artist discographies.
+Last.fm is the source of truth for listening history. Spotify supplies catalogue and playlist context and is the destination for an explicit playlist sync. MusicBrainz adds artist identity and origin metadata only to records already grounded in Last.fm or Spotify data; it does not establish catalogue provenance.
 
 ## Page map
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasEfmId;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,6 +34,32 @@ class Artist extends Model
     }
 
     /**
+     * Limit provider enrichment to artists grounded in Last.fm or Spotify data.
+     */
+    public function scopeWithSourceEvidence(Builder $query): Builder
+    {
+        return $query
+            ->where(function (Builder $query): void {
+                $query
+                    ->whereNotNull('artists.spotify_id')
+                    ->orWhereNotNull('artists.lastfm_mbid')
+                    ->orWhereExists(function ($query): void {
+                        $query->selectRaw('1')
+                            ->from('scrobbles')
+                            ->whereColumn('scrobbles.artist_id', 'artists.id');
+                    })
+                    ->orWhereHas('albums', function (Builder $query): void {
+                        $query->whereNotNull('albums.spotify_id')
+                            ->orWhereNotNull('albums.lastfm_mbid')
+                            ->orWhereHas('tracks', function (Builder $query): void {
+                                $query->whereNotNull('tracks.spotify_id')
+                                    ->orWhereNotNull('tracks.lastfm_mbid');
+                            });
+                    });
+            });
+    }
+
+    /**
      * Return albums credited to the artist.
      */
     public function albums(): BelongsToMany
@@ -46,6 +73,22 @@ class Artist extends Model
     public function musicBrainzDiscographyImportRuns(): HasMany
     {
         return $this->hasMany(MusicBrainzDiscographyImportRun::class);
+    }
+
+    /**
+     * Return provider aliases for this artist without changing the canonical name.
+     */
+    public function aliases(): HasMany
+    {
+        return $this->hasMany(ArtistAlias::class);
+    }
+
+    /**
+     * Return provider relationships from this artist to related artists.
+     */
+    public function relationships(): HasMany
+    {
+        return $this->hasMany(ArtistRelationship::class);
     }
 
     /**

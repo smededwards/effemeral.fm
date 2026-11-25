@@ -9,6 +9,7 @@ use App\Models\SpotifyPlaylistImportRun;
 use App\Services\Catalog\CatalogWriter;
 use App\Services\Catalog\GenreWriter;
 use App\Services\Spotify\SpotifyClient;
+use App\Services\Spotify\SpotifyImportPolicy;
 use App\Services\Spotify\SpotifyRateLimitException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -51,11 +52,17 @@ class ImportSpotifyPlaylists implements ShouldQueue
      * @param  SpotifyClient  $client  The Spotify API client.
      * @param  CatalogWriter|null  $catalog  The canonical catalogue writer.
      * @param  GenreWriter|null  $genreWriter  The genre persistence service.
+     * @param  SpotifyImportPolicy|null  $policy  The Spotify import policy.
      */
-    public function handle(SpotifyClient $client, ?CatalogWriter $catalog = null, ?GenreWriter $genreWriter = null): void
-    {
+    public function handle(
+        SpotifyClient $client,
+        ?CatalogWriter $catalog = null,
+        ?GenreWriter $genreWriter = null,
+        ?SpotifyImportPolicy $policy = null,
+    ): void {
         $catalog ??= app(CatalogWriter::class);
         $genreWriter ??= app(GenreWriter::class);
+        $policy ??= app(SpotifyImportPolicy::class);
         $run = SpotifyPlaylistImportRun::query()->findOrFail($this->importRunId);
         $resume = in_array($run->status, ['failed', 'running'], true) && (int) $run->next_offset > 0;
         if (! $resume) {
@@ -71,6 +78,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
         $run->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
 
         try {
+            $ownerId = $policy->ownerId($client);
             $offset = (int) $run->next_offset;
             $fetched = (int) $run->fetched_count;
             $imported = (int) $run->imported_count;
@@ -85,6 +93,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
                     $playlists = [[
                         'id' => $this->playlistId,
                         'name' => SpotifyPlaylist::query()->where('spotify_playlist_id', $this->playlistId)->value('name') ?? 'Untitled playlist',
+                        'owner' => ['id' => SpotifyPlaylist::query()->where('spotify_playlist_id', $this->playlistId)->value('owner_id')],
                     ]];
                     $page = ['next_offset' => 1, 'total' => 1];
                 } else {
@@ -108,6 +117,12 @@ class ImportSpotifyPlaylists implements ShouldQueue
                     $playlistId = (string) ($playlistData['id'] ?? '');
 
                     if ($playlistId === '') {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    if (! $policy->allowsPlaylist($playlistData, $ownerId)) {
                         $skipped++;
 
                         continue;
@@ -154,7 +169,7 @@ class ImportSpotifyPlaylists implements ShouldQueue
                         $items = $client->playlistItems($playlistId);
                         $playlistFetched = 0;
 
-                        DB::transaction(function () use ($catalog, $items, $playlist, &$artistIds, &$playlistFetched, &$skipped, &$trackIdsByAlbum): void {
+                        DB::transaction(function () use ($catalog, $items, $playlist, $policy, &$artistIds, &$playlistFetched, &$skipped, &$trackIdsByAlbum): void {
                             $playlist->items()->delete();
 
                             foreach ($items as $position => $item) {
@@ -165,7 +180,17 @@ class ImportSpotifyPlaylists implements ShouldQueue
                                     continue;
                                 }
 
-                                foreach ($track['album']['artists'] ?? [] as $artist) {
+                                $albumArtists = array_values(array_filter(
+                                    $track['album']['artists'] ?? [],
+                                    fn (mixed $artist): bool => is_array($artist),
+                                ));
+                                if (collect($albumArtists)->contains($policy->excludesArtist(...))) {
+                                    $skipped++;
+
+                                    continue;
+                                }
+
+                                foreach ($albumArtists as $artist) {
                                     if (is_array($artist) && is_string($artist['id'] ?? null) && $artist['id'] !== '') {
                                         $artistIds[$artist['id']] = true;
                                     }

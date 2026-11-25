@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Artist;
-use App\Services\Catalog\GenreWriter;
+use App\Services\MusicBrainz\MusicBrainzArtistMetadataWriter;
 use App\Services\MusicBrainz\MusicBrainzClient;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Enriches existing artists with MusicBrainz identity, origin and genre metadata.
+ * Enriches existing artists with MusicBrainz identity, origin and cross-reference metadata.
  */
 #[Signature('artists:import-musicbrainz {--refresh : Check all artists again, including previously checked artists} {--known-only : Process only artists that already have a MusicBrainz ID} {--after-id=0 : Start after this artist ID} {--limit=0 : Stop after this many artists (0 means all)}')]
 #[Description('Enrich existing artists with MusicBrainz metadata')]
@@ -23,8 +23,10 @@ class ImportMusicBrainzArtistMetadata extends Command
      * @param  MusicBrainzClient  $client  The MusicBrainz API client.
      * @return int The command exit status.
      */
-    public function handle(MusicBrainzClient $client, GenreWriter $genreWriter): int
-    {
+    public function handle(
+        MusicBrainzClient $client,
+        MusicBrainzArtistMetadataWriter $metadataWriter,
+    ): int {
         $lock = Cache::lock('musicbrainz-artist-metadata-import', 86400);
         if (! $lock->get()) {
             $this->error('A MusicBrainz artist import is already in progress.');
@@ -34,6 +36,7 @@ class ImportMusicBrainzArtistMetadata extends Command
 
         try {
             $artists = Artist::query()
+                ->withSourceEvidence()
                 ->when(! $this->option('refresh'), fn ($query) => $query->whereNull('musicbrainz_checked_at'))
                 ->when($this->option('known-only'), fn ($query) => $query->whereNotNull('musicbrainz_mbid'))
                 ->when((int) $this->option('after-id') > 0, fn ($query) => $query->where('id', '>', (int) $this->option('after-id')))
@@ -53,7 +56,7 @@ class ImportMusicBrainzArtistMetadata extends Command
                 ? $artists->limit($limit)->get()
                 : $artists->lazyById();
 
-            $this->withProgressBar($artistsToProcess, function (Artist $artist) use ($client, $genreWriter, &$failed, &$matched): void {
+            $this->withProgressBar($artistsToProcess, function (Artist $artist) use ($client, $metadataWriter, &$failed, &$matched): void {
                 try {
                     $metadata = $client->artistMetadata($artist);
                 } catch (\RuntimeException) {
@@ -69,7 +72,11 @@ class ImportMusicBrainzArtistMetadata extends Command
                     'country_code' => $artist->country_manual ? $artist->country_code : ($metadata['country_code'] ?? $artist->country_code),
                     'musicbrainz_checked_at' => now(),
                 ])->save();
-                $genreWriter->syncMusicBrainz($artist, $metadata['genres'] ?? []);
+                $metadataWriter->write(
+                    $artist,
+                    $metadata['aliases'] ?? [],
+                    $metadata['relationships'] ?? [],
+                );
 
                 if ($metadata !== null) {
                     $matched++;
