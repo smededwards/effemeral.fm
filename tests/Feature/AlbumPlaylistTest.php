@@ -147,6 +147,24 @@ class AlbumPlaylistTest extends TestCase
         ]);
     }
 
+    public function test_empty_spotify_track_state_explains_how_to_review_or_remove_albums(): void
+    {
+        $album = $this->createAlbum('Unmatched Album');
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Unmatched Draft']);
+        $playlist->albums()->attach($album->id, ['position' => 1]);
+
+        $this->post(route('album-playlists.spotify.preview', $playlist), ['destination' => 'new'])
+            ->assertRedirect(route('album-playlists.show', $playlist))
+            ->assertSessionHas('error', 'No Spotify-linked tracks are available. Add albums with matched Spotify tracks before syncing.');
+
+        $this->get(route('album-playlists.show', $playlist))
+            ->assertOk()
+            ->assertSee('Missing Spotify tracks')
+            ->assertSee('Review album')
+            ->assertSee(route('albums.show', $album, false), false)
+            ->assertSee(route('album-playlists.albums.destroy', [$playlist, $album], false), false);
+    }
+
     public function test_playlist_page_searches_canonical_albums_and_lists_saved_playlists(): void
     {
         $album = $this->createAlbumWithTrack('Mariner', 'spotify:track:mariner');
