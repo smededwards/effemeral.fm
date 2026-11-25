@@ -206,3 +206,18 @@ button[aria-disabled='true'] {
     cursor: not-allowed;
     opacity: 0.55;
 }
+
+.artist-genres-section .genre-remove {
+    display: none;
+}
+
+.artist-genres-section:has(.artist-genres-editor[open]) .genre-remove {
+    display: inline-flex;
+}
+
+.artist-genres-section .genre-remove button {
+    min-height: 2.75rem;
+    padding: 0 0.5rem !important;
+    font-size: 1.25rem;
+    line-height: 1;
+}

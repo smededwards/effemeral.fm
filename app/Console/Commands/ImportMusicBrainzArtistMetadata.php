@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Cache;
 /**
  * Enriches existing artists with MusicBrainz identity, origin and genre metadata.
  */
-#[Signature('artists:import-musicbrainz {--refresh : Check all artists again, including previously checked artists} {--limit=0 : Stop after this many artists (0 means all)}')]
+#[Signature('artists:import-musicbrainz {--refresh : Check all artists again, including previously checked artists} {--known-only : Process only artists that already have a MusicBrainz ID} {--after-id=0 : Start after this artist ID} {--limit=0 : Stop after this many artists (0 means all)}')]
 #[Description('Enrich existing artists with MusicBrainz metadata')]
 class ImportMusicBrainzArtistMetadata extends Command
 {
@@ -35,6 +35,8 @@ class ImportMusicBrainzArtistMetadata extends Command
         try {
             $artists = Artist::query()
                 ->when(! $this->option('refresh'), fn ($query) => $query->whereNull('musicbrainz_checked_at'))
+                ->when($this->option('known-only'), fn ($query) => $query->whereNotNull('musicbrainz_mbid'))
+                ->when((int) $this->option('after-id') > 0, fn ($query) => $query->where('id', '>', (int) $this->option('after-id')))
                 ->orderBy('id');
             $limit = max(0, (int) $this->option('limit'));
             $total = $limit > 0 ? min($limit, $artists->count()) : $artists->count();

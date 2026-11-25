@@ -531,6 +531,21 @@ class DashboardController extends Controller
     }
 
     /**
+     * Remove a genre from an artist's accepted catalogue metadata.
+     *
+     * @param  Artist  $artist  The artist being edited.
+     * @param  Genre  $genre  The genre being removed.
+     * @param  GenreWriter  $genreWriter  The genre persistence service.
+     * @return RedirectResponse The artist page redirect.
+     */
+    public function removeArtistGenre(Artist $artist, Genre $genre, GenreWriter $genreWriter): RedirectResponse
+    {
+        $genreWriter->remove($artist, $genre);
+
+        return back()->with('success', 'Artist genre removed.');
+    }
+
+    /**
      * Create a draft from albums selected by the user.
      *
      * @param  Request  $request  The selected album IDs.

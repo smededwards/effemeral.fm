@@ -12,6 +12,72 @@ class ImportMusicBrainzArtistMetadataTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * It enriches only artists that already have a MusicBrainz ID when requested.
+     */
+    public function test_known_only_import_skips_artists_without_a_musicbrainz_id(): void
+    {
+        Sleep::fake();
+        Http::preventStrayRequests();
+        Http::fake([
+            'musicbrainz.org/ws/2/artist/artist-mbid*' => Http::response([
+                'id' => 'artist-mbid',
+                'name' => 'Known Artist',
+                'area' => ['name' => 'England'],
+                'country' => 'GB',
+                'genres' => [],
+            ]),
+        ]);
+        $unknownArtist = Artist::query()->create([
+            'name' => 'Unknown Artist',
+            'normalised_name' => 'unknown artist',
+        ]);
+        $knownArtist = Artist::query()->create([
+            'name' => 'Known Artist',
+            'normalised_name' => 'known artist',
+            'musicbrainz_mbid' => 'artist-mbid',
+        ]);
+
+        $this->artisan('artists:import-musicbrainz --known-only --limit=1')->assertSuccessful();
+
+        $this->assertNull($unknownArtist->fresh()->musicbrainz_checked_at);
+        $this->assertNotNull($knownArtist->fresh()->musicbrainz_checked_at);
+        Http::assertSentCount(1);
+        Sleep::assertNeverSlept();
+    }
+
+    /**
+     * It starts a known-artist batch after the supplied cursor.
+     */
+    public function test_known_only_import_can_continue_after_an_artist_id(): void
+    {
+        Sleep::fake();
+        Http::preventStrayRequests();
+        Http::fake([
+            'musicbrainz.org/ws/2/artist/artist-two*' => Http::response([
+                'id' => 'artist-two',
+                'name' => 'Second Artist',
+                'genres' => [],
+            ]),
+        ]);
+        $firstArtist = Artist::query()->create([
+            'name' => 'First Artist',
+            'normalised_name' => 'first artist',
+            'musicbrainz_mbid' => 'artist-one',
+        ]);
+        $secondArtist = Artist::query()->create([
+            'name' => 'Second Artist',
+            'normalised_name' => 'second artist',
+            'musicbrainz_mbid' => 'artist-two',
+        ]);
+
+        $this->artisan('artists:import-musicbrainz --refresh --known-only --after-id='.$firstArtist->id.' --limit=1')->assertSuccessful();
+
+        $this->assertNull(Artist::query()->where('name', 'First Artist')->value('musicbrainz_checked_at'));
+        $this->assertNotNull($secondArtist->fresh()->musicbrainz_checked_at);
+        Http::assertSentCount(1);
+    }
+
     public function test_musicbrainz_metadata_is_imported_for_artists_with_a_known_mbid(): void
     {
         Sleep::fake();
