@@ -165,6 +165,22 @@ class AlbumPlaylistTest extends TestCase
             ->assertSee(route('album-playlists.albums.destroy', [$playlist, $album], false), false);
     }
 
+    public function test_all_albums_can_be_removed_without_deleting_catalogue_records(): void
+    {
+        $first = $this->createAlbum('First Unmatched Album');
+        $second = $this->createAlbum('Second Unmatched Album');
+        $playlist = AlbumPlaylist::query()->create(['name' => 'Unmatched Draft']);
+        $playlist->albums()->attach([$first->id => ['position' => 1], $second->id => ['position' => 2]]);
+
+        $this->delete(route('album-playlists.albums.destroy-all', $playlist))
+            ->assertRedirect(route('album-playlists.show', $playlist))
+            ->assertSessionHas('success', 'All albums removed from playlist.');
+
+        $this->assertDatabaseMissing('album_playlist_items', ['album_playlist_id' => $playlist->id]);
+        $this->assertDatabaseHas('albums', ['id' => $first->id]);
+        $this->assertDatabaseHas('albums', ['id' => $second->id]);
+    }
+
     public function test_playlist_page_searches_canonical_albums_and_lists_saved_playlists(): void
     {
         $album = $this->createAlbumWithTrack('Mariner', 'spotify:track:mariner');

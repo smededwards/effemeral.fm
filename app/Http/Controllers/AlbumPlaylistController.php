@@ -407,6 +407,24 @@ class AlbumPlaylistController extends Controller
     }
 
     /**
+     * Remove every album from a playlist without deleting the albums themselves.
+     *
+     * @param  AlbumPlaylist  $albumPlaylist  The playlist being cleared.
+     * @return RedirectResponse The playlist detail redirect.
+     */
+    public function removeAllAlbums(AlbumPlaylist $albumPlaylist): RedirectResponse
+    {
+        if ($response = $this->syncInProgress($albumPlaylist)) {
+            return $response;
+        }
+
+        $albumPlaylist->albums()->detach();
+        $this->markSyncPending($albumPlaylist);
+
+        return to_route('album-playlists.show', $albumPlaylist)->with('success', 'All albums removed from playlist.');
+    }
+
+    /**
      * Move one album up or down while preserving playlist order.
      *
      * @param  Request  $request  The requested movement direction.

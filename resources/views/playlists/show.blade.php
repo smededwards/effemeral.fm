@@ -177,6 +177,15 @@
                         </h4>
                         <p class="mt-2 text-xs leading-5 text-ef-muted">Review an album to enrich its tracks, or remove it
                             from this playlist. The catalogue record will remain available.</p>
+                        <form class="mt-3" method="POST"
+                            action="{{ route('album-playlists.albums.destroy-all', $albumPlaylist, false) }}"
+                            data-confirm="Remove all albums from this playlist? The catalogue records will remain available.">
+                            @csrf
+                            @method('DELETE')
+                            <button
+                                class="border border-red-700 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-700/10"
+                                type="submit">Remove All</button>
+                        </form>
                         <ul class="mt-3 divide-y divide-ef-line">
                             @foreach ($albumPlaylist->albums as $album)
                                 <li class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
