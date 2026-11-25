@@ -418,8 +418,10 @@ class AlbumPlaylistController extends Controller
             return $response;
         }
 
-        $albumPlaylist->albums()->detach();
-        $this->markSyncPending($albumPlaylist);
+        DB::transaction(function () use ($albumPlaylist): void {
+            $albumPlaylist->albums()->detach();
+            $this->markSyncPending($albumPlaylist);
+        });
 
         return to_route('album-playlists.show', $albumPlaylist)->with('success', 'All albums removed from playlist.');
     }
