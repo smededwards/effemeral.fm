@@ -93,6 +93,7 @@ class EnrichMusicBrainzDiscographies extends Command
     private function eligibleArtists(): Builder
     {
         return Artist::query()
+            ->withSourceEvidence()
             ->whereNotNull('musicbrainz_mbid')
             ->when($this->option('artist-id'), fn ($query, $artistId) => $query->whereKey((int) $artistId))
             ->when((int) $this->option('after-id') > 0, fn ($query) => $query->where('id', '>', (int) $this->option('after-id')))

@@ -96,6 +96,7 @@ class EnrichmentCommandTest extends TestCase
         $artist = Artist::query()->create([
             'name' => 'Baroness',
             'normalised_name' => 'baroness',
+            'spotify_id' => 'spotify-baroness',
             'musicbrainz_mbid' => 'artist-mbid',
         ]);
         Http::fake(function (Request $request) {
