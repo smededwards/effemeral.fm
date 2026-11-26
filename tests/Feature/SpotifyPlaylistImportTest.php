@@ -11,6 +11,7 @@ use App\Models\SpotifyPlaylistItem;
 use App\Services\Spotify\SpotifyClient;
 use App\Services\Spotify\SpotifyRateLimitException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -44,6 +45,24 @@ class SpotifyPlaylistImportTest extends TestCase
             'requested_limit' => null,
         ]);
         Queue::assertPushed(ImportSpotifyPlaylists::class);
+    }
+
+    public function test_cli_import_stops_when_unapproved_playlists_remain(): void
+    {
+        SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'unapproved-playlist',
+            'name' => 'Unapproved playlist',
+            'owner_id' => 'other-user',
+        ]);
+
+        $exitCode = Artisan::call('spotify:import-playlists');
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString(
+            'Unapproved Spotify playlists remain locally.',
+            Artisan::output(),
+        );
+        $this->assertDatabaseCount('spotify_playlist_import_runs', 0);
     }
 
     public function test_a_failed_playlist_import_resumes_from_its_saved_offset(): void

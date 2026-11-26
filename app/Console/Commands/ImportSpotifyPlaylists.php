@@ -4,6 +4,9 @@ namespace App\Console\Commands;
 
 use App\Jobs\ImportSpotifyPlaylists as ImportSpotifyPlaylistsJob;
 use App\Models\SpotifyPlaylistImportRun;
+use App\Services\Spotify\SpotifyClient;
+use App\Services\Spotify\SpotifyImportPolicy;
+use App\Services\Spotify\SpotifyPlaylistPurgeService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -20,10 +23,16 @@ class ImportSpotifyPlaylists extends Command
     /**
      * Run a playlist import synchronously with visible progress.
      *
+     * @param  SpotifyClient  $client  The authenticated Spotify client.
+     * @param  SpotifyImportPolicy  $policy  The approved-owner import policy.
+     * @param  SpotifyPlaylistPurgeService  $purge  The stale-record safety check.
      * @return int The command exit status.
      */
-    public function handle(): int
-    {
+    public function handle(
+        SpotifyClient $client,
+        SpotifyImportPolicy $policy,
+        SpotifyPlaylistPurgeService $purge,
+    ): int {
         $lock = Cache::lock('spotify-playlist-import-command', 3600);
         if (! $lock->get()) {
             $this->error('A Spotify playlist import is already in progress.');
@@ -32,6 +41,15 @@ class ImportSpotifyPlaylists extends Command
         }
 
         try {
+            $ownerId = $policy->ownerId($client);
+            $staleRecords = $purge->preview($ownerId);
+            if ($staleRecords['playlists'] > 0) {
+                $this->error('Unapproved Spotify playlists remain locally.');
+                $this->line('Run `php artisan spotify:purge-playlists --apply` before importing again.');
+
+                return self::FAILURE;
+            }
+
             $run = $this->resumeRun();
             if ($run === null) {
                 $limit = max(0, (int) $this->option('limit'));
