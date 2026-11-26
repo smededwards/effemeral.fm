@@ -30,6 +30,10 @@ class CatalogueTest extends TestCase
         $response->assertSee('Search by artist or album');
         $response->assertSee('Cult of Luna');
         $response->assertSee('Mariner');
+
+        $this->get(route('catalogue.index', ['q' => 'Mariner.']))
+            ->assertOk()
+            ->assertSee('Mariner');
     }
 
     public function test_catalogue_can_select_an_artist_and_album(): void

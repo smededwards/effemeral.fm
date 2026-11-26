@@ -9,6 +9,7 @@ use App\Models\Genre;
 use App\Models\Scrobble;
 use App\Models\SpotifySavedAlbum;
 use App\Services\Recommendations\RecommendationListeningWindow;
+use App\Services\Search\SearchTermNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -21,8 +22,12 @@ class CataloguePageService
 {
     /**
      * @param  RecommendationListeningWindow  $recommendationListeningWindow  The listening-window resolver.
+     * @param  SearchTermNormalizer  $searchTermNormalizer  The search term normalizer.
      */
-    public function __construct(private RecommendationListeningWindow $recommendationListeningWindow) {}
+    public function __construct(
+        private RecommendationListeningWindow $recommendationListeningWindow,
+        private SearchTermNormalizer $searchTermNormalizer,
+    ) {}
 
     /**
      * @return Collection<int, Genre> The filterable catalogue genres.
@@ -42,7 +47,7 @@ class CataloguePageService
      */
     public function data(Request $request): array
     {
-        $search = trim((string) $request->query('q'));
+        $search = $this->searchTermNormalizer->normalize((string) $request->query('q'));
         $artistId = $request->integer('artist');
         $albumId = $request->integer('album');
         $artists = collect();
@@ -53,7 +58,7 @@ class CataloguePageService
                 ->withCount('albums')
                 ->where(function ($query) use ($search): void {
                     $query->where('name', 'like', '%'.$search.'%')
-                        ->orWhere('normalised_name', 'like', '%'.$this->normalise($search).'%');
+                        ->orWhere('normalised_name', 'like', '%'.$search.'%');
                 })
                 ->orderBy('name')
                 ->limit(25)
@@ -63,10 +68,10 @@ class CataloguePageService
                 ->withCount('releaseTracks as tracks_count')
                 ->where(function ($query) use ($search): void {
                     $query->where('title', 'like', '%'.$search.'%')
-                        ->orWhere('normalised_title', 'like', '%'.$this->normalise($search).'%')
+                        ->orWhere('normalised_title', 'like', '%'.$search.'%')
                         ->orWhereHas('artists', function ($artistQuery) use ($search): void {
                             $artistQuery->where('name', 'like', '%'.$search.'%')
-                                ->orWhere('normalised_name', 'like', '%'.$this->normalise($search).'%');
+                                ->orWhere('normalised_name', 'like', '%'.$search.'%');
                         });
                 })
                 ->orderBy('title')
@@ -153,10 +158,5 @@ class CataloguePageService
                 ? Album::query()->with('artists.acceptedGenres', 'releaseTracks')->find($albumId)
                 : null,
         ];
-    }
-
-    private function normalise(string $value): string
-    {
-        return preg_replace('/\s+/', ' ', mb_strtolower(trim($value))) ?? '';
     }
 }

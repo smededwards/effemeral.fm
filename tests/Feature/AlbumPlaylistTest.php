@@ -231,6 +231,10 @@ class AlbumPlaylistTest extends TestCase
             ->assertOk()
             ->assertSee('Mariner');
 
+        $this->get(route('album-playlists.show', [$playlist, 'q' => 'post-metal.']))
+            ->assertOk()
+            ->assertSee('Mariner');
+
         $this->assertDatabaseHas('albums', ['id' => $album->id]);
     }
 

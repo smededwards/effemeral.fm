@@ -5,6 +5,7 @@ namespace App\Services\Playlists;
 use App\Models\Album;
 use App\Models\AlbumPlaylist;
 use App\Models\Artist;
+use App\Services\Search\SearchTermNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -13,6 +14,13 @@ use Illuminate\Support\Collection;
  */
 class AlbumSuggestionService
 {
+    /**
+     * Create the album suggestion service.
+     *
+     * @param  SearchTermNormalizer  $searchTermNormalizer  The search term normalizer.
+     */
+    public function __construct(private readonly SearchTermNormalizer $searchTermNormalizer) {}
+
     /**
      * Search for playable albums that are not already in the playlist.
      *
@@ -23,8 +31,8 @@ class AlbumSuggestionService
      */
     public function search(AlbumPlaylist $albumPlaylist, string $search, string $sort = ''): array
     {
-        $search = trim($search);
-        $normalisedSearch = mb_strtolower($search);
+        $search = $this->searchTermNormalizer->normalize($search);
+        $normalisedSearch = $search;
         $searchTerm = '%'.$normalisedSearch.'%';
         $artistSearch = $search !== '' && Artist::query()
             ->where('normalised_name', 'like', $searchTerm)
@@ -37,8 +45,13 @@ class AlbumSuggestionService
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($albumQuery) use ($search): void {
                     $albumQuery->where('title', 'like', '%'.$search.'%')
-                        ->orWhereHas('artists', fn ($artistQuery) => $artistQuery->where('name', 'like', '%'.$search.'%'))
-                        ->orWhereHas('artists.acceptedGenres', fn ($genreQuery) => $genreQuery->where('genres.name', 'like', '%'.$search.'%'));
+                        ->orWhere('normalised_title', 'like', '%'.$search.'%')
+                        ->orWhereHas('artists', fn ($artistQuery) => $artistQuery
+                            ->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('normalised_name', 'like', '%'.$search.'%'))
+                        ->orWhereHas('artists.acceptedGenres', fn ($genreQuery) => $genreQuery
+                            ->where('genres.name', 'like', '%'.$search.'%')
+                            ->orWhere('genres.normalised_name', 'like', '%'.$search.'%'));
                 });
             })
             ->whereDoesntHave('playlists', fn ($query) => $query->whereKey($albumPlaylist->id));
