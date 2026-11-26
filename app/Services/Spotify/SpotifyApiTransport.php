@@ -71,7 +71,7 @@ class SpotifyApiTransport
     {
         return $response->status() === 429
             ? 'Spotify rate limit reached. Try again later.'
-            : 'Spotify returned HTTP '.$response->status().'.';
+            : 'Spotify returned HTTP '.$response->status();
     }
 
     private function request(): PendingRequest

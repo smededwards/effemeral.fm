@@ -421,12 +421,12 @@ class SpotifyPlaylistImportTest extends TestCase
         ]);
         $this->assertDatabaseHas('spotify_playlists', [
             'spotify_playlist_id' => 'playlist-id',
-            'last_import_error' => 'Spotify returned HTTP 500.',
+            'last_import_error' => 'Spotify returned HTTP 500',
         ]);
         $this->assertDatabaseHas('spotify_playlist_import_runs', [
             'id' => $run->id,
             'status' => 'completed',
-            'error' => 'Updated playlist: Spotify returned HTTP 500.',
+            'error' => 'Updated playlist: Spotify returned HTTP 500',
         ]);
     }
 
@@ -436,7 +436,7 @@ class SpotifyPlaylistImportTest extends TestCase
         $playlist = SpotifyPlaylist::query()->create([
             'spotify_playlist_id' => 'failed-playlist-id',
             'name' => 'Failed playlist',
-            'last_import_error' => 'Spotify returned HTTP 500.',
+            'last_import_error' => 'Spotify returned HTTP 500',
         ]);
 
         $this->post(route('imports.spotify.playlists.retry', $playlist))

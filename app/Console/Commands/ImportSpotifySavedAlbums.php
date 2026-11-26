@@ -57,7 +57,7 @@ class ImportSpotifySavedAlbums extends Command
         try {
             $run = $createRun();
             $run->update(['status' => 'queued', 'error' => null, 'completed_at' => null]);
-            $this->info('Starting '.$label.' import run #'.$run->id.'.');
+            $this->info('Starting '.$label.' import run #'.$run->id);
             ImportSpotifySavedAlbumsJob::dispatchSync($run->id, (bool) $this->option('enrich'));
             $result = $run->fresh();
             $this->info('Completed: '.$result->fetched_count.' fetched, '.$result->imported_count.' imported, '
