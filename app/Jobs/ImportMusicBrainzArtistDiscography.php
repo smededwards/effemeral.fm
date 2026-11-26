@@ -67,7 +67,9 @@ class ImportMusicBrainzArtistDiscography implements ShouldQueue
                 }
 
                 $album->musicbrainz_release_group_mbid = $releaseGroupId;
-                $album->album_type = mb_strtolower((string) ($releaseGroup['primary-type'] ?? 'album'));
+                $album->musicbrainz_primary_type = $this->normaliseType($releaseGroup['primary-type'] ?? null);
+                $album->setAttribute('musicbrainz_secondary_types', $this->secondaryTypes($releaseGroup));
+                $album->canonical_release_type = $this->canonicalReleaseType($releaseGroup);
                 $album->release_date ??= $releaseGroup['first-release-date'] ?? null;
                 $album->release_date_precision ??= isset($releaseGroup['first-release-date'])
                     ? $this->datePrecision((string) $releaseGroup['first-release-date'])
@@ -101,6 +103,58 @@ class ImportMusicBrainzArtistDiscography implements ShouldQueue
             4 => 'year',
             7 => 'month',
             default => 'day',
+        };
+    }
+
+    /**
+     * Return a normalized MusicBrainz release-group type.
+     *
+     * @param  mixed  $type  The raw MusicBrainz primary type.
+     * @return string|null The normalized type, when present.
+     */
+    private function normaliseType(mixed $type): ?string
+    {
+        $normalised = mb_strtolower(trim((string) $type));
+
+        return $normalised !== '' ? $normalised : null;
+    }
+
+    /**
+     * Return normalized MusicBrainz secondary release-group types.
+     *
+     * @param  array<string, mixed>  $releaseGroup  The MusicBrainz release group.
+     * @return list<string> The normalized secondary types.
+     */
+    private function secondaryTypes(array $releaseGroup): array
+    {
+        return collect($releaseGroup['secondary-types'] ?? [])
+            ->filter(fn (mixed $type): bool => is_string($type) && trim($type) !== '')
+            ->map(fn (string $type): string => mb_strtolower(trim($type)))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Derive the canonical release classification used by catalogue filters.
+     *
+     * @param  array<string, mixed>  $releaseGroup  The MusicBrainz release group.
+     * @return string The canonical release type.
+     */
+    private function canonicalReleaseType(array $releaseGroup): string
+    {
+        $secondaryTypes = $this->secondaryTypes($releaseGroup);
+        if (in_array('live', $secondaryTypes, true)) {
+            return 'live';
+        }
+        if (in_array('compilation', $secondaryTypes, true)) {
+            return 'compilation';
+        }
+
+        return match ($this->normaliseType($releaseGroup['primary-type'] ?? null)) {
+            'single' => 'single',
+            'ep' => 'ep',
+            default => 'album',
         };
     }
 }

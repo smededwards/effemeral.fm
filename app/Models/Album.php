@@ -20,10 +20,18 @@ class Album extends Model
     protected const EFM_TYPE = 'ALB';
 
     protected $fillable = [
-        'title', 'normalised_title', 'album_type', 'spotify_id', 'lastfm_mbid', 'musicbrainz_release_group_mbid',
+        'title', 'normalised_title', 'album_type', 'canonical_release_type', 'spotify_id', 'lastfm_mbid',
+        'musicbrainz_release_group_mbid', 'musicbrainz_primary_type', 'musicbrainz_secondary_types',
         'spotify_uri', 'spotify_url', 'total_tracks', 'release_date',
         'release_date_precision', 'cover_image_url',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'musicbrainz_secondary_types' => 'array',
+        ];
+    }
 
     /**
      * Limit enrichment to albums grounded in Last.fm or Spotify data.

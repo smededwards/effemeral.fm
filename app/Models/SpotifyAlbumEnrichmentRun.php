@@ -13,7 +13,7 @@ class SpotifyAlbumEnrichmentRun extends Model
 {
     protected $fillable = [
         'scope', 'status', 'priority_phase', 'requested_limit', 'pause_every', 'pause_seconds', 'last_album_id',
-        'total_candidates', 'processed_count', 'enriched_count', 'failed_count', 'failed_album_ids',
+        'spotify_playlist_id', 'total_candidates', 'processed_count', 'enriched_count', 'failed_count', 'failed_album_ids',
         'error', 'started_at', 'completed_at',
     ];
 

@@ -6,6 +6,8 @@ use App\Models\Album;
 use App\Models\Artist;
 use App\Models\MusicBrainzDiscographyImportRun;
 use App\Models\SpotifyAlbumEnrichmentRun;
+use App\Models\SpotifyPlaylist;
+use App\Models\SpotifyPlaylistItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -84,6 +86,62 @@ class EnrichmentCommandTest extends TestCase
         $this->assertSame(0, $exitCode);
         $this->assertSame(0, SpotifyAlbumEnrichmentRun::query()->count());
         $this->assertStringContainsString((string) $album->id, Artisan::output());
+    }
+
+    /**
+     * Restrict a Spotify enrichment dry run to albums from one imported playlist.
+     */
+    public function test_spotify_album_enrichment_can_filter_by_playlist(): void
+    {
+        $playlist = SpotifyPlaylist::query()->create([
+            'spotify_playlist_id' => 'endless-void',
+            'name' => 'Endless Void',
+            'owner_id' => 'smededwards',
+        ]);
+        $included = Album::query()->create([
+            'title' => 'Included album',
+            'normalised_title' => 'included album',
+            'spotify_id' => 'included-album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+        ]);
+        $wordAwareIncluded = Album::query()->create([
+            'title' => 'Mind Burns Alive',
+            'normalised_title' => 'mind burns alive',
+            'spotify_id' => 'mind-burns-alive',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+        ]);
+        $excluded = Album::query()->create([
+            'title' => 'Excluded album',
+            'normalised_title' => 'excluded album',
+            'spotify_id' => 'excluded-album',
+            'album_type' => 'album',
+            'total_tracks' => 1,
+        ]);
+        SpotifyPlaylistItem::query()->create([
+            'spotify_playlist_id' => $playlist->id,
+            'album_id' => $included->id,
+            'position' => 0,
+        ]);
+        SpotifyPlaylistItem::query()->create([
+            'spotify_playlist_id' => $playlist->id,
+            'album_id' => $wordAwareIncluded->id,
+            'position' => 1,
+        ]);
+
+        $exitCode = Artisan::call('albums:enrich-spotify', [
+            '--playlist-id' => 'endless-void',
+            '--limit' => 10,
+            '--dry-run' => true,
+        ]);
+
+        $this->assertSame(0, $exitCode);
+        $output = Artisan::output();
+        $this->assertStringContainsString((string) $included->id.' Included Album', $output);
+        $this->assertStringContainsString((string) $wordAwareIncluded->id.' Mind Burns Alive', $output);
+        $this->assertStringNotContainsString((string) $excluded->id.' Excluded Album', $output);
+        $this->assertSame(0, SpotifyAlbumEnrichmentRun::query()->count());
     }
 
     /**

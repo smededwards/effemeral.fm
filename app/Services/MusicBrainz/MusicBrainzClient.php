@@ -105,7 +105,7 @@ class MusicBrainzClient
         do {
             $payload = $this->get('release-group', [
                 'artist' => $artist->musicbrainz_mbid,
-                'type' => 'album|ep',
+                'type' => 'album|ep|single',
                 'fmt' => 'json',
                 'limit' => $limit,
                 'offset' => $offset,
@@ -124,7 +124,7 @@ class MusicBrainzClient
 
             $groups = array_merge($groups, array_values(array_filter(
                 $page,
-                fn (mixed $group): bool => is_array($group) && $this->isEligibleReleaseGroup($group),
+                fn (mixed $group): bool => is_array($group) && $this->hasSupportedPrimaryType($group),
             )));
             $offset += count($page);
         } while ($offset < $total);
@@ -133,45 +133,15 @@ class MusicBrainzClient
     }
 
     /**
-     * Keep standard albums and EPs while excluding non-canonical release groups.
+     * Keep release groups that can classify an existing catalogue record.
      *
      * @param  array<string, mixed>  $group  The MusicBrainz release group.
      */
-    private function isEligibleReleaseGroup(array $group): bool
+    private function hasSupportedPrimaryType(array $group): bool
     {
         $primaryType = mb_strtolower((string) ($group['primary-type'] ?? ''));
-        if (! in_array($primaryType, ['album', 'ep'], true)) {
-            return false;
-        }
 
-        $excludedTypes = [
-            'audio drama',
-            'audiobook',
-            'bootleg',
-            'broadcast',
-            'box set',
-            'compilation',
-            'concert film',
-            'demo',
-            'dj-mix',
-            'field recording',
-            'holiday',
-            'interview',
-            'live',
-            'mixtape',
-            'other',
-            'promo',
-            'remix',
-            'soundtrack',
-            'spokenword',
-            'video',
-        ];
-
-        return collect($group['secondary-types'] ?? [])
-            ->filter(fn (mixed $type): bool => is_string($type))
-            ->map(fn (string $type): string => mb_strtolower(trim($type)))
-            ->intersect($excludedTypes)
-            ->isEmpty();
+        return in_array($primaryType, ['album', 'ep', 'single'], true);
     }
 
     /**
@@ -226,7 +196,7 @@ class MusicBrainzClient
 
             if (! in_array($response->status(), [429, 503], true)) {
                 if ($response->failed()) {
-                    throw new RuntimeException('MusicBrainz returned HTTP '.$response->status().'.');
+                    throw new RuntimeException('MusicBrainz returned HTTP '.$response->status());
                 }
 
                 return $response->json();
