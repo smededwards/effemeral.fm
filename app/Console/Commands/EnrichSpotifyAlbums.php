@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Album;
 use App\Models\SpotifyAlbumEnrichmentRun;
+use App\Models\SpotifyPlaylist;
 use App\Services\Catalog\CatalogWriter;
 use App\Services\Spotify\SpotifyClient;
 use App\Services\Spotify\SpotifyRateLimitException;
@@ -17,7 +18,7 @@ use Throwable;
 /**
  * Enriches existing Spotify-linked albums with missing canonical tracks.
  */
-#[Signature('albums:enrich-spotify {--scope=priority : Selection scope: priority, canonical, or all} {--artist-id= : Only process albums for one artist ID} {--after-id=0 : Start after this album ID} {--limit=10 : Albums per batch} {--pause-every=3 : Pause after this many albums} {--pause=10 : Pause duration in seconds} {--resume : Resume the latest paused or failed run} {--continuous : Continue through successive batches until no eligible albums remain} {--dry-run : List eligible albums without requesting Spotify data}')]
+#[Signature('albums:enrich-spotify {--scope=priority : Selection scope: priority, canonical, or all} {--artist-id= : Only process albums for one artist ID} {--playlist-id= : Only process albums in one imported Spotify playlist} {--after-id=0 : Start after this album ID} {--limit=10 : Albums per batch} {--pause-every=3 : Pause after this many albums} {--pause=10 : Pause duration in seconds} {--resume : Resume the latest paused or failed run} {--continuous : Continue through successive batches until no eligible albums remain} {--dry-run : List eligible albums without requesting Spotify data}')]
 #[Description('Enrich existing Spotify-linked albums with missing tracks')]
 class EnrichSpotifyAlbums extends Command
 {
@@ -32,11 +33,14 @@ class EnrichSpotifyAlbums extends Command
      */
     public function handle(SpotifyClient $client, CatalogWriter $catalog): int
     {
-        $lock = Cache::lock('spotify-album-enrichment', 86400);
-        if (! $lock->get()) {
-            $this->error('A Spotify album enrichment is already in progress.');
+        $lock = null;
+        if (! $this->option('dry-run')) {
+            $lock = Cache::lock('spotify-album-enrichment', 86400);
+            if (! $lock->get()) {
+                $this->error('A Spotify album enrichment is already in progress.');
 
-            return self::FAILURE;
+                return self::FAILURE;
+            }
         }
 
         try {
@@ -76,7 +80,7 @@ class EnrichSpotifyAlbums extends Command
 
             return $run->status === 'completed' || $run->failed_count === 0 ? self::SUCCESS : self::FAILURE;
         } finally {
-            $lock->release();
+            $lock?->release();
         }
     }
 
@@ -112,8 +116,14 @@ class EnrichSpotifyAlbums extends Command
             $this->fail('The scope must be priority, canonical, or all.');
         }
 
+        $playlistId = $this->option('playlist-id');
+        if (is_string($playlistId) && ! SpotifyPlaylist::query()->where('spotify_playlist_id', $playlistId)->exists()) {
+            $this->fail('The imported Spotify playlist could not be found.');
+        }
+
         return new SpotifyAlbumEnrichmentRun([
             'scope' => $scope,
+            'spotify_playlist_id' => $playlistId,
             'status' => 'queued',
             'requested_limit' => max(1, (int) $this->option('limit')),
             'pause_every' => max(1, (int) $this->option('pause-every')),
@@ -236,13 +246,35 @@ class EnrichSpotifyAlbums extends Command
                     ) < albums.total_tracks');
             });
 
+        if (is_string($run->spotify_playlist_id) && $run->spotify_playlist_id !== '') {
+            $query->whereExists(function ($subquery) use ($run): void {
+                $subquery->selectRaw('1')
+                    ->from('spotify_playlist_items')
+                    ->join(
+                        'spotify_playlists',
+                        'spotify_playlists.id',
+                        '=',
+                        'spotify_playlist_items.spotify_playlist_id',
+                    )
+                    ->whereColumn('spotify_playlist_items.album_id', 'albums.id')
+                    ->where('spotify_playlists.spotify_playlist_id', $run->spotify_playlist_id);
+            });
+        }
+
         if ($run->scope !== 'all') {
-            $query->whereIn('album_type', ['album', 'ep'])
-                ->whereNot(function ($builder): void {
-                    foreach (['live', 'demo', 'bootleg', 'compilation', 'b-side', 'soundtrack', 'remix', 'sampler', 'session', 'radio', 'unplugged', 'box set', 'special'] as $term) {
-                        $builder->orWhereRaw('LOWER(title) LIKE ?', ['%'.$term.'%']);
-                    }
-                });
+            $query->where(function ($builder): void {
+                $builder->whereIn('canonical_release_type', ['album', 'ep'])
+                    ->orWhere(function ($fallback): void {
+                        $fallback->whereNull('canonical_release_type')
+                            ->whereIn('album_type', ['album', 'ep'])
+                            ->whereNot(function ($titleQuery): void {
+                                foreach (['live', 'demo', 'bootleg', 'compilation', 'b-side', 'soundtrack', 'remix', 'sampler', 'session', 'radio', 'unplugged', 'box set', 'special'] as $term) {
+                                    $pattern = '(^|[^[:alnum:]])'.$term.'([^[:alnum:]]|$)';
+                                    $titleQuery->orWhereRaw('LOWER(title) REGEXP ?', [$pattern]);
+                                }
+                            });
+                    });
+            });
         }
 
         if ((int) $this->option('after-id') > 0) {
@@ -254,7 +286,7 @@ class EnrichSpotifyAlbums extends Command
         }
 
         if ($run->scope === 'priority' && $run->priority_phase === 0) {
-            $query->where(function ($builder): void {
+            $query->where(function ($builder) use ($run): void {
                 $builder->whereExists(function ($subquery): void {
                     $subquery->selectRaw('1')
                         ->from('album_playlist_items')
@@ -264,6 +296,21 @@ class EnrichSpotifyAlbums extends Command
                         ->from('spotify_album_collections')
                         ->whereColumn('spotify_album_collections.album_id', 'albums.id');
                 });
+
+                if (is_string($run->spotify_playlist_id) && $run->spotify_playlist_id !== '') {
+                    $builder->orWhereExists(function ($subquery) use ($run): void {
+                        $subquery->selectRaw('1')
+                            ->from('spotify_playlist_items')
+                            ->join(
+                                'spotify_playlists',
+                                'spotify_playlists.id',
+                                '=',
+                                'spotify_playlist_items.spotify_playlist_id',
+                            )
+                            ->whereColumn('spotify_playlist_items.album_id', 'albums.id')
+                            ->where('spotify_playlists.spotify_playlist_id', $run->spotify_playlist_id);
+                    });
+                }
             });
         }
 

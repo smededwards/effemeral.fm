@@ -80,8 +80,30 @@ class MusicBrainzDiscographyTest extends TestCase
             'title' => 'Studio Album',
             'normalised_title' => 'studio album',
             'spotify_id' => 'spotify-studio-album',
+            'album_type' => 'album',
         ]);
         $existingAlbum->artists()->attach($artist->id);
+        $liveAlbum = Album::query()->create([
+            'title' => 'Live Album',
+            'normalised_title' => 'live album',
+            'spotify_id' => 'spotify-live-album',
+            'album_type' => 'album',
+        ]);
+        $liveAlbum->artists()->attach($artist->id);
+        $compilation = Album::query()->create([
+            'title' => 'Compilation',
+            'normalised_title' => 'compilation',
+            'spotify_id' => 'spotify-compilation',
+            'album_type' => 'compilation',
+        ]);
+        $compilation->artists()->attach($artist->id);
+        $single = Album::query()->create([
+            'title' => 'Tour Single',
+            'normalised_title' => 'tour single',
+            'spotify_id' => 'spotify-single',
+            'album_type' => 'single',
+        ]);
+        $single->artists()->attach($artist->id);
         $run = MusicBrainzDiscographyImportRun::query()->create(['artist_id' => $artist->id, 'status' => 'queued']);
         $releaseGroups = [
             ['id' => 'studio-album', 'title' => 'Studio Album', 'primary-type' => 'Album'],
@@ -89,6 +111,7 @@ class MusicBrainzDiscographyTest extends TestCase
             ['id' => 'demo-album', 'title' => 'Demo Album', 'primary-type' => 'Album', 'secondary-types' => ['Demo']],
             ['id' => 'compilation', 'title' => 'Compilation', 'primary-type' => 'Album', 'secondary-types' => ['Compilation']],
             ['id' => 'ep', 'title' => 'Eligible EP', 'primary-type' => 'EP'],
+            ['id' => 'single', 'title' => 'Tour Single', 'primary-type' => 'Single'],
         ];
         Http::fake(function (Request $request) use ($releaseGroups) {
             if (str_contains($request->url(), '/release-group?')) {
@@ -105,14 +128,25 @@ class MusicBrainzDiscographyTest extends TestCase
         (new ImportMusicBrainzArtistDiscography($run->id))->handle(app(MusicBrainzClient::class));
 
         $this->assertDatabaseHas('albums', ['musicbrainz_release_group_mbid' => 'studio-album']);
+        $this->assertDatabaseHas('albums', [
+            'musicbrainz_release_group_mbid' => 'live-album',
+            'canonical_release_type' => 'live',
+        ]);
+        $this->assertDatabaseHas('albums', [
+            'musicbrainz_release_group_mbid' => 'compilation',
+            'canonical_release_type' => 'compilation',
+        ]);
+        $this->assertDatabaseHas('albums', [
+            'musicbrainz_release_group_mbid' => 'single',
+            'canonical_release_type' => 'single',
+            'album_type' => 'single',
+        ]);
         $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'ep']);
-        $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'live-album']);
         $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'demo-album']);
-        $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'compilation']);
-        $this->assertSame(2, $run->fresh()->fetched_count);
-        $this->assertSame(1, $run->fresh()->matched_count);
-        $this->assertSame(1, $run->fresh()->unmatched_count);
-        $this->assertSame(1, Album::query()->count());
+        $this->assertSame(6, $run->fresh()->fetched_count);
+        $this->assertSame(4, $run->fresh()->matched_count);
+        $this->assertSame(2, $run->fresh()->unmatched_count);
+        $this->assertSame(4, Album::query()->count());
     }
 
     public function test_refresh_updates_existing_album_metadata_without_requesting_spotify_data(): void
@@ -151,17 +185,19 @@ class MusicBrainzDiscographyTest extends TestCase
 
         $matchedAlbum = Album::query()->where('musicbrainz_release_group_mbid', 'album-group')->firstOrFail();
         $this->assertSame('existing-spotify-id', $matchedAlbum->spotify_id);
-        $this->assertSame('album', $matchedAlbum->album_type);
+        $this->assertNull($matchedAlbum->album_type);
+        $this->assertSame('album', $matchedAlbum->canonical_release_type);
+        $this->assertSame('album', $matchedAlbum->musicbrainz_primary_type);
         $this->assertSame('2009-10-13', $matchedAlbum->release_date);
         $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'ep-group']);
         $this->assertDatabaseMissing('albums', ['musicbrainz_release_group_mbid' => 'single-group']);
-        $this->assertSame(2, $run->fresh()->fetched_count);
+        $this->assertSame(3, $run->fresh()->fetched_count);
         $this->assertSame(1, $run->fresh()->matched_count);
-        $this->assertSame(1, $run->fresh()->unmatched_count);
+        $this->assertSame(2, $run->fresh()->unmatched_count);
         Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'api.spotify.com'));
     }
 
-    public function test_musicbrainz_release_group_browse_paginates_and_excludes_non_album_types(): void
+    public function test_musicbrainz_release_group_browse_paginates_supported_release_types(): void
     {
         Sleep::fake();
         $artist = Artist::query()->create([
@@ -180,7 +216,7 @@ class MusicBrainzDiscographyTest extends TestCase
 
         $groups = app(MusicBrainzClient::class)->artistReleaseGroups($artist);
 
-        $this->assertCount(100, $groups);
+        $this->assertCount(101, $groups);
         Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'offset=100'));
     }
 
