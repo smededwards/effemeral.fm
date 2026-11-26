@@ -34,7 +34,7 @@ class PlaylistOverviewTest extends TestCase
         SpotifyPlaylist::query()->create([
             'spotify_playlist_id' => 'failed-playlist-id',
             'name' => 'Failed Playlist',
-            'last_import_error' => 'Spotify returned HTTP 500.',
+            'last_import_error' => 'Spotify returned HTTP 500',
         ]);
 
         $this->get(route('spotify-playlists.index', ['playlist_search' => 'Complete']))

@@ -46,7 +46,7 @@ class ImportLastFm extends Command
                 $run->update(['status' => 'queued', 'error' => null, 'completed_at' => null]);
             }
 
-            $this->info('Starting Last.fm import run #'.$run->id.'.');
+            $this->info('Starting Last.fm import run #'.$run->id);
             ImportLastFmScrobbles::dispatchSync($run->id);
             $result = $run->fresh();
             $this->info('Completed: '.$result->fetched_count.' fetched, '.$result->imported_count.' imported, '

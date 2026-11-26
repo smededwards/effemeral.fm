@@ -42,7 +42,7 @@ class ImportSpotifyPlaylists extends Command
                 ]);
             }
 
-            $this->info('Starting Spotify playlist import run #'.$run->id.'.');
+            $this->info('Starting Spotify playlist import run #'.$run->id);
             ImportSpotifyPlaylistsJob::dispatchSync(
                 $run->id,
                 null,

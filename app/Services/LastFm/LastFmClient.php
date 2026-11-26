@@ -75,13 +75,13 @@ class LastFmClient
             ]);
 
             if ($response->failed()) {
-                throw new RuntimeException('Last.fm returned HTTP '.$response->status().'.');
+                throw new RuntimeException('Last.fm returned HTTP '.$response->status());
             }
 
             $payload = $response->json();
 
             if (isset($payload['error'])) {
-                throw new RuntimeException('Last.fm error '.$payload['error'].': '.($payload['message'] ?? 'Unknown error').'.');
+                throw new RuntimeException('Last.fm error '.$payload['error'].': '.($payload['message'] ?? 'Unknown error'));
             }
 
             $pageTracks = data_get($payload, 'recenttracks.track', []);
@@ -121,7 +121,7 @@ class LastFmClient
         ]));
 
         if ($response->failed()) {
-            throw new RuntimeException('Last.fm returned HTTP '.$response->status().'.');
+            throw new RuntimeException('Last.fm returned HTTP '.$response->status());
         }
 
         $tags = data_get($response->json(), 'artist.tags.tag', []);

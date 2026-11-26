@@ -72,7 +72,7 @@ class EnrichSpotifyAlbums extends Command
             }
 
             $this->info('Run #'.$run->id.' '.$run->status.': '.$run->enriched_count.' enriched, '
-                .$run->failed_count.' failed, cursor '.($run->last_album_id ?? 0).'.');
+                .$run->failed_count.' failed, cursor '.($run->last_album_id ?? 0));
 
             return $run->status === 'completed' || $run->failed_count === 0 ? self::SUCCESS : self::FAILURE;
         } finally {
@@ -184,7 +184,7 @@ class EnrichSpotifyAlbums extends Command
                 $catalog->spotifyAlbumTracks($album, $tracks);
                 $run->enriched_count++;
                 $run->failed_album_ids = array_values(array_diff($run->failed_album_ids ?? [], [$album->id]));
-                $this->info('Completed '.$album->displayTitle().'.');
+                $this->info('Completed '.$album->displayTitle());
             } catch (SpotifyRateLimitException $exception) {
                 $run->status = 'paused';
                 $run->error = $exception->getMessage();

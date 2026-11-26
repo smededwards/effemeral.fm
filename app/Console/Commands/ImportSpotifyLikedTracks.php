@@ -38,7 +38,7 @@ class ImportSpotifyLikedTracks extends Command
                 'status' => 'queued',
                 'requested_limit' => $limit > 0 ? $limit : null,
             ]);
-            $this->info('Starting Spotify liked-track import run #'.$run->id.'.');
+            $this->info('Starting Spotify liked-track import run #'.$run->id);
             ImportSpotifyLikedTracksJob::dispatchSync($run->id, (bool) $this->option('enrich'));
             $result = $run->fresh();
             $this->info('Completed: '.$result->fetched_count.' fetched, '.$result->imported_count.' imported, '

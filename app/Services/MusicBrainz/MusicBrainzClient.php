@@ -226,7 +226,7 @@ class MusicBrainzClient
 
             if (! in_array($response->status(), [429, 503], true)) {
                 if ($response->failed()) {
-                    throw new RuntimeException('MusicBrainz returned HTTP '.$response->status().'.');
+                    throw new RuntimeException('MusicBrainz returned HTTP '.$response->status());
                 }
 
                 return $response->json();
