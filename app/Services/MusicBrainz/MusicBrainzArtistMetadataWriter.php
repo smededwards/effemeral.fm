@@ -61,6 +61,6 @@ class MusicBrainzArtistMetadataWriter
      */
     private function normalise(string $value): string
     {
-        return preg_replace('/\s+/', ' ', mb_strtolower(trim($value))) ?? '';
+        return Artist::normaliseName($value);
     }
 }

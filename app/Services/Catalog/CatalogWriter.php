@@ -40,7 +40,7 @@ class CatalogWriter
     ): Album {
         $title = (string) ($albumData['name'] ?? 'Unknown album');
         $normalisedTitle = $this->normalise($title);
-        $primaryArtist = $this->normalise((string) data_get($albumData, 'artists.0.name', ''));
+        $primaryArtist = Artist::normaliseName((string) data_get($albumData, 'artists.0.name', ''));
         $album = $canonicalAlbum ?? (isset($albumData['id']) && $albumData['id'] !== ''
             ? Album::query()->where('spotify_id', $albumData['id'])->first()
             : null);
@@ -72,10 +72,10 @@ class CatalogWriter
             $artist = isset($artistData['id']) && $artistData['id'] !== ''
                 ? Artist::query()->where('spotify_id', $artistData['id'])->first()
                 : null;
-            $artist ??= Artist::query()->firstOrNew(['normalised_name' => $this->normalise($artistData['name'])]);
+            $artist ??= Artist::query()->firstOrNew(['normalised_name' => Artist::normaliseName($artistData['name'])]);
             $artist->fill([
                 'name' => $artistData['name'],
-                'normalised_name' => $this->normalise($artistData['name']),
+                'normalised_name' => Artist::normaliseName($artistData['name']),
                 'spotify_id' => $artistData['id'] ?? null,
             ]);
             $artist->save();
@@ -221,10 +221,10 @@ class CatalogWriter
         $artist = isset($data['artist_mbid']) && $data['artist_mbid'] !== ''
             ? Artist::query()->where('lastfm_mbid', $data['artist_mbid'])->first()
             : null;
-        $artist ??= Artist::query()->firstOrNew(['normalised_name' => $this->normalise($artistName)]);
+        $artist ??= Artist::query()->firstOrNew(['normalised_name' => Artist::normaliseName($artistName)]);
         $artist->fill([
             'name' => $artistName,
-            'normalised_name' => $this->normalise($artistName),
+            'normalised_name' => Artist::normaliseName($artistName),
             'lastfm_mbid' => $data['artist_mbid'] ?? null,
         ]);
         $artist->save();

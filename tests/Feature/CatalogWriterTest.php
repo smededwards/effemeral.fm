@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Album;
+use App\Models\Artist;
+use App\Models\Track;
 use App\Services\Catalog\CatalogWriter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -18,6 +20,7 @@ class CatalogWriterTest extends TestCase
             'normalised_title' => 'les chants de laurore',
             'spotify_id' => 'spotify-album-id',
         ]);
+        /** @var Track $track */
         $track = $album->tracks()->create([
             'title' => 'Komorebi',
             'normalised_title' => 'komorebi',
@@ -40,6 +43,30 @@ class CatalogWriterTest extends TestCase
             'disc_number' => 1,
             'track_number' => 1,
             'duration_ms' => 399226,
+        ]);
+    }
+
+    public function test_spotify_artist_matching_treats_ampersand_and_and_as_equivalent(): void
+    {
+        Artist::query()->create([
+            'name' => ':Of the Wand & the Moon:',
+            'normalised_name' => Artist::normaliseName(':Of the Wand & the Moon:'),
+        ]);
+
+        app(CatalogWriter::class)->spotifyAlbum([
+            'id' => 'spotify-album-id',
+            'name' => 'The Empty Moon',
+            'artists' => [[
+                'id' => 'spotify-artist-id',
+                'name' => ':Of The Wand And The Moon:',
+            ]],
+            'tracks' => ['items' => []],
+        ]);
+
+        $this->assertDatabaseCount('artists', 1);
+        $this->assertDatabaseHas('artists', [
+            'normalised_name' => ':of the wand and the moon:',
+            'spotify_id' => 'spotify-artist-id',
         ]);
     }
 }
