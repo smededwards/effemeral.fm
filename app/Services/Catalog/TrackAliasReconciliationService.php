@@ -74,7 +74,7 @@ class TrackAliasReconciliationService
                 ],
                 [
                     'name' => $source->title,
-                    'provider_id' => $source->lastfm_mbid,
+                    'provider_id' => $lastfmMbid,
                 ],
             );
             DB::table('scrobbles')
