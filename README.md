@@ -53,9 +53,9 @@ For a private deployment, set `EFFEMERAL_ACCESS_USERNAME` and `EFFEMERAL_ACCESS_
 
 ## Command-line enrichment
 
-See the complete [CLI guide](docs/cli.md) for safe import, enrichment, status, retry, and playlist-sync workflows.
+See the complete [CLI guide](https://github.com/smededwards/effemeral.fm/wiki/CLI) for safe import, enrichment, status, retry, and playlist-sync workflows.
 
-See the [documentation index](docs/README.md) for the [application guide](docs/application.md), [integrations guide](docs/integrations.md), and [development guide](docs/development.md).
+See the [application guide](https://github.com/smededwards/effemeral.fm/wiki/Application), [integrations guide](https://github.com/smededwards/effemeral.fm/wiki/Integrations), and [development guide](https://github.com/smededwards/effemeral.fm/wiki/Development) in the GitHub Wiki.
 
 Enrichment can be run in small, resumable batches from the application container:
 
