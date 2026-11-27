@@ -23,6 +23,23 @@ class Artist extends Model
         'spotify_id', 'lastfm_mbid', 'musicbrainz_mbid', 'musicbrainz_checked_at',
     ];
 
+    /**
+     * Normalize provider artist names for matching without changing display names.
+     *
+     * Ampersands and the word "and" are treated as equivalent because providers
+     * format the same artist differently.
+     *
+     * @param  string  $name  The provider artist name.
+     * @return string The normalized artist name.
+     */
+    public static function normaliseName(string $name): string
+    {
+        $normalised = mb_strtolower(trim($name));
+        $normalised = preg_replace('/\s*&\s*/u', ' and ', $normalised) ?? $normalised;
+
+        return preg_replace('/\s+/', ' ', trim($normalised)) ?? '';
+    }
+
     protected function casts(): array
     {
         return [

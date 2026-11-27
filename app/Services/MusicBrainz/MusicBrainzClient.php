@@ -215,7 +215,7 @@ class MusicBrainzClient
 
     private function normalise(string $name): string
     {
-        return preg_replace('/\s+/', ' ', mb_strtolower(trim($name))) ?? '';
+        return Artist::normaliseName($name);
     }
 
     /**
