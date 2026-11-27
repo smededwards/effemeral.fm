@@ -6,6 +6,7 @@ use App\Models\Concerns\HasEfmId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Canonical track record linked to an album and source identifiers.
@@ -53,5 +54,13 @@ class Track extends Model
         return $this->belongsToMany(Album::class, 'album_track_releases')
             ->withPivot('disc_number', 'track_number')
             ->withTimestamps();
+    }
+
+    /**
+     * Return provider titles that refer to this canonical track.
+     */
+    public function aliases(): HasMany
+    {
+        return $this->hasMany(TrackAlias::class);
     }
 }

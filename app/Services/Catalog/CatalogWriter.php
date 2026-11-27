@@ -6,6 +6,8 @@ use App\Models\Album;
 use App\Models\Artist;
 use App\Models\SpotifyAlbumCollection;
 use App\Models\Track;
+use App\Models\TrackAlias;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Arr;
 
@@ -257,14 +259,44 @@ class CatalogWriter
         $track = isset($data['track_mbid']) && $data['track_mbid'] !== ''
             ? Track::query()->where('lastfm_mbid', $data['track_mbid'])->first()
             : null;
+        $normalisedTrackName = $this->normalise($trackName);
+        /** @var EloquentCollection<int, Track> $spotifyTracks */
+        $spotifyTracks = $album->releaseTracks()
+            ->whereNotNull('tracks.spotify_id')
+            ->get();
+        $spotifyTrack = $spotifyTracks->first(
+            fn (Track $candidate): bool => $this->trackMatchKey($candidate->title) === $this->trackMatchKey($trackName),
+        );
+        if ($track === null || $track->spotify_id === null) {
+            $track = $spotifyTrack ?? $track;
+        }
+
+        if ($track instanceof Track && $track->spotify_id !== null) {
+            TrackAlias::query()->updateOrCreate(
+                [
+                    'track_id' => $track->id,
+                    'source' => 'lastfm',
+                    'normalised_name' => $this->trackMatchKey($trackName),
+                ],
+                [
+                    'name' => $trackName,
+                    'provider_id' => $data['track_mbid'] ?? null,
+                ],
+            );
+            $track->lastfm_mbid ??= $data['track_mbid'] ?? null;
+            $track->save();
+
+            return $track;
+        }
+
         $track ??= Track::query()->firstOrNew([
             'album_id' => $album->id,
-            'normalised_title' => $this->normalise($trackName),
+            'normalised_title' => $normalisedTrackName,
         ]);
         $track->fill([
             'album_id' => $album->id,
             'title' => $trackName,
-            'normalised_title' => $this->normalise($trackName),
+            'normalised_title' => $normalisedTrackName,
             'lastfm_mbid' => $data['track_mbid'] ?? null,
         ]);
         $track->save();
@@ -276,5 +308,16 @@ class CatalogWriter
     private function normalise(string $value): string
     {
         return preg_replace('/\s+/', ' ', mb_strtolower(trim($value))) ?? '';
+    }
+
+    /**
+     * Normalize track titles for conservative cross-provider alias matching.
+     */
+    private function trackMatchKey(string $value): string
+    {
+        $normalised = mb_strtolower(trim($value));
+        $normalised = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $normalised) ?? $normalised;
+
+        return trim(preg_replace('/\s+/', ' ', $normalised) ?? '');
     }
 }
