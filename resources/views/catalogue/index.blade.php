@@ -335,8 +335,24 @@
                     <p class="text-xs font-semibold tracking-[0.18em] text-ef-accent-strong uppercase">Your Catalogue</p>
                     <h2 id="catalogue-artists" class="mt-2 text-2xl font-semibold">Artists</h2>
                 </div>
-                <span class="text-sm text-ef-muted">{{ number_format($artists->total()) }}
-                    {{ $artists->total() === 1 ? 'artist' : 'artists' }}</span>
+                <div class="flex flex-wrap items-end gap-3">
+                    <span class="text-sm text-ef-muted">{{ number_format($artists->total()) }}
+                        {{ $artists->total() === 1 ? 'artist' : 'artists' }}</span>
+                    <form class="flex items-end gap-2" method="GET"
+                        action="{{ route('catalogue.index', [], false) }}">
+                        <label class="text-sm text-ef-muted" for="artist-sort">Sort artists
+                            <select id="artist-sort"
+                                class="mt-1 block rounded-md border-ef-line bg-ef-canvas text-ef-text" name="artist_sort">
+                                <option value="recent" @selected($artistSort === 'recent')>Recently added</option>
+                                <option value="updated" @selected($artistSort === 'updated')>Recently updated</option>
+                                <option value="name" @selected($artistSort === 'name')>Alphabetical</option>
+                            </select>
+                        </label>
+                        <button
+                            class="rounded-md border border-ef-line px-3 py-2 text-sm font-medium text-ef-text hover:border-ef-accent"
+                            type="submit">Apply</button>
+                    </form>
+                </div>
             </div>
             @if ($artists->isNotEmpty())
                 <ul class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

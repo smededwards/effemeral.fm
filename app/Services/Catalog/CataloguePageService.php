@@ -50,11 +50,15 @@ class CataloguePageService
         $search = $this->searchTermNormalizer->normalize((string) $request->query('q'));
         $artistId = $request->integer('artist');
         $albumId = $request->integer('album');
+        $artistSort = $request->validate([
+            'artist_sort' => ['nullable', 'in:recent,name,updated'],
+        ])['artist_sort'] ?? 'recent';
         $artists = collect();
         $albums = collect();
 
         if ($search !== '') {
             $artists = Artist::query()
+                ->withCatalogueData()
                 ->withCount('albums')
                 ->where(function ($query) use ($search): void {
                     $query->where('name', 'like', '%'.$search.'%')
@@ -78,7 +82,15 @@ class CataloguePageService
                 ->limit(25)
                 ->get();
         } else {
-            $artists = Artist::query()->withCount('albums')->orderBy('name')->paginate(24);
+            $artistQuery = Artist::query()
+                ->withCatalogueData()
+                ->withCount('albums');
+            match ($artistSort) {
+                'name' => $artistQuery->orderBy('name'),
+                'updated' => $artistQuery->orderByDesc('updated_at')->orderBy('name'),
+                default => $artistQuery->orderByDesc('created_at')->orderBy('name'),
+            };
+            $artists = $artistQuery->paginate(24)->withQueryString();
         }
 
         $filters = $request->validate([
@@ -143,6 +155,7 @@ class CataloguePageService
 
         return [
             'search' => $search,
+            'artistSort' => $artistSort,
             'artists' => $artists,
             'albums' => $albums,
             'filteredAlbums' => $filteredAlbums,

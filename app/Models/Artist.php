@@ -77,6 +77,18 @@ class Artist extends Model
     }
 
     /**
+     * Limit Explore results to artists with catalogue data to display.
+     */
+    public function scopeWithCatalogueData(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query
+                ->whereHas('albums')
+                ->orWhereHas('genres');
+        });
+    }
+
+    /**
      * Return albums credited to the artist.
      */
     public function albums(): BelongsToMany

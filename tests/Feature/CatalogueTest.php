@@ -36,6 +36,71 @@ class CatalogueTest extends TestCase
             ->assertSee('Mariner');
     }
 
+    /**
+     * Hide empty artists from Explore until catalogue data is available.
+     */
+    public function test_catalogue_hides_artists_without_catalogue_data(): void
+    {
+        $visibleArtist = Artist::query()->create([
+            'name' => 'Visible Artist',
+            'normalised_name' => 'visible artist',
+        ]);
+        $visibleAlbum = Album::query()->create([
+            'title' => 'Visible Album',
+            'normalised_title' => 'visible album',
+        ]);
+        $visibleAlbum->artists()->attach($visibleArtist->id);
+        Artist::query()->create([
+            'name' => 'Empty Artist',
+            'normalised_name' => 'empty artist',
+        ]);
+
+        $this->get(route('catalogue.index'))
+            ->assertOk()
+            ->assertSee('Visible Artist')
+            ->assertDontSee('Empty Artist');
+
+        $this->get(route('catalogue.index', ['q' => 'Empty Artist']))
+            ->assertOk()
+            ->assertDontSee('Empty Artist');
+    }
+
+    /**
+     * Sort the default Explore artist list by recently added records.
+     */
+    public function test_catalogue_artist_sorting_defaults_to_recent_and_supports_alphabetical_order(): void
+    {
+        $olderArtist = Artist::query()->create([
+            'name' => 'Alpha Artist',
+            'normalised_name' => 'alpha artist',
+        ]);
+        $newerArtist = Artist::query()->create([
+            'name' => 'Zulu Artist',
+            'normalised_name' => 'zulu artist',
+        ]);
+        $album = Album::query()->create([
+            'title' => 'Catalogue Album',
+            'normalised_title' => 'catalogue album',
+        ]);
+        $album->artists()->attach([$olderArtist->id, $newerArtist->id]);
+        $olderArtist->forceFill([
+            'created_at' => now()->subDay(),
+            'updated_at' => now()->subDay(),
+        ])->saveQuietly();
+        $newerArtist->forceFill([
+            'created_at' => now()->addDay(),
+            'updated_at' => now()->addDay(),
+        ])->saveQuietly();
+
+        $recentResponse = $this->get(route('catalogue.index'));
+        $recentArtists = $recentResponse->viewData('artists')->getCollection();
+        $this->assertSame($newerArtist->id, $recentArtists->first()->id);
+
+        $alphabeticalResponse = $this->get(route('catalogue.index', ['artist_sort' => 'name']));
+        $alphabeticalArtists = $alphabeticalResponse->viewData('artists')->getCollection();
+        $this->assertSame($olderArtist->id, $alphabeticalArtists->first()->id);
+    }
+
     public function test_catalogue_can_select_an_artist_and_album(): void
     {
         $artist = Artist::query()->create([
